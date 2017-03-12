@@ -1,0 +1,102 @@
+● XNA Collision 라이브러리
+- \Samples\C++\Misc\Collision 
+
+
+
+
+
+● 경계 상자
+① AABB(axis-aligned bounding box ; 축에 정렬된 경계 상자)
+- 좌표축들에 평행하다.
+- 하나의 AABB를 최솟점vmin과 최댓점 vmax로 정의할 수 있다. // 이때, 각 성분별 최솟값 및 최댓값으로 일반적으로 새로운 벡터이다.
+- 또는 상자의 중점 c와 한계 벡터(extents vector) e로 나타낼 수 있다. 
+// 한계벡터 : 중점과 축에 정렬된 면(2차원의 경우 변)들 사이의 거리를 의미한다.
+// XNA Collision 라이브러리는 중점·한계 표현을 사용한다.
+_DECLSPEC_ALIGN_16_ struct AxisAlignedBox
+{
+	XMFLOAT3 Center;		// 상자의 중점.
+	XMFLOAT3 Extents;		// 중점에서 각 면까지의 거리들.
+};
+- 한 표현을 다른 표현으로 바꾸는 방법은 다음과 같다.
+수식.
+c = 0.5(vmin + vmax)
+e = 0.5(vmax - vmin)
+- 다음은 AABB를 계산하는 코드이다.
+코드.
+XMFLOAT3 vMinf3(+MathHelper::Infinity, +MathHelper::Infinity, +MathHelper::Infinity);
+XMFLOAT3 vMaxf3(-MathHelper::Infinity, -MathHelper::Infinity, -MathHelper::Infinity);
+	
+XMVECTOR vMin = XMLoadFloat3(&vMinf3);
+XMVECTOR vMax = XMLoadFloat3(&vMaxf3);
+std::vector<Vertex::Basic32> vertices(vcount);
+for(UINT i = 0; i < vcount; ++i)
+{
+	fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
+	fin >> vertices[i].Normal.x >> vertices[i].Normal.y >> vertices[i].Normal.z;
+		
+	XMVECTOR P = XMLoadFloat3(&vertices[i].Pos);
+		
+	vMin = XMVectorMin(vMin, P);		// min(u, v) = (min(ux, vx), min(uy, vy), min(uz, vz), min(uw, vw))
+	vMax = XMVectorMax(vMax, P);		// max(u, v) = (max(ux, vx), max(uy, vy), max(uz, vz), max(uw, vw))
+}
+	
+XMStoreFloat3(&mSkullBox.Center, 0.5f*(vMin+vMax));
+XMStoreFloat3(&mSkullBox.Extents, 0.5f*(vMax-vMin));
+
+② OBB(oriented bounding box ; 지향 경계상자)
+- AABB를 국소 공간이 아닌 다른 공간에서 표현할 경우, 축 정렬이 아닐 수 있다.
+- 이를 해결하는 방법은, 충돌 체크 시 국소 공간으로 변환하던가, 또는 AABB를 세계 공간에서 다시 계산하는 것이다.
+- 또 다른 대안은 아예 축 정렬 경계 상자를 포기하고 그냥 유향 경계상자를 사용하는 것이다.
+_DECLSPEC_ALIGN_16_ struct OrientedBox
+{
+	XMFLOAT3 Center;		// 상자의 중점
+	XMFLOAT3 Extents;		// 중점에서 각 면까지의 거리들
+	XMFLOAT4 Orientation;		// 회전(상자 -> 세계)을 나타내는 단위 사원수. ; 경계 상자의 방향을 나타낸다.
+};
+// 단위 사원수로도 회전행렬처럼 하나의 회전을 표현할 수 있다.
+
+
+
+
+
+● 경계구
+- 경계구를 정의하는 것은 구의 중점과 구의 반지름이다. 이 둘은 다음과 같이 정의된다.
+c = 0.5(vmin + vmax)		// vmin과 vmax는 경계 상자를 정의하는 최솟값과 최댓값이다.
+r = max{||c-p||:p ∈ mesh}	// p는 메시를 이루는 임의의 정점이다.
+- 메시가 세계 행렬의 비균등 비례가 이루어짐에 따라, 경계구가 해당 메시를 전부 감싸지 못할 수 있다. 해결 방법은 다음과 같다.
+① 비균등 비례 혹은 균등 비례가 이루어지지 않도록, 게임 세계의 축적에 따라 메시를 모형화한다.	// 협의를 거쳐야 할 것이다.
+② 가장 큰 비례 성분으로 반지름을 비례시킨다. rmax = r * smax 
+
+
+
+
+● AABB와 OBB 그리고 경계구를 구축하는 XNA Collision 라이브러리 함수
+① AABB 구축
+void ComputeBoundingAxisAlignedBoxFromPoints(AxisAlignedBox* pOut,
+	UINT Count, const XMFLOAT3* pPoints, UINT Stride);
+ex.
+struct Basic32
+{
+	XMFLOAT3 Pos;
+	XMFLOAT3 Normal;
+	XMFLOAT2 Tex;
+};
+
+void ComputeBoundingAxisAlignedBoxFromPoints(*box,
+	vertices.size(), &vertices[0].Pos, sizeof(Vertex::Basic32));
+
+② OBB 구축
+void ComputeBoundingOrientedBoxFromPoints(OrientedBox* pOut,
+	UINT Count, const XMFLOAT3* pPoints, UINT Stride);
+
+③ 경계구 구축
+void ComputeBoundingSphereFromPoints(OrientedBox* pOut,
+	UINT Count, const XMFLOAT3* pPoints, UINT Stride);
+
+
+
+
+
+● 메시의 경계입체를 계산하기 위해서는 정점 목록의 복사본이 시스템 메모리에 존재해야 한다.
+- 위 예시처럼 std::vector에 담아둔다. 왜냐하면 렌더링을 위해 만들어진 정점 버퍼를 CPU가 직접 읽지 못하기 때문이다.
+- ?

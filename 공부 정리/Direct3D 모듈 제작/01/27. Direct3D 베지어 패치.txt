@@ -1,0 +1,128 @@
+● 3차 베지에 곡면 코드
+코드.
+
+// 다음은 베른슈타인 기저 함수값들을 벡터로서 반환하는 함수이다.
+float4 BernsteinBasis(float t)
+{
+	float invT = 1.0f - t;
+	
+	return float4(invT * invT * invT,		// (1-t)^3
+		3.0f * t * invT * invT,			// 3t(1-t)^2
+		3.0f * t * t * invT,			// 3t^2(1-t)
+		t * t * t);				// t^3
+}
+
+// 다음은 베른슈타인 기저 함수의 미분값들을 벡터로서 반환하는 함수이다.
+float4 dBernsteinBasis(float t)
+{
+	float invT = 1.0f - t;
+
+	return float4(
+		-3 * invT * invT,			// -3(1-t)^2
+		3 * invT * invT - 6 * t * invT,		// 3(1-t)^2 -6t(1-t)
+		6 * t * invT - 3 * t * t,		// 6t(1-t)-3t^2
+		3 * t * t);				// 3t^2
+}
+
+// 다음은 매개변수화된 좌표 (u, v)에 대한 기저 함수값을 통해 제어점이 16개인 3차 베지에 곡면의 한 점을 반환하는 함수이다.
+float3 CubicBezierSum(const OutputPatch<HullOut, 16> bezpatch, float4 basisU, float4 basisV)
+{
+	float3 sum = float3(0.0f, 0.0f, 0.0f);
+	sum = basisV.x * (basisU.x*bazpatch[0].PosL +
+			basisU.y*bazpatch[1].PosL +
+			basisU.z*bazpatch[2].PosL +
+			basisU.w*bazpatch[3].PosL);
+
+	sum += basisV.y * (basisU.x*bazpatch[4].PosL +
+			basisU.y*bazpatch[5].PosL +
+			basisU.z*bazpatch[6].PosL +
+			basisU.w*bazpatch[7].PosL);
+
+	sum += basisV.z * (basisU.x*bazpatch[8].PosL +
+			basisU.y*bazpatch[9].PosL +
+			basisU.z*bazpatch[10].PosL +
+			basisU.w*bazpatch[11].PosL);
+
+	sum += basisV.w * (basisU.x*bazpatch[12].PosL +
+			basisU.y*bazpatch[13].PosL +
+			basisU.z*bazpatch[14].PosL +
+			basisU.w*bazpatch[15].PosL);
+
+	return sum;
+}
+
+// 다음은 위 함수들을 이용해서 p(u, v)를 구하고 편도함수들을 구하는 예이다.
+float4 basisU = BernsteinBasis(uv.x);
+float4 basisV = BernsteinBasis(uv.y);
+
+// p(u, v)
+float3 p = CubicBezierSum(bezPatch, basisU, basisV);
+
+float4 dBasisU = dBernsteinBasis(uv.x);
+float4 dBasisV = dBernsteinBasis(uv.y);
+
+// u에 대한 편도함수 ; p와 u가 이루는 평면에 평행인 곡선에 대한 접선 기울기가 구해진다.
+float3 dpdu = CubicBezierSum(bezPatch, dbasisU, basisV);
+
+// v에 대한 편도함수 ; p와 v가 이루는 평면에 평행인 곡선에 대한 접선 기울기가 구해진다.
+float3 dpdv = CubicBezierSum(bezPatch, basisU, dbasisV);
+
+
+
+
+
+● 패치 기하구조의 정의
+- 다음은 16개의 제어점을 담는 정점 버퍼를 생성하는 코드이다.
+코드.
+void BasicTessellation::BuildQuadPatchBuffer()
+{
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(XMFLOAT3) * 16;
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+
+	XMFLOAT3 vertices[16] =
+	{
+		// 행 0
+		XMFLOAT(-10.0f, -10.0f, +15.0f);
+		XMFLOAT(-5.0f, 0.0f, +15.0f);
+		XMFLOAT(+5.0f, 0.0f, +15.0f);
+		XMFLOAT(+10.0f, 0.0f, +15.0f);
+
+		// 행 1
+		XMFLOAT(-15.0f, 0.0f, +5.0f);
+		XMFLOAT(-5.0f, 0.0f, +5.0f);
+		XMFLOAT(+5.0f, 20.0f, +5.0f);
+		XMFLOAT(+15.0f, 0.0f, +5.0f);		
+	
+		// 행 2
+		XMFLOAT(-15.0f, 0.0f, -5.0f);
+		XMFLOAT(-5.0f, 0.0f, -5.0f);
+		XMFLOAT(+5.0f, 0.0f, -5.0f);
+		XMFLOAT(+15.0f, 0.0f, -5.0f);
+
+		// 행 3
+		XMFLOAT(-10,0f, 10.0f, -15.0f);
+		XMFLOAT(-5.0f, 0.0f, -15.0f);
+		XMFLOAT(+5.0f, 0.0f, -15.0f);
+		XMFLOAT(+25.0f, 10.0f, -15.0f);	
+	};
+
+	D3D11_SUBRESOURCE_DATA vinitData;
+	vinitData.pSysMem = vertices;
+	HR(md3dDevice->CreateBuffer(&vbd, &vinitData, &mQuadPatchVB));
+}
+
+// 위 제어점들로 이루어진 사각형 패치를 입력 조립기 단계에 제출하는 것은 다음과 같다.
+md3dImmediateContext->IASetPrimitiveTopology(
+	D3D11_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST);
+
+UINT stride = sizeof(Vertex::Pos);
+UINT offset = 0;
+
+md3dImmediateContext->IASetVertexBuffers(
+	0, 1, &mQuadPatchVB, &stride, &offset);
+
+md3dImmediateContext->Draw(16, 0);

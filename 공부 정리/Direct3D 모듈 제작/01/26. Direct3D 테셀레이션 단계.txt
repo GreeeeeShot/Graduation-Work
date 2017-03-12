@@ -1,0 +1,341 @@
+● 테셀레이션 단계
+- 기하구조를 더 작은 삼각형들로 분할하고, 새로 생긴 정점들의 위치를 적절한 방법으로 조정하는 것이다.
+- 덮개 셰이더 단계, 테셀레이터 단계, 영역 셰이더 단계로 이루어져 있다.
+- 이를 통해 메시의 세부정도를 조절할 수 있다.
+
+
+
+
+
+● 테셀레이션 기본도형 종류
+- 테셀레이션 단계를 사용하는 경우, 입력 조립기는 삼각형이 아닌 일단의 제어점(control point)들로 이루어진
+패치(patch)들을 제출한다. 
+- 따라서, 정점 셰이더가 받는 것들도 제어점들이다. 이때, 정점 셰이더는 애니메이션이나 물리 계산을 수행한다.
+- 패치(곡면과 연관된.)는 테셀레이션 단계들에서 결국 '삼각형'들로 분할된다.
+- 한 패치의 제어점은 최대 32개이다.
+- 제어점 개수에 따라 다음과 같이 기본도형 종류가 정의되어 있다.
+D3D11_PRIMITIVE_1_CONTROL_POINT_PATCH = 8,
+D3D11_PRIMITIVE_2_CONTROL_POINT_PATCH = 9,
+D3D11_PRIMITIVE_3_CONTROL_POINT_PATCH = 10,		// 삼각형은 제어점이 세 개인 패치 기본도형이라고 할 수 있다.
+D3D11_PRIMITIVE_4_CONTROL_POINT_PATCH = 11,
+.
+.
+.
+D3D11_PRIMITIVE_31_CONTROL_POINT_PATCH = 38,
+D3D11_PRIMITIVE_32_CONTROL_POINT_PATCH = 39
+// 다양한 패치 기본도형들은 여러 종류의 곡면을 지원하기 위한 것이다.
+
+
+
+
+
+● 상수 덮개 셰이더
+- 각 패치마다 실행되는 하나의 셰이더 함수로, 임무는 메시의 소위 테셀레이션 계수들을 출력하는 것이다.
+코드.
+// 제어점이 4개인 사각형 패치를 균등하게 3회 테셀레이션하도록 하는 상수 덮개 셰이더의 예 ; 제어점이 4개가 아닐 수도 있나? 그런 듯.
+struct PatchTess
+{
+	float EdgeTess[4]	: SV_TessFactor;		// 변 테셀레이션 계수(edge tessellation factor)
+	float InsideTess[2]	: SV_InsideTessFactor;		// 내부 테셀레이션 계수(interior tessellation factor)
+
+	// ...패치마다 부여할 추가 정보...
+};
+
+PatchTess ConstantHS (InputPatch<VertexOut, 4> patch,		// VertexOut : 패치의 제어점 형식, 4 : 패치 당 제어점 개수
+	uint patchID : SV_PrimitiveID)				// 입력 조립기가 생성한 기본 도형 ID
+{
+	PatchTess pt;
+	
+	// 패치를 균등하게 3회 분할한다.
+	
+	pt.EdgeTess[0] = 3;	// 왼쪽 변
+	pt.EdgeTess[1] = 3;	// 윗변
+	pt.EdgeTess[2] = 3;	// 오른쪽 변
+	pt.EdgeTess[3] = 3;	// 밑변
+
+	pt.InsideTess[0] = 3;	// u축(열들)
+	pt.InsideTess[1] = 3;	// v축(행들)
+
+	return pt;
+}
+// Direct3D 11에서 테셀레이션 계수의 최댓값은 64이다. 모든 테셀레이션 계수가 0이면 그 패치는 더 이상 처리되지 않고 폐기된다.
+// 패치별로 절두체 선별이나 후면 선별 같은 최적화를 구현하는 것이 가능하다.
+
+
+
+
+
+● 제어점 덮개 셰이더
+- 다수의 제어점들을 변경하거나 추가하는 역할을 한다. 예를 들어, 제어점 3개인 삼각형 패치를 제어점 10개인 삼각형 패치로 증강하는 것이다.
+이를 흔히 N패치 방안(N-patches scheme) 또는 PN 삼각형 방안(PN triangles scheme)이라고 부른다.
+코드.
+// 다음은 간단한 그대로 통과(pass-through) 셰이더, 즉 제어점을 수정 없이 그대로 넘겨주는 제어점 덮개 셰이더 코드의 한 예이다.
+// 구동기가 이런 '그대로 통과' 셰이더를 검출해서 최적화할 수도 있다.
+struct HullOut
+{
+	float3 PosL	: POSITION;
+};
+
+①[domain ("quad")]				
+②[partitioning("integer")]			
+③[outputtopology("triangle_cw")]
+④[outputcontrolpoints(4)]				// 입력 패치의 제어점 개수가 출력 제어점 개수와 반드시 일치해야 하는 것은 아니다.
+⑤[patchconstantfunc("ConstantHS")]
+⑥[maxtessfactor(64.0f)]
+HullOut HS (InputPatch<VertexOut, 4> p,			// InputPatch를 통해 패치의 모든 제어점을 입력받는다.
+	uint i : SV_OutputControlPointID,		// 현재 출력할 제어점의 색인이다.
+	uint patchId : SV_PrimitiveID)			// 입력 조립기가 생성한 기본 도형 ID
+{
+	HullOut hout;
+
+	hout.PosL = p[i].PosL;
+
+	return hout;
+}
+
+① domain
+- 패치의 종류로서 tri, quad, 또는 isoline 등을 사용할 수 있다.
+				
+② partitioning
+- 다음과 같은 테셀레이션 세분 모드를 지정한다.
+⒜ integer : 새 정점들이 정수 테셀레이션 계수 값들에서만 추가·제거된다. 테셀레이션 계수의 분수부(소수점 이하 부분)는 무시된다.
+이 때문에 메시의 테셀레이션 수준이 변할 때 '파핑'현상이 눈에 띄게 된다.
+⒝ fractional_even 또는 fractional_odd : 분수 테셀레이션에 해당하는 것으로, 새 정점들이 정수 테셀레이션 계수 값들에서 추가·제거되나,
+테셀레이션 계수의 분수에 따라 점진적으로 '진입(slide in)'한다. 이는 테셀레이션을 통해서 메시를 성긴 버전에서 더 조밀한 버전으로
+매끄럽게 전이하고자 할 때(정수 단계들 사이에서 갑자기 변하는 것이 아니라) 유용하다.		
+	
+③ outputtopology
+- 세분에 의해 만들어진 삼각형들의 정점 감김 순서이다.
+⒜ triangle_cw : 시계 방향
+⒝ triangle_ccw : 반시계 방향
+⒞ line : 선(line) 테셀레이션에 쓰인다.
+
+④ outputcontrolpoints
+- 덮개 셰이더가 출력할 제어점의 개수. 이는 곧 하나의 입력 패치에 대한 제어점 덮개 셰이더의 실행 횟수이다.
+- 시스템 값 의미소 SV_OutputControlPointID는 현재 제어점 덮개 셰이더가 다루고 있는 출력 제어점을 식별하는 색인을 제공한다.
+
+⑤ patchconstantfunc
+- 상수 덮개 셰이더로 쓰일 함수의 이름(문자열)을 이 특성으로 지정한다.
+
+⑥ maxtessfactor
+- 셰이더가 사용할 테셀레이션 계수의 최댓값을 구동기에게 귀띔해주는 역할을 한다. 하드웨어가 이 최댓값을 미리 알고 있으면 테셀레이션에
+얼마나 많은 자원이 필요할지를 추정할 수 있으므로 추가적인 최적화의 여지가 생긴다.
+- Direct3D 11 대응 하드웨어의 테셀레이션 계수 최댓값은 64이다.
+
+
+
+
+
+● 테셀레이터 단계
+- 전적으로 하드웨어가 제어하며, 상수 덮개 셰이더가 출력한 테셀레이션 계수들에 기초해서 패치들을 실제로 세분한다.
+- 새로이 생성된 모든 삼각형 정점을 모두 출력한다.
+
+
+
+
+
+● 영역 셰이더
+- 테셀레이터 단계가 출력한 각 정점마다 호출된다.
+- 본질적으로 테셀레이션된 패치에 대한 정점 셰이더로 작용한다.
+- 특히, 테셀레이션된 패치의 정점들을 동차 절단 공간으로 변환하는 장소의 역할을 한다. // 띠용? 기하 셰이더에서도 할 수 있는 부분 아닌감?
+- '테셀레이션 계수들(그리고 상수 덮개 셰이더에서 출력한 패치별 추가 정보)'과 테셀레이션된 '정점 위치의 매개변수화된 좌표 (u, v)'
+(실제 정점 위치를 입력받는 것은 아니다!), 그리고 제어점 덮개 셰이더가 출력한 모든 '출력 패치 제어점'을 입력받는다.
+- 정점 위치의 매개변수화된 좌표 (u, v)로부터 겹선형 보간 등을 이용해서 실제 정점 위치를 유도한다.
+코드.
+struct DomainOut
+{
+	float4 PosH : SV_POSITION;
+};
+
+// 영역 셰이더는 테셀레이터가 생성한 각 정점마다 호출된다.
+// 테셀레이션 이후에 실행되는 정점 셰이더라고 할 수 있다.
+[domain("quad")]
+DomainOut DS(PatchTess patchTess,			// 테셀레이션 계수들
+	float2 uv : SV_DomainLocation,			// 정점 위치의 매개변수화된 좌표 (u, v)
+	const OutputPatch<HullOut, 4> quad)		// 제어점 덮개 셰이더가 출력한 모든 '출력 패치 제어점'
+{
+	DomainOut dout;
+
+	// 겹선형 보간.
+	float3 v1 = lerp(quad[0].PosL, quad[1].PosL, uv.x);
+	float3 v2 = lerp(quad[2].PosL, quad[3].PosL, uv.x);
+	float3 p = lerp(v1, v2, uv.y);
+
+	dout.PosH = mul(float4(p, 1.0f), gWorldViewProj);		// 동차 절단 공간
+
+	return dout;
+}
+// 삼각형 패치같은 경우 정점의 매개변수 좌표 (u, v) 대신 float3 무게중심 좌표 (u, v, w)가 입력된다.
+// why. 베지에 삼각형 패치는 무게중심 좌표들로 정의되기 때문이다.
+
+
+
+
+
+● 사각형 하나의 테셀레이션
+- 다음은 사각형 패치를 렌더링 파이프라인에 제출하고, 그것을 '카메라와의 거리'에 기초해서 테셀레이션하고,
+생성된 정점들의 위치를 수학 함수를 이용해서 조정한다. 
+코드.
+// 제어점 4개를 담는 정점 버퍼(변하지 않는.)를 생성한다.
+void BasicTessellation::BuildQuadPatchBuffer()
+{
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(XMFLOAT3) * 4;
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+
+	XMFLOAT3 vertices[4] =
+	{
+		XMFLOAT3 (-10.0f, 0.0f, +10.0f),
+		XMFLOAT3 (+10.0f, 0.0f, +10.0f),
+		XMFLOAT3 (-10.0f, 0.0f, -10.0f),
+		XMFLOAT3 (+10.0f, 0.0f, -10.0f)
+	};
+
+	D3D11_SUBRESOURCE_DATA vinitData;
+	vinitData.pSysMem = vertices;
+	HR(md3dDevice->CreateBuffer(&vbd, &binitData, &mQuadPatchVB));
+}
+
+// 사각형 패치를 입력 조립기 단계에 제출하는 코드다.
+md3dImmediateContext->IASetPrimitiveTopology(
+	D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+
+UINT stride = sizeof(Vertex::Pos);
+UINT offset = 0;
+
+md3dImmediateContext->IASetVertexBuffers(
+	0, 1, &mQuadPatchVB, &stride, &offset);
+
+md3dImmediateContext->Draw(4, 0);
+
+// 다음의 상수 덮개 셰이더는 카메라와 시점 간 거리에 따라 테셀레이터 계수들을 결정한다.
+struct VertexIn
+{
+	float3 PosL	: POSITION;
+};
+
+struct VertexOut
+{
+	float3 PosL	: POSITION;
+};
+
+VertexOut VS(VertexIn vin)
+{
+	VertexOut vout;
+	
+	vout.PosL = vin.PosL;
+	
+	return vout;
+}
+
+struct PatchTess
+{
+	float EdgeTess[4]	: SV_TessFactor;
+	float InsideTess[2]	: SV_InsideTessFactor;
+};
+
+PatchTess ConstantHS(InputPatch<VertexOut, 4> patch, uint patchID : SV_PrimitiveID)
+{
+	PatchTess pt;
+
+	// 세계 공간에서의 패치의 중점을 구한다.
+	float3 centerL = 0.25f * (patch[0].PosL + patch[1].PosL +
+		patch[2].PosL + patch[3].PosL);
+	float3 centerW = mul(float4(centerL, 1.0f), gWorld).xyz;
+
+	float d = distance(centerW, gEyePosW);
+
+	// 시점과의 거리에 따라 패치를 테셀레이션한다. 만일 d >= d1이면
+	// 테셀레이션 계수를 0으로 하고 d <= d0이면 64로 한다.
+	// 그 사이의 거리는 [d0, d1] 구간으로 보간한 값을 사용한다.
+
+	const float d0 = 20.0f;
+	const float d1 = 100.0f;
+	float tess = 64.0f*saturate((d1-d)/(d1-d0));	// 매개변수를 [0, 1] 범위로 클램프한다.
+
+	// 모든 테셀레이션 계수를 동일하게 설정해서
+	// 패치를 균등하게 세분한다.
+
+	pt.EdgeTess[0] = tess;
+	pt.EdgeTess[1] = tess;
+	pt.EdgeTess[2] = tess;
+	pt.EdgeTess[3] = tess;
+
+	pt.InsideTess[0] = tess;
+	pt.InsideTess[1] = tess;
+
+	return pt;
+}
+
+// 제어점 덮개 셰이더는 그냥 '그대로 통과' 셰이더이다.
+struct HullOut
+{	
+	float3 PosL	: POSITION;
+};
+
+[domain("quad")]
+[partitioning("integer")]
+[outputtopology("triangle_cw")]
+[outputcontrolpoints(4)]
+[patchconstantfunc("ConstantHS")]
+[maxtessfactor(64.0f)]
+HullOut HS(InputPatch<VertexOut, 4> p,
+	uint i : SV_OutputControlPointID,
+	uint patchId : SV_PrimitiveID)
+{
+	HullOut hout;
+	
+	hout.PosL = p[i].PosL;
+
+	return hout;
+}
+
+// 사각형을 단순히 세분하는 것만으로는 표면에 세부사항이 추가되지 않는다. 그 상태라면
+// 새 삼각형들이 그냥 패치의 평면에 그대로 놓여 있기 때문이다.
+// 세부사항을 반영하기 위해 정점마다 변위 매핑을 적용한다.
+
+// 영역 셰이더는 테셀레이터가 생성한 각 정점마다 호출된다.
+// 테셀레이션 이후의 정점 셰이더라고 할 수 있다.
+struct DomainOut
+{
+	float4 PosH	: SV_POSITION;
+};
+
+[domain("quad")]
+DomainOut DS(PatchTess patchTess,
+	float2 uv : SV_DomainLocation,
+	const OutputPatch<HullOut, 4> quad)
+{
+	DomainOut dout;
+	
+	// 겹선형 보간.
+	float3 v1 = lerp(quad[0].PosL, quad[1].PosL, 1-uv.y);
+	float3 v2 = lerp(quad[3].PosL, quad[2].PosL, 1-uv.y);
+	float3 p = lerp(v1, v2, uv.x);
+
+	// 변위 매핑
+	p.y = 0.3f*(p.z*sin(p.x) + p.x*cos(p.z));
+	
+	dout.PosH = mul(float4(p, 1.0f), gWorldViewProj);
+
+	return dout;
+}
+
+float4 PS(DomainOut pin) : SV_Target
+{
+	return float4(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+technique11 Tess
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetHullShader(CompileShader(hs_5_0, HS()));
+		SetDomainShader(CompileShader(ds_5_0, DS()));
+		SetPixelShader(ComplieShader(ps_5_0, PS()));
+	}
+}

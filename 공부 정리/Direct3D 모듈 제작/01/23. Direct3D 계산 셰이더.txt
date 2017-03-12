@@ -1,0 +1,525 @@
+● 계산 셰이더 개요
+- 렌더링 파이프라인에 직접적으로 속해 있지는 않지만(따로 옆에 존재하지만), GPU 자원에서 직접 자료를 읽거나 자료를 기록할 수 있다.
+- 자료 병렬적 알고리즘(스트리밍 연산 ; 대량의 연속된 메모리를 읽어서 병렬적으로 처리하는 것 ex. 픽셀 셰이딩)을 수행한다.
+- 배분 스레드 ID가 입력으로 들어온다.
+
+
+
+
+
+● 스레드와 스레드 그룹
+- 그림 자료를 참고하자.
+
+
+
+
+
+● 계산 셰이더 기본 틀
+- 계산 셰이더에 관여하는 구성요소들을 들자면 다음과 같다.
+① 상수 버퍼를 통해서 접근하는 전역 변수.
+② 입력 자원과 출력 자원
+③ 스레드들의 개수와 구성(3차원 격자 형태)을 결정하는 [numthreads(X, Y, Z)] 특성
+④ 각 스레드마다 실행될 명령들을 담은 계산 셰이더 함수 본문.				// 자료 병렬적 알고리즘
+⑤ 스레드 식별을 위한 시스템 값 의미소 매개변수
+- 다음은 크기가 같은 두 텍스처의 합을 구하는 간단한 계산 셰이더 예제이다.
+코드.
+cbuffer cbSettings
+{
+	// 계산 셰이더는 상수 버퍼의 값들에 접근할 수 있다.
+};
+
+// 자료 원본 및 출력
+Texture2D gInputA;		// GPU 읽기 전용
+Texture2D gInputB;		// GPU 읽기 전용
+RWTexture2D<float4> gOutput;
+
+// 스레드 그룹 하나의 스레드 개수와 구성. 한 그룹의 스레드들을
+// 1차원이나 2차원, 3차원 격자 형태로 배치할 수 있다.
+[numthreads(16, 16, 1)]	
+void CS(int3 dispatchThreadID : SV_DispatchThreadID)	// 스레드 ID
+{
+	// 두 텍스처의 xy번째 텍셀들을 합해서 gOutput의
+	// xy번째 텍셀에 저장한다.
+	gOutput[dispatchThreadID.xy] =
+		gInputA[dispatchThreadID.xy] +
+		gInputB[dispatchThreadID.xy];
+}
+
+technique11 AddTextures
+{
+	pass P0
+	{
+		SetVertexShader(NULL);
+		SetPixelShader(NULL);
+		SetComputeShader(CompileShader(cs_5_0, CS()));
+	}
+}
+
+
+
+
+
+● 텍스처 입력
+- 응용 프로그램에서 그 텍스처들에 대한 ID3D11ShaderResourceView(셰이더 자원 뷰)들을 생성하고,
+그것들을 ID3DX11EffectShaderResourceVariable 변수들을 통해서 계산 셰이더에 설정한다.
+- 입력 텍스처들의 경우 해당 셰이더 자원 뷰가 '읽기 전용'이다.
+
+
+
+
+
+● 텍스처 출력
+- 출력 자원은 Texture2D의 접두사로 'RW'(읽기·쓰기 가능)가 붙으며, 출력 원소의 형식과 차원을 꺾음괄호쌍 안의 템플릿 인수로
+지정해주어야 한다.
+ex. RWTexture2D<float4> gOutput;
+- 계산 셰이더에서 자료를 기록(write)할 자원을 묶으려면 '순서 없는 접근 뷰(unorderd access view, UAV)'라고 하는 새로운 종류의
+뷰를 사용해야 한다. 응용 프로그램에서는 이 뷰를 ID3D11UnorderdAccessView 인터페이스로 나타낸다.
+- '순서 없는 접근 뷰'의 생성은 다음과 같다.
+코드.
+// 주의 : UAV에 대해서는 압축 텍스처 형식을 사용할 수 없다. 억지로 시도하면 다음과
+// 같은 오류가 발생한다.
+// ERROR: ID3D11Device::CreateTexture2D: The format (0x4d, BC3_UNORM) 
+// cannot be bound as an UnorderedAccessView, or cast to a format that
+// could be bound as an UnorderedAccessView.  Therefore this format 
+// does not support D3D11_BIND_UNORDERED_ACCESS.
+
+D3D11_TEXTURE2D_DESC blurredTexDesc;
+blurredTexDesc.Width     = width;
+blurredTexDesc.Height    = height;
+blurredTexDesc.MipLevels = 1;
+blurredTexDesc.ArraySize = 1;
+blurredTexDesc.Format    = format;
+blurredTexDesc.SampleDesc.Count   = 1;
+blurredTexDesc.SampleDesc.Quality = 0;
+blurredTexDesc.Usage     = D3D11_USAGE_DEFAULT;		// GPU W, R(O) But CPU W, R(X)
+blurredTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;		// 중요!
+blurredTexDesc.CPUAccessFlags = 0;
+blurredTexDesc.MiscFlags      = 0;
+
+ID3D11Texture2D* blurredTex = 0;
+HR(device->CreateTexture2D(&blurredTexDesc, 0, &blurredTex));
+
+// 아래의 과정은 CreateShaderResourceView 함수에서는 하지 않은 것이었다.
+D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;		// 일반 셰이더 자원 뷰 형태 ; 어떤 기하구조에 텍스처를 입힐 때 사용된다.
+srvDesc.Format = format;
+srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+srvDesc.Texture2D.MostDetailedMip = 0;
+srvDesc.Texture2D.MipLevels = 1;
+HR(device->CreateShaderResourceView(blurredTex, &srvDesc, &mBlurredOutputTexSRV));
+
+D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;		// 순서 없는 뷰 형태 ; 텍스처를 일정한 방식으로 변경할 때 쓰인다.
+uavDesc.Format = format;
+uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+uavDesc.Texture2D.MipSlice = 0;
+HR(device->CreateUnorderedAccessView(blurredTex, &uavDesc, &mBlurredOutputTexUAV));
+// 참고로 일반 셰이더 자원 뷰 형태와 순서 없는 뷰 형태 둘 다를 동시에 묶는 것은 불가능하다.
+
+// 뷰가 텍스처에 대한 참조를 따로 저장하므로 여기서는
+// 해당 참조를 해제해도 된다.
+ReleaseCOM(blurredTex);
+
+// 순서 없는 뷰, 즉 ID3D11UnorderedAccessView 객체를 생성한 후에는 ID3DX11EffectUnorderedAccessViewVariable 인터페이스의
+// SetUnorderedAccessView 메서드를 이용해서 그것을 계산 셰이더의 'RW'변수에 묶으면 된다.
+
+// HLSL 변수들.
+Texture2D gInputA;
+Texture2D gInputB;
+RWTexture2D<float4> gOutput;
+
+// C++ 코드.
+ID3DX11EffectShaderResourceVariable* InputA;
+ID3DX11EffectShaderResourceVariable* InputB;
+ID3DX11EffectUnorderedAccessViewVariable* Output;
+
+InputA = mFX->GetVariableByName("gInputA")->AsShaderResource();
+InputB = mFX->GetVariableByName("gInputB")->AsShaderResource();
+Output = mFX->GetVariableByName("gOutput")->AsUnorderedAccessView();
+
+void SetInputA(ID3D11ShaderResourceView* tex)
+{
+	InputA->SetResource(tex);
+}
+
+void SetInputB(ID3D11ShaderResourceView* tex)
+{
+	InputB->SetResource(tex);
+}
+
+void SetOutput(ID3D11ShaderResourceView* tex)
+{
+	Output->SetUnorderedAccessView(tex);
+}
+
+
+
+
+
+● 텍스처 색인화
+- 계산 셰이더는 '배분 스레드 ID(dispatch thread ID)'에 기초해서 '텍스처 색인'을 결정한다. 이를 통해 2차원 텍스처의 '한 텍셀'에 접근할 수 있다.
+- '각 스레드'에는 고유한 배분 ID가 부여된다.
+[numthreads(16, 16, 1)]
+void CS(int3 dispatchThreadID : SV_DispatchThreadID)
+{
+	// 두 텍스처의 xy번째 텍셀들을 합해서 gOutput의
+	// xy번째 텍셀에 저장한다.
+	gOutput[dispatchThreadID.xy] =
+		gInputA[dispatchThreadID.xy] +
+		gInputB[dispatchThreadID.xy];	
+}
+
+
+
+
+
+● 텍스처 표본 추출
+- 계산 셰이더의 출력 텍스처의 표본을 추출하기 위해선 Sample 메서드가 아닌 SampleLevel 메서드를 사용해야 한다. // 둘 다 Texture2D 메서드
+- SampleLevel 메서드는 밉맵 수준을 자동으로 선택하는 논리가 없기 때문에 세 번째 매개변수를 통하여 밉맵 수준(부동소수점)을
+명시적으로 지정해주어야 한다.
+- SampleLevel 메서드는 텍스처 추출 시 정수 색인이 아닌 [0 1]^2 구간의 정규화된 텍스처 좌표를 사용해야 한다.
+u = x / width, v = y / height (x, y는 정수 색인)
+- 다음은 정수 색인들을 사용하는 계산 셰이더 하나와, 그와 동일한 작업을 수행하되 정규화된 텍스처 좌표와 SampleLevel을 사용하는
+또 다른 계산 셰이더의 예이다. 둘다 텍스처가 512x512라고 가정하며, 텍스처의 최상위 밉맵 수준(0)만 사용한다.
+코드.
+//
+// 버전1 : 정수 색인을 사용.
+//
+
+cbuffer cbUpdateSettings
+{
+	float gWaveConstants[3];
+};
+
+Texture2D gPrevSolInput;
+Texture2D gCurrSolInput;
+RWTexture2D<float> gNextSolOutput;
+
+[numthreads(16, 16, 1)]
+void CS(int3 dispatchThreadID : SV_DispatchThreadID)
+{
+	int x = dispatchThreadID.x;
+	int y = dispathcThreadID.y;
+
+	gNextSolOutput[int2(x, y)] =
+		gWaveConstants[0] * gPrevSolInput[int2(x, y)].r +
+		gWaveConstants[1] * gCurrSolInput[int2(x, y)].r +
+		gWaveConstants[2] * (
+			gCurrSolInput[int2(x, y+1)].r +
+			gCurrSolInput[int2(x, y-1)].r +
+			gCurrSolInput[int2(x+1, y)].r +
+			gCurrSolInput[int2(x-1, y)].r;
+		
+}
+
+//
+// 버전2 : SampleLevel과 텍스처 좌표를 사용.
+//
+
+cbuffer cbUpdateSettings
+{
+	float gWaveConstants[3];
+};
+
+SamplerState samPoint
+{
+	Filter = MIN_MAG_MIP_POINT;
+	
+	AddressU = CLAMP;
+	AddressV = CLAMP;
+};
+
+Texture2D gPrevSolInput;
+Texture2D gCurrSolInput;
+RWTexture2D<float> gNextSolOutput;
+
+[numthreads(16, 16, 1)]
+void CS(int3 dispatchThreadID : SV_DispatchThreadID)
+{
+	// [] 연산자 대신 SampleLevel을 이용해서 같은 작업을 수행한다.
+	int x = dispatchThreadID.x;
+	int y = dispathcThreadID.y;
+
+	float2 c = float2(x, y)/512.0f;
+	float2 t = float2(x, y-1)/512.0f;
+	float2 b = float2(x, y+1)/512.0f;
+	float2 l = float2(x-1, y)/512.0f;
+	float2 r = float2(x+1, y)/512.0f;
+
+	gNextSolOutput[int2(x, y)] =
+		gWaveConstants[0] * gPrevSolInput.SampleLevel(samPoint, c, 0.0f).r +
+		gWaveConstants[1] * gCurrSolInput.SampleLevel(samPoint, c, 0.0f).r +
+		gWaveConstants[2] * (
+			gCurrSolInput.SampleLevel(samPoint, b, 0.0f).r +
+			gCurrSolInput.SampleLevel(samPoint, t, 0.0f).r +
+			gCurrSolInput.SampleLevel(samPoint, r, 0.0f).r +
+			gCurrSolInput.SampleLevel(samPoint, l, 0.0f).r;
+		
+}
+
+
+
+
+
+● 구조적 버퍼 자원			// 사용자가 지정한 형식을 원소로 하는 버퍼
+- 구조적 버퍼는 같은 형식의 원소들을 담는 버퍼로, 사용자 정의 구조체를 원소의 형식으로 사용할 수 있다.
+// HLSL 내 구조적 버퍼 정의
+struct Data
+{
+	float3 v1;
+	float2 v2;
+};
+
+StructuredBuffer<Data> gInputA;
+StructuredBuffer<Data> gInputB;
+
+RWStructuredBuffer<Data> gOutput;
+- 보통의 버퍼와 생성 방법이 비슷하나, 다음 두 가지를 지정해야 한다.
+① 구조적 버퍼임을 알려 주는 플래그를 지정해야 한다.
+② 저장할 원소의 바이트 단위 크기를 알려주어야 한다.
+// 응용 프로그램 내 구조적 버퍼 생성
+struct Data
+{
+	XMFLOAT3 v1;
+	XMFLOAT2 v2;
+};
+
+// 셰이더에 '입력 자원(D3D11_BIND_SHADER_RESOURCE)'으로
+// 묶을 버퍼를 생성한다.
+
+D3D11_BUFFER_DESC inputDesc;
+inputDesc.Usage = D3D11_USAGE_DEFAULT;
+inputDesc.ByteWidth = sizeof(Data) * mNumElements;
+inputDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+inputDesc.CPUAccessFlags = 0;					
+inputDesc.StructureByteStride = sizeof(Data);			// ② 
+inputDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;	// ① 
+
+D3D11_SUBRESOURCE_DATA vinitDataA;
+vinitDataA.pSysMem = &dataA[0];
+
+ID3D11Buffer* bufferA = 0;
+HR(md3dDevice->CreateBuffer(&inputDesc, &vinitDataA, &bufferA));
+
+// 계산 셰이더가 자료를 기록할 수 있도록(D3D11_BIND_UNORDERED_ACCESS)
+// 읽기-쓰기 버퍼를 생성한다.
+
+D3D11_BUFFER_DESC outputDesc;
+outputDesc.Usage = D3D11_USAGE_DEFAULT;
+outputDesc.ByteWidth = sizeof(Data) * mNumElements;
+outputDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+outputDesc.CPUAccessFlags = 0;
+outputDesc.StructureByteStride = sizeof(Data);
+outputDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+
+ID3D11Buffer* mOutputBuffer;
+HR(md3dDevice->CreateBuffer(&outputDesc, 0, &mOutputBuffer));
+
+// 구조적 버퍼를 계산 셰이더의 입력 자원으로서 묶기 위해서는 구조적 버퍼에 대한 
+// 셰이더 자원 뷰를 생성하고 효과 파일에 갱신해야 한다.
+
+D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+srvDesc.Format = DXGI_FORMAT_UNKNOWN;				// 사용자 정의 형식을 사용한다.
+srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+srvDesc.BufferEx.FirstElement = 0;
+srvDesc.BufferEx.Flags = 0;
+srvDesc.BufferEx.NumElements = mNumElements;
+
+md3dDevice->CreateShaderResourceView(bufferA, &srvDesc, &mInputASRV);
+md3dDevice->CreateShaderResourceView(bufferB, &srvDesc, &mInputBSRV);
+
+// 구조적 버퍼를 계산 셰이더의 읽기 쓰기 자원으로서 묶기 위해서는 구조적 버퍼에 대한 
+// 순서없는 뷰를 생성하고 효과 파일에 갱신해야 한다.
+
+D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
+uavDesc.Format = DXGI_FORMAT_UNKNOWN;				// 사용자 정의 형식을 사용한다.
+uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+uavDesc.Buffer.FirstElement = 0;
+uavDesc.Buffer.Flags = 0;
+uavDesc.Buffer.NumElements = mNumElements;
+
+md3dDevice->CreateUnorderedAccessView(mOutputBuffer, &uavDesc, &mOutputUAV);
+
+// HLSL 변수들
+struct Data
+{
+	float3 v1;
+	float3 v2;
+};
+
+StructuredBuffer<Data> gInputA;
+StructuredBuffer<Data> gInputB;
+RWStructuredBuffer<Data> gOutput;
+
+// C++ 코드
+ID3DX11EffectShaderResourceVariable* InputA;
+ID3DX11EffectShaderResourceVariable* InputB;
+ID3DX11EffectUnorderedAccessViewVariable* Output;
+
+InputA = mFX->GetVariableByName("gInputA")->AsShaderResource();
+InputB = mFX->GetVariableByName("gInputB")->AsShaderResource();
+Output = mFX->GetVariableByName("gOutput")->AsUnorderedAccessView();
+
+void SetInputA(ID3D11ShaderResourceView* srv)
+{
+	InputA->SetResource(srv);
+}
+
+void SetInputA(ID3D11ShaderResourceView* srv)
+{
+	InputB->SetResource(srv);
+}
+
+void SetOutput(ID3D11UnorderedAccessView* uav)
+{
+	Output->SetUnorderedAccessView(uav);
+}
+
+
+
+
+
+● 형식 있는 버퍼			// Direct3D가 지원하는 형식을 원소로 하는 버퍼
+ex.
+Buffer<float4> typedBuffer1;
+Buffer<float> typedBuffer2;
+Buffer<int2> typedBuffer3;
+- 구조적 버퍼 자원에서 형식이 있는 것으로 위 코드에서의 차이점을 다음과 같은 것이 있다.
+① 응용 프로그램에서 버퍼 생성 시 D3D11_RESOURCE_MISC_BUFFER_STRUCTURED 플래그를 지정하지 않는다.
+② 뷰 생성 시 Format 속성에 적절한 DXGI_FORMAT 멤버를 지정해야 한다.
+
+
+
+
+
+● 생(raw) 버퍼
+- 본질적으로 자료 바이트 배열로 이를 사용하기 위해 다음을 설정해야 한다.
+① 바이트 오프셋으로 원하는 자료의 시작 위치를 지정한다.
+② 명시적 형식 변환을 통해서 원하는 형식의 값을 얻는다.
+
+
+
+
+
+● 계산 셰이더의 결과를 시스템 메모리에 복사
+- GPGPU로서 GPU를 사용하는 경우에는 비디오 메모리에 담긴 계산 결과를 시스템 메모리에 복사할 필요가 있다.
+즉, GPU가 계산한 결과를 알기 위해서는 시스템 메모리로의 복사 과정이 필요하다.
+// 그래픽같은 경우, 그 결과가 화면에 시각적으로 표시되기 때문에 이런 과정은 딱히 필요가 없다.
+- 아무튼, GPU 메모리에 담긴 자료(순서 없는 뷰를 통해서 구조적 버퍼에 자료를 기록하면 그 결과는 GPU 메모리에 남게 된다.)를
+시스템 메모리로 복사하기 위한 과정은 다음과 같다.
+① 시스템 메모리가 접근할 수 있는 버퍼 생성 시 예비용도를 뜻하는 D3D11_USAGE_STAGING 플래그와 
+CPU 접근 가능을 뜻하는 D3D11_CPU_ACCESS_READ 플래그를 지정한다.
+② ID3D11DeviceContext::CopyResource 메서드로 GPU 자원을 시스템 메모리 자원으로 복사한다.
+// 이때, 시스템 메모리 자원의 형식과 크기는 복사하고자 하는 자원의 것들과 동일해야 한다.
+③ 복사 이후 매핑 API로 시스템 메모리 버퍼를 매핑하면 CPU에서 자료를 읽을 수 있게 된다.
+
+코드.
+struct Data
+{
+	float3 v1;
+	float2 v2;
+};
+
+StructuredBuffer<Data> gInputA;
+StructuredBuffer<Data> gInputB;
+RWStructuredBuffer<Data> gOutput;
+
+// 단순히 구조적 버퍼에 담긴 벡터들을 합하여 gOutput에 차례로 담는다.
+[numthreads(32, 1, 1)]
+void CS(int3 dtid : SV_DispatchThreadID)
+{
+	gOutput[dtid.x].v1 = gInputA[dtid.x].v1 + gInputB[dtid.x].v1;
+	gOutput[dtid.x].v2 = gInputA[dtid.x].v2 + gInputB[dtid.x].v2;
+}
+
+// 버퍼의 시스템 메모리 버전을 생성해서 GPU의 결과를 읽어들인다.
+D3D11_BUFFER_DESC outputDesc;
+outputDesc.Usage = D3D11_USAGE_STAGING;
+outputDesc.BindFlags = 0;
+outputDesc.ByteWidth = sizeof(Data) * mNumElements;
+outputDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+outputDesc.StructureByteStride = sizeof(Data);
+outputDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+
+ID3D11Buffer* mOutputDebugBuffer;
+HR(md3dDevice->CreateBuffer(&outputDesc, 0, &mOutputDebugBuffer));
+// ...
+//
+// 계산 셰이더의 실행이 모두 완료되었음!
+
+struct Data
+{
+	XMFLOAT3 v1;
+	XMFLOAT2 v2;
+};
+
+// 출력 버퍼를 시스템 메모리에 복사한다.
+md3dImmediateContext->CopyResource(mOutputDebugBuffer, mOutputBuffer);
+
+// 자료를 매핑해서 읽어 들인다.
+D3D11_MAPPED_SUBRESOURCE mappedData; 
+md3dImmediateContext->Map(mOutputDebugBuffer, 0, D3D11_MAP_READ, 0, &mappedData);
+
+Data* dataView = reinterpret_cast<Data*>(mappedData.pData);
+
+for(int i = 0; i < mNumElements; ++i)
+{
+	fout << "(" << dataView[i].v1.x << ", " << dataView[i].v1.y << ", " << dataView[i].v1.z <<
+		", " << dataView[i].v2.x << ", " << dataView[i].v2.y << ")" << std::endl;
+}
+
+md3dImmediateContext->Unmap(mOutputDebugBuffer, 0);
+
+fout.close();
+
+// 다음은 두 입력 버퍼에 초기 자료를 채우는 부분이다.
+std::vector<Data> dataA(mNumElements);
+std::vector<Data> dataB(mNumElements);
+for(int i = 0; i < mNumElements; ++i)
+{
+	dataA[i].v1 = XMFLOAT3(i, i, i);
+	dataA[i].v2 = XMFLOAT2(i, 0);
+
+	dataB[i].v1 = XMFLOAT3(-i, i, 0.0f);
+	dataB[i].v2 = XMFLOAT2(0, -i);
+}
+
+
+
+
+
+● 공유 메모리
+- 각 스레드 그룹은 공유 메모리(또는 스레드 지역 저장소라 불리는)라고 부르는 공간이 주어진다. 일종의 하드웨어 캐시이다.
+- 그룹 공유 메모리 크기의 상한인 32KB(다중 처리기마다 다름.)를 넘지 않는 한(32kb/2 이하. for. 지연 스레드)에서 개발자가 임의로 크기를 정할 수 있다.
+ex. groupshared float4 gCache[256];
+- SV_GroupThreadID를 배열 색인으로 사용한다면 그룹의 각 스레드에 배열 원소 하나씩을 대응시킬 수 있다.
+
+
+
+
+
+● 공유 메모리의 용도와 동기화
+- 공유 메모리의 흔한 용도 하나는 '텍스처 값을 저장'하는 것이다.
+- 스레드 그룹이 필요한 텍스처 표본들을 공유 메모리의 배열에 미리 담아둔다면 텍스처 조회의 중복을 피할 수 있다.
+Texture2D gInput;
+RWTexture2D<float4> gOutput;
+
+groupshared float4 gCache[256];
+
+[numthreads(256, 1, 1)]
+void CS(int3 groupThreadID : SV_GroupThreadID,
+	int3 dispatchThreadID : SV_DispatchThreadID)
+{
+	// 각 스레드는 텍스처에서 표본을 추출해서
+	// 공유 메모리에 저장한다.
+	gCache[groupThreadID.x] = gInput[dispatchThreadID.xy];
+
+	// 모든 스레드가 여기까지의 작업을 완수할 때까지 기다린다.
+	GroupMemoryBarrierWithGroupSync ();
+
+	// 이제 안심하고 공유 메모리에서 임의의 원소를 읽어서
+	// 계산 작업을 수행할 수 있다.
+	
+	float4 left = gCache[groupThreadID.x - 1];
+	float4 right = gCache[groupThreadID.x + 1];
+	
+	...
+}

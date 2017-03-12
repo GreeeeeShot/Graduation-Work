@@ -1,0 +1,174 @@
+● 깊이·스텐실 버퍼의 자료 형식과 버퍼 지우기
+- 스텐실 버퍼의 자료 형식으로는 다음과 같은 것이 존재한다.
+① DXGI_FORMAT_D32_FLOAT_S8X24_UINT
+② DXGI_FORMAT_D24_UNORM_S8_UINT
+- 스텐실 버퍼를 클리어하는 방식은 다음과 같다.
+코드.
+void MirrorApp::DrawScene()
+{
+	md3dImmediateContext->ClearRenderTargetView(mRenderTargetView, reinterpret_cast<const float*>(&Colors::Black));
+	md3dImmediateContext->ClearDepthStencilView(
+		mDepthStencilView, 				// 지우고자 하는 깊이·스텐실 뷰를 가리키는 포인터
+		D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 		// 지우고자 하는 버퍼에 대한 열거형 값
+		1.0f,						// 깊이 버퍼의 모든 픽셀에 설정할 값. [0, 1] 
+		0);						// 스텐실 버퍼의 모든 픽셀에 설정할 값. [0, 255]
+}
+
+
+
+
+
+● 스텐실 판정
+- 스텐실 버퍼에 근거하여 주어진 한 픽셀을 후면 버퍼에 기록할 것인지 아닌지를 판정하는 것.
+- 의사코드로 표현하면 다음과 같다.
+if(StencilRef & StencilReadMask '비교 연산자' Value & StencilReadMask)
+	픽셀을 허용
+else
+	픽셀을 기각
+// StencilRef : 응용 프로그램이 정의한 스텐실 기준 값
+// Value : 스텐실 버퍼에 이미 있던 해당 픽셀의 값
+// StencilReadMask : 응용 프로그램이 정의한 마스킹 값
+- 비교 연산자로 사용하는 '비교 함수'는 다음처럼 열거형 형태로 존재한다.
+typedef enum D3D11_COMPARISON_FUNC
+{
+	D3D11_COMPARISON_NEVER = 1,			// 이 함수는 항상 거짓을 돌려준다.
+	D3D11_COMPARISON_LESS = 2,			// <
+	D3D11_COMPARISON_EQUAL = 3,			// ==
+	D3D11_COMPARISON_LESS_EQUEL = 4,		// <=
+	D3D11_COMPARISON_GREATER = 5,			// >
+	D3D11_COMPARISON_NOT_EQUEL = 6,			// !=
+	D3D11_COMPARISON_GREATER_EQUEL = 7,		// >=
+	D3D11_COMPARISON_ALWAYS = 8,			// 이 함수는 항상 참을 돌려준다.
+} D3D11_COMPARISON_FUNC;
+
+
+
+
+
+● 깊이·스텐실 상태 집합을 서술하는 D3D11_DEPTH_STENCIL_DESC
+typedef struct D3D11_DEPTH_STENCIL_DESC {
+	// 깊이 설정들
+①	BOOL                       DepthEnable;			// 기본값 : true
+②	D3D11_DEPTH_WRITE_MASK     DepthWriteMask;		// 기본값 : D3D11_DEPTH_WRITE_MAKE_ALL
+③	D3D11_COMPARISON_FUNC      DepthFunc;			// 기본값 : D3D11_COMPARISON_LESS
+
+	// 스텐실 설정들
+④	BOOL                       StencilEnable;		// 기본값 : false
+⑤	UINT8                      StencilReadMask;		// 기본값 : 0xff <=> #define D3D11_DEFAULT_STENCIL_READ_MASK
+⑥	UINT8                      StencilWriteMask;		// 기본값 : 0xff <=> #define D3D11_DEFAULT_STENCIL_WRITE_MASK
+⑦	D3D11_DEPTH_STENCILOP_DESC FrontFace;
+⑧	D3D11_DEPTH_STENCILOP_DESC BackFace;
+} D3D11_DEPTH_STENCIL_DESC;
+
+① BOOL DepthEnable
+- 깊이 버퍼링 활성화 여부
+- false 지정 시, 그리기 순서가 중요해지며, 깊이 버퍼의 픽셀들이 더 이상 갱신되지 않는다.
+
+② D3D11_DEPTH_WRITE_MASK DepthWriteMask
+- D3D11_DEPTH_WRITE_MASK_ZERO 또는 D3D11_DEPTH_WRITE_MASK_ALL을 지정한다. 두 개 모두 지정할 수 없다.
+- DepthEnable을 true인 경우, D3D11_DEPTH_WRITE_MASK_ZERO로 지정하면 깊이 버퍼 쓰기(갱신)가 방지되나 깊이 판정은 여전히 수행된다.
+- D3D11_DEPTH_WRITE_MASK_ALL을 지정하면 깊이 버퍼 쓰기가 활성화되어서, 깊이 판정과 스텐실 판정을 모두 통과한 픽셀의 깊이가 깊이 버퍼에
+새로이 기록된다.
+
+③ D3D11_COMPARISON_FUNC DepthFunc
+- 깊이 판정에 쓰이는 비교 함수 => 통상적인 깊이 버퍼링 알고리즘이 수행된다.
+
+④ BOOL StencilEnable
+- 스텐실 판정 활성화 여부
+
+⑤ UINT8 StencilReadMask
+- 위에서 의사코드 형태로 제시했던 스텐실 판정 조건문의 StencilReadMask 값에 해당하는 멤버이다.
+
+⑥ UINT8 StencilWriteMask
+- 스텐실 버퍼 갱신 시 특정 비트 값들이 갱신되지 않도록 하는 비트 마스크이다.
+
+⑦ D3D11_DEPTH_STENCILOP_DESC FrontFace
+- 전면 삼각형에 대한 스텐실 버퍼 적용 방식을 서술하는 D3D11_DEPTH_STENCILOP_DESC 구조체를 지정한다.
+
+⑧ D3D11_DEPTH_STENCILOP_DESC BackFace
+- 후면 삼각형에 대한 스텐실 버퍼 적용 방식을 서술하는 D3D11_DEPTH_STENCILOP_DESC 구조체를 지정한다.
+
+ref. D3D11_DEPTH_STENCILOP_DESC
+typedef struct D3D11_DEPTH_STENCILOP_DESC 
+{
+①	D3D11_STENCIL_OP StencilFailOp;			// 기본값 : D3D11_STENCIL_OP_KEEP
+②	D3D11_STENCIL_OP StencilDepthFailOp;		// 기본값 : D3D11_STENCIL_OP_KEEP
+③	D3D11_STENCIL_OP StencilPassOp;			// 기본값 : D3D11_STENCIL_OP_KEEP
+④	D3D11_COMPARISON_FUNC StencilFunc;		// 기본값 : D3D11_COMPARISON_ALWAYS
+} D3D11_DEPTH_STENCILOP_DESC;
+
+① D3D11_STENCIL_OP StencilFailOp
+- 픽셀 단편이 스텐실 판정에 실패했을 때의 스텐실 버퍼의 갱신 방식을 결정하는 멤버
+	
+② D3D11_STENCIL_OP StencilDepthFailOp;		
+- 픽셀 단편이 스텐실 판정은 통과되었으나 깊이 판정에 실패했을 때의 스텐실 버퍼의 갱신 방법을 결정하는 멤버
+
+③ D3D11_STENCIL_OP StencilPassOp;			
+- 픽셀 단편이 스텐실 판정과 깊이 판정을 모두 통과했을 때의 스텐실 버퍼의 갱신 방법을 결정하는 멤버
+
+④ D3D11_COMPARISON_FUNC StencilFunc;		
+- 스텐실 판정 비교 함수를 결정하는 멤버로, D3D11_COMPARISON_FUNC(위 참고) 열거형의 한 멤버를 지정해야 한다.
+
+ref. D3D11_STENCIL_OP
+typedef enum D3D11_STENCIL_OP 
+{
+	D3D11_STENCIL_OP_KEEP = 1,			// 스텐실 버퍼를 변경하지 않도록 한다.
+	D3D11_STENCIL_OP_ZERO = 2,			// 스텐실 버퍼 항목을 0으로 설정한다.
+	D3D11_STENCIL_OP_REPLACE = 3,			// 스텐실 버퍼 항목을 스텐실 판정에 쓰인 스텐실 기준 값(StencilRef)으로 덮어쓴다. StencilRef값은 깊이·스텐실 상태 집합을 렌더링 파이프라인에 묶을 때 응용 프로그램이 설정한다.
+	D3D11_STENCIL_OP_INCR_SAT = 4,			// 스텐실 버퍼 항목을 증가한다. 최댓값을 넘을 순 없다.
+	D3D11_STENCIL_OP_DECR_SAT = 5			// 스텐실 버퍼 항목을 감소한다. 최솟값을 넘을 수 없다.
+	D3D11_STENCIL_OP_INVERT = 6,			// 스텐실 버퍼 항목의 비트들을 뒤집는다.
+	D3D11_STENCIL_OP_INCR = 7,			// 스텐실 버퍼 항목을 증가한다. 최댓값을 넘으면 다시 0으로 순환된다.
+	D3D11_STENCIL_OP_DECR = 8			// 스텐실 버퍼 항목을 감소한다. 최솟값을 넘으면 다시 최댓값으로 순환된다.
+}  D3D11_STENCIL_OP ;
+
+
+
+
+
+● 깊이·스텐실 상태의 생성 및 결속
+- 생성
+HRESULT ID3D11Device::CreateDepthStencilState(
+	const D3D11_DEPTH_STENCIL_DESC *pDepthStencilDesc,		
+	ID3D11DepthStencilState **ppDepthStencilState);
+- 결속
+void ID3D11DeviceContext::OMSetDepthStencilState(
+	ID3D11DepthStencilState *pDepthStencilState,
+	UINT StencilRef);					// 스텐실 판정에 쓰이는 32비트 스텐실 기준 값(StencilRef)
+// 기본 상태로 복원하려면 첫 인수를 널 값으로 설정한 후 호출한다.
+
+
+
+
+
+● 효과 파일의 깊이·스텐실 상태
+코드.
+DepthStencilState DSS
+{
+	DepthEnable = true;
+	DepthWriteMask = Zero;
+	
+	StencilEnable = true;
+	StencilReadMask = 0xff;
+	StencilWriteMask = 0xff;
+
+	FrontFaceStencilFunc = Always;
+	FrontFaceStencilPass = Incr;
+	FrontFaceStencilFail = Keep;
+
+	BackFaceStencilFunc = Always;
+	BackFaceStencilPass = Incr;
+	BackFaceStencilFail = Keep;
+};
+...
+technique11 Tech
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PS()));
+
+		SetDepthStencilState(DSS, 0);
+	}
+}

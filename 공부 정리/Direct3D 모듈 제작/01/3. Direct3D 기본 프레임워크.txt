@@ -1,0 +1,156 @@
+● D3DApp 클래스
+- D3DApp 클래스는 기본 Direct3D 응용 프로그램 클래스로 다음과 같은 작업을 처리한다.
+① 응용 프로그램 주 창(main window)의 생성
+② 응용 프로그램 메시지 루프 실행
+③ Windows 메시지 처리
+④ Direct3D 초기화
+⑤ 프레임워크 함수들 정의
+- 클라이언트는 D3DApp을 상속해서 가상 함수로 서언된 프레임워크 함수들을 재정의하고,
+상속한 D3DApp의 인스턴스를 하나만 생성해서 사용하면 된다.
+
+코드.
+//***************************************************************************************
+// d3dApp.h by Frank Luna (C) 2011 All Rights Reserved.
+//
+// Simple Direct3D demo application class.  
+// Make sure you link: d3d11.lib d3dx11d.lib D3DCompiler.lib D3DX11EffectsD.lib 
+//                     dxerr.lib dxgi.lib dxguid.lib.
+// Link d3dx11.lib and D3DX11Effects.lib for release mode builds instead
+//   of d3dx11d.lib and D3DX11EffectsD.lib.
+//***************************************************************************************
+
+#ifndef D3DAPP_H
+#define D3DAPP_H
+
+#include "d3dUtil.h"
+#include "GameTimer.h"
+#include <string>
+
+class D3DApp
+{
+public:
+	//			<<<프레임워크 메서드가 아닌 메서드들>>>
+
+	D3DApp(HINSTANCE hInstance);				// 자료 멤버들을 기본값으로 초기화한다.
+	virtual ~D3DApp();					// D3DApp이 획득한 COM 인터페이스들을 해제한다.
+	
+	HINSTANCE AppInst()const;				// 응용 프로그램 인스턴스 핸들의 복사본을 돌려준다.
+	HWND      MainWnd()const;				// 주 창의 핸들의 복사본을 돌려준다.
+	float     AspectRatio()const;				// 높이에 대한 너비의 비율을 돌려준다.
+	
+	int Run();						// 응용 프로그램의 메시지 루프를 감싼 메서드이다.
+ 
+	// 				<<<프레임워크 메서드들>>> 
+	// 파생 클라이언트 클래스는 이 메서드들을 자신의 요구에 맞게 재정의한다.
+
+	virtual bool Init();					// 자원 할당, 장면 물체 초기화, 광원 설정 등 응용 프로그램 고유의 초기화.
+	//└> 기본 구현은 InitMainWindow와 InitDirect3D를 호출하는 것이다.
+
+	virtual void OnResize(); 				// WM_SIZE 메시지 발생 시 D3DApp::MsgProc이 호출. 
+	//└> OnResize() 메서드는 다음과 같은 일을 처리한다.
+	// ① 후면 버퍼 크기 조정 by. IDXGISwapChain::ResizeBuffers
+	// ② 깊이·스텐실 버퍼 파괴 후 재생성
+	// ③ 렌더 대상 뷰와 깊이·스텐실 뷰 재생성
+	// ④ 이 외에도 클라이언트 영역의 크기에 의존하는 속성들(ex. 투영행렬) 재설정
+
+	virtual void UpdateScene(float dt)=0;			// 매 프레임마다 호출되며, 시간의 흐름에 따라 응용 프로그램을 갱신한다.
+	//└> 이를 테면, 애니메이션 수행, 카메라 이동, 충돌 검출, 사용자 입력 처리 등
+	
+	virtual void DrawScene()=0; 				// 매 프레임마다 호출되며, 현재 프레임을 후면 버퍼에 실제로 그리기 위한 렌더링 명령들을 제출하는 코드가 작성된다.
+	//└> 프레임을 다 그린 후에는 IDXGISwapChain::Present 메서드를 호출해서 후면 버퍼를 화면에 제시
+	
+	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);	// 윈도우 응용 프로그램 주 창의 메시지 처리 기능을 구현한다.
+	//└> D3DApp::MsgProc가 아예 처리하지 않거나 응용 프로그램에 적합한 방식으로 처리하지 않는 어떤 메시지를
+	// 응용 프로그램이 처리하고 싶은 경우에만 이 메서드를 재정의하면 된다.
+	//└> 해당 메서드를 재정의하는 경우, 재정의된 메서드(by. 프로그래머)에서 처리하지 않는 모든 메시지를 반드시
+	// D3DApp::MsgProc에 전달할 필요가 있다. (?)
+
+	// 마우스 입력의 처리를 위한 편의용 가상 메서드들
+	virtual void OnMouseDown(WPARAM btnState, int x, int y){ }
+	virtual void OnMouseUp(WPARAM btnState, int x, int y)  { }
+	virtual void OnMouseMove(WPARAM btnState, int x, int y){ }
+
+protected:
+	//			<<<프레임워크 메서드가 아닌 메서드들>>>
+	bool InitMainWindow();					// 응용 프로그램의 주 창을 초기화한다.
+	bool InitDirect3D();					// Direct3D를 초기화한다.
+
+	void CalculateFrameStats();				// 평균 초당 프레임 수(FPS)와 평균 프레임당 밀리초를 계산한다.
+
+protected:
+
+	HINSTANCE mhAppInst;					// 응용 프로그램의 인스턴스 핸들
+	HWND      mhMainWnd;					// 주 창 핸들
+	bool      mAppPaused;					// 응용 프로그램이 일시정지된 상태인가?
+	bool      mMinimized;					// 응용 프로그램이 최소화된 상태인가?
+	bool      mMaximized;					// 응용 프로그램이 최대화된 상태인가?
+	bool      mResizing;					// 사용자가 크기 조정용 테두리를 끌고 있는(Drag) 상태인가?
+	UINT      m4xMsaaQuality;				// 4X MSAA의 품질 수준
+
+	// 경과 시간과 게임 전체 시간을 측정하는데 쓰인다.
+	GameTimer mTimer;
+
+	ID3D11Device* md3dDevice;				// 장치
+	ID3D11DeviceContext* md3dImmediateContext;		// 즉시 장치 문맥
+	IDXGISwapChain* mSwapChain;				// 스왑 체인
+	ID3D11Texture2D* mDepthStencilBuffer;			// 깊이·스텐실 버퍼
+	ID3D11RenderTargetView* mRenderTargetView;		// 렌더 타겟 뷰
+	ID3D11DepthStencilView* mDepthStencilView;		// 뷰 포트
+	D3D11_VIEWPORT mScreenViewport;
+
+	// 다음 변수들은 D3DApp의 생성자에서 기본값들로 초기화된다. 그러나 
+	// 필요하다면 파생 클래스의 생성자에서 다른 값들로 초기화해도 된다.
+	std::wstring mMainWndCaption;				// 창의 제목		; D3DApp -> D3D11 Application
+	D3D_DRIVER_TYPE md3dDriverType;				// 구동기 종류		; D3DApp -> D3D_DRIVER_TYPE_HARDWARE
+
+	// 창의 크기가 바뀌면 현재 클라이언트 영역의 크기에 맞게
+	// 동적으로 갱신해야 된다.
+	int mClientWidth;					// 창의 너비		; D3DApp -> 800
+	int mClientHeight;					// 창의 높이		; D3DApp -> 600
+	bool mEnable4xMsaa;					// 4X MSAA 사용 여부	; D3DApp -> false
+};
+
+#endif // D3DAPP_H
+
+
+
+
+
+● 프레임 통계치
+- FPS의 계산 및 한 프레임을 처리하는 데 걸리는 평균 시간(밀리초 단위)은 D3DApp::CalculateFrameStats에서 이루어진다.
+
+코드.
+void D3DApp::CalculateFrameStats()
+{
+	// 이 메서드는 평균 FPS를 계산하며, 하나의 프레임을 렌더링하는 데
+	// 걸리는 평균 시간도 계산한다. 또한 이 통계치들을 창의 제목줄에 
+	// 추가한다.
+
+	static int frameCnt = 0;		// 초기값
+	static float timeElapsed = 0.0f;	// 초기값
+
+	frameCnt++;				// 1초가 경과하기 이전의 연산된 프레임 수이다.
+
+	// 1초 동안 평균 프레임 수를 계산한다.
+	if( (mTimer.TotalTime() - timeElapsed) >= 1.0f )			// 1초가 경과하였다면
+	{
+		float fps = (float)frameCnt; // fps = frameCnt / 1		// 1초 간 연산된 프레임 수. // 약간의 시간 오차는 반내림하는 격
+		float mspf = 1000.0f / fps;					// 한 프레임을 처리하는 데 걸리는 평균 시간(밀리초 단위)
+
+		std::wostringstream outs;   
+		outs.precision(6);
+		outs << mMainWndCaption << L"    "
+			 << L"FPS: " << fps << L"    " 
+			 << L"Frame Time: " << mspf << L" (ms)";
+		SetWindowText(mhMainWnd, outs.str().c_str());
+		
+		// 다음 평균을 위해 다시 초기화한다.
+		frameCnt = 0;
+		timeElapsed += 1.0f;						// 약간의 오차는 무시한다.
+	}
+}
+
+
+
+
+

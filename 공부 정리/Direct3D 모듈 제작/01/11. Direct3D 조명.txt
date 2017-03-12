@@ -1,0 +1,455 @@
+● 정점 목록과 색인 목록이 주어졌을 때 정점 법선들을 구하는 의사 코드
+// 입력:
+// 1. 정점들의 배열(mVertices). 각 정점은 위치 성분(pos)와
+//    법선 성분(normal)으로 구성된다.
+// 2. 색인들의 목록(mIndices).
+
+// 메시의 각 삼각형에 대해
+for(UINT i = 0; i < mNumTriangles; ++i)
+{
+	// i번째 삼각형의 색인들
+	UINT i0 = mIndices[i*3 + 0];
+	UINT i1 = mIndices[i*3 + 1];
+	UINT i2 = mIndices[i*3 + 2];
+
+	// i번째 삼각형의 정점들
+	Vertex v0 = mVertices[i0];
+	Vertex v1 = mVertices[i1];
+	Vertex v2 = mVertices[i2];
+
+	// 면 법선을 계산한다.
+	Vector3 e0 = v1.pos - v0.pos;
+	Vector3 e1 = v2.pos - v0.pos;
+	Vector3 faceNormal = Cross(e0, e1);
+	
+	// 이 삼각형의 세 정점을 다른 삼각형들도
+	// 공유하므로, 면 법선을 각 정점의 법선에 누적한다.
+	mVertices[i0].normal += faceNormal;
+	mVertices[i1].normal += faceNormal;
+	mVertices[i2].normal += faceNormal;
+}
+
+// 이제 각 정점 v의 normal 성분은 그 정점을 공유하는 모든
+// 삼각형의 면 법선이 누적된 결과이다. 이를 정규화하면
+// 결과적으로 그 법선들의 평균이 된다.
+for(UINT i = 0; i < mNumVertices; ++i)
+	mVertices[i].normal = Normalize(&mVertices[i].normal);
+
+
+● 재질을 정의하는 구조체
+- Diffuse 벡터의 네 번째 성분은 알파 성분이며, Specular 벡터의 네 번째 성분은 반영 지수 p를 의미한다.
+1. 응용 프로그램 수준
+struct Material
+{
+	Material() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;		
+	XMFLOAT4 Reflect;
+}
+
+
+
+
+
+● 광원의 종류를 정의하는 구조체 
+- 하나의 광원은 주변광 조명, 분산광 조명, 반영광 조명(색상)을 정의하는 변수가 존재.
+1. 응용 프로그램 수준
+① 평행광
+struct DirectionalLight
+{
+	DirectionalLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+	XMFLOAT3 Direction;
+	float Pad;		// 더미 메모리 공간 
+}
+② 점광
+struct PointLight
+{
+	PointLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+
+	// (Position, Range) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Position;
+	float Range;
+
+	// (A0, A1, A2, Pad) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Att;		//감쇠 매개 변수
+	float Pad;
+}
+③ 점적광
+struct SpotLight
+{
+	SpotLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+
+	// (Position, Range) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Position;
+	float Range;
+
+	// (Direction, Spot) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Direction;
+	float Spot;		// 점적광 원뿔을 제어하는 데 쓰이는 지수
+
+	// (Att, Pad) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Att;
+	float Pad;
+}
+
+2. HLSL 수준
+① 평행광
+struct DirectionalLight
+{
+	float4 Ambient;
+	float4 Diffuse;
+	float4 Specular;
+	float3 Direction;
+	float Pad;
+}
+② 점광
+struct PointLight
+{
+	float4 Ambient;
+	float4 Diffuse;
+	float4 Specular;
+	
+	float3 Position;
+	float Range;
+	
+	float3 Att;
+	float pad;
+}
+③ 점적광
+struct SpotLight
+{
+	float4 Ambient;
+	float4 Diffuse;
+	float4 Specular;
+
+	float3 Position;
+	float Range;
+
+	float3 Direction;
+	float Spot;	// 스페큘러의 반영 계수와 같은 것이다.
+
+	float3 Att;
+	float pad;
+}
+
+
+
+
+
+● 구조체 채우기
+- 효과 파일 내 사용할 조명들에 대한 상수 버퍼를 다음과 같이 인스턴스화한다.
+cbuffer cbPerFrame
+{
+	DirectionalLight gDirLight;		// 평행광
+	PointLight gPointLight;			// 점광
+	SpotLight gSpotLight;			// 점적광
+	float3 gEyePosW;			// 카메라 위치
+};
+
+- 위 상수 버퍼를 갱신할 때는 다음처럼 ID3DX11EffectVariable::SetRawValue 메서드를 이용하여 갱신한다. 
+std::ifstream fin("fx/Lighting.fxo", std::ios::binary);
+
+fin.seekg(0, std::ios_base::end);
+int size = (int)fin.tellg();
+fin.seekg(0, std::ios_base::beg);
+std::vector<char> compiledShader(size);
+
+fin.read(&compiledShader[0], size);
+fin.close();
+	
+HR(D3DX11CreateEffectFromMemory(&compiledShader[0], size, 0, md3dDevice, &mFX));
+...
+mfxEyePosW           = mFX->GetVariableByName("gEyePosW")->AsVector();
+mfxDirLight          = mFX->GetVariableByName("gDirLight");
+mfxPointLight        = mFX->GetVariableByName("gPointLight");
+mfxSpotLight         = mFX->GetVariableByName("gSpotLight");
+...
+// Set per frame constants.
+mfxDirLight->SetRawValue(&mDirLight, 0, sizeof(mDirLight));
+mfxPointLight->SetRawValue(&mPointLight, 0, sizeof(mPointLight));
+mfxSpotLight->SetRawValue(&mSpotLight, 0, sizeof(mSpotLight));
+mfxEyePosW->SetRawValue(&mEyePosW, 0, sizeof(mEyePosW));
+
+
+
+
+
+● 지향광의 구현
+- 다음의 HLSL 함수는 주어진 재질과 지향광원, 표면 법선, 그리고 시점 벡터(빛을 받는 표면 점에서
+시점을 향한 단위벡터)에 기초해서 표면 점의 조명 값(반사된 빛의 색상)을 계산한다.
+void ComputeDirectionalLight(
+	Material mat, 
+	DirectionalLight L, 
+	float3 normal, 
+	float3 toEye,
+	out float4 ambient,
+	out float4 diffuse,
+	out float4 spec)
+{
+	// 출력 성분들을 초기화한다.
+	ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	spec    = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	// 빛 벡터는 광선이 나아가는 방향의 반대 방향이다.
+	float3 lightVec = -L.Direction;
+
+	// 주변광 항을 더한다.
+	ambient = mat.Ambient * L.Ambient;	
+
+	// 빛이 막히지 않고 표면에 도달한다는 가정 하에서 
+	// 분산광 항과 반영광 항을 더한다.
+	
+	float diffuseFactor = dot(lightVec, normal);					// 람베르트의 코사인 법칙
+
+	// 동적 분기를 피하기 위해 조건문을 펼친다.
+	[flatten]
+	if( diffuseFactor > 0.0f )
+	{
+		float3 v         = reflect(-lightVec, normal);				// 반사 벡터
+		float specFactor = pow(max(dot(v, toEye), 0.0f), mat.Specular.w);	// 반영광의 양
+					
+		diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+		spec    = specFactor * mat.Specular * L.Specular;
+	}
+}
+
+
+
+
+
+● 점광의 구현
+- 다음의 HLSL 함수는 주어진 재질과 점광원, 표면 점 위치, 표면 법선, 그리고 시점 벡터(빛을 받는 표면 점에서 시점을 향한
+단위벡터)에 기초해서 표면 점의 조명 값(반사된 빛의 색상)을 계산한다.
+void ComputePointLight(
+	Material mat, 
+	PointLight L, 
+	float3 pos, 
+	float3 normal, 
+	float3 toEye,
+	out float4 ambient, 
+	out float4 diffuse, 
+	out float4 spec)
+{
+	// 출력 성분들을 초기화한다.
+	ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	spec    = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	// 빛 벡터(표면 점에서 광원으로의 벡터)
+	float3 lightVec = L.Position - pos;
+		
+	// 표면 점과 광원 사이의 거리
+	float d = length(lightVec);
+	
+	// 범위 판정
+	if( d > L.Range )
+		return;
+		
+	// 빛 벡터를 정규화한다.
+	lightVec /= d; 
+	
+	// 주변광 항
+	ambient = mat.Ambient * L.Ambient;	
+
+	// 빛이 막히지 않고 표면에 도달한다는 가정 하에서
+	// 분산광 항과 반영광 항을 더한다.
+
+	float diffuseFactor = dot(lightVec, normal);
+
+	// 동적 분기를 피하기 위해 조건문을 펼친다.
+	[flatten]
+	if( diffuseFactor > 0.0f )
+	{
+		float3 v         = reflect(-lightVec, normal);
+		float specFactor = pow(max(dot(v, toEye), 0.0f), mat.Specular.w);
+					
+		diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+		spec    = specFactor * mat.Specular * L.Specular;
+	}
+
+	// Attenuate
+	float att = 1.0f / dot(L.Att, float3(1.0f, d, d*d));
+
+	diffuse *= att;
+	spec    *= att;
+}
+
+
+
+
+
+● 점적광의 구현
+- 다음의 HLSL 함수는 주어진 재질과 점적광원, 표면 점 위치, 표면 법선, 그리고 시점 벡터(빛을 받는 표면 점에서
+시점을 향한 단위벡터)에 기초해서 표면 점의 조명 값(반사된 빛의 색상)을 계산한다.
+void ComputeSpotLight(
+	Material mat, 
+	SpotLight L, 
+	float3 pos, 
+	float3 normal, 
+	float3 toEye,
+	out float4 ambient, 
+	out float4 diffuse, 
+	out float4 spec)
+{
+	// 출력 성분들을 초기화한다.
+	ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	spec    = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	// 빛 벡터(표면 점에서 광원으로의 벡터)
+	float3 lightVec = L.Position - pos;
+		
+	// 표면 점과 광원 사이의 거리
+	float d = length(lightVec);
+	
+	// 범위 판정
+	if( d > L.Range )
+		return;
+		
+	// 빛 벡터를 정규화한다.
+	lightVec /= d; 
+	
+	// 주변광 항
+	ambient = mat.Ambient * L.Ambient;	
+
+	// 빛이 막히지 않고 표면에 도달한다는 가정하에서
+	// 분산광 항과 반영광 항을 더한다.
+
+	float diffuseFactor = dot(lightVec, normal);
+
+	// 동적 분기를 피하기 위해 조건문을 펼친다.
+	[flatten]
+	if( diffuseFactor > 0.0f )
+	{
+		float3 v         = reflect(-lightVec, normal);
+		float specFactor = pow(max(dot(v, toEye), 0.0f), mat.Specular.w);
+					
+		diffuse = diffuseFactor * mat.Diffuse * L.Diffuse;
+		spec    = specFactor * mat.Specular * L.Specular;
+	}
+	
+	// 점적광 계수를 계산한다.
+	float spot = pow(max(dot(-lightVec, L.Direction), 0.0f), L.Spot);
+
+	// 빛의 세기를 점적광 계수로 비례하고 거리에 따라 감쇠시킨다.
+	float att = spot / dot(L.Att, float3(1.0f, d, d*d));
+
+	ambient *= spot;
+	diffuse *= att;
+	spec    *= att;
+}
+
+
+
+
+
+● 효과 파일
+// "LightHelper.fx"는 지향광, 점광, 점적광, 재질 구조체 및 각 조명 계산을 위한
+// 함수들이 존재한다.
+#include "LightHelper.fx"	
+ 
+cbuffer cbPerFrame
+{
+	DirectionalLight gDirLight;
+	PointLight gPointLight;
+	SpotLight gSpotLight;
+	float3 gEyePosW;
+};
+
+cbuffer cbPerObject
+{
+	float4x4 gWorld;
+	float4x4 gWorldInvTranspose;
+	float4x4 gWorldViewProj;
+	Material gMaterial;
+};
+
+struct VertexIn
+{
+	float3 PosL    : POSITION;
+	float3 NormalL : NORMAL;
+};
+
+struct VertexOut
+{
+	float4 PosH    : SV_POSITION;
+    float3 PosW    : POSITION;
+    float3 NormalW : NORMAL;
+};
+
+VertexOut VS(VertexIn vin)
+{
+	VertexOut vout;
+	
+	// 세계 공간으로 변환한다.
+	vout.PosW    = mul(float4(vin.PosL, 1.0f), gWorld).xyz;
+	vout.NormalW = mul(vin.NormalL, (float3x3)gWorldInvTranspose);
+		
+	// 동차 절단 공간으로 변환한다.
+	vout.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
+	
+	return vout;
+}
+  
+float4 PS(VertexOut pin) : SV_Target
+{
+	// 보간 때문에 법선이 더 이상 단위벡터가 아닐 수 있으므로 다시 정규화한다.
+	pin.NormalW = normalize(pin.NormalW); 
+
+	float3 toEyeW = normalize(gEyePosW - pin.PosW);
+
+	// 성분들의 합이 0인 재질 속성들로 시작한다.
+	float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	float4 spec    = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	// 각 광원이 기여한 빛을 합한다.
+	float4 A, D, S;
+
+	ComputeDirectionalLight(gMaterial, gDirLight, pin.NormalW, toEyeW, A, D, S);
+	ambient += A;  
+	diffuse += D;
+	spec    += S;
+
+	ComputePointLight(gMaterial, gPointLight, pin.PosW, pin.NormalW, toEyeW, A, D, S);
+	ambient += A;
+	diffuse += D;
+	spec    += S;
+
+	ComputeSpotLight(gMaterial, gSpotLight, pin.PosW, pin.NormalW, toEyeW, A, D, S);
+	ambient += A;
+	diffuse += D;
+	spec    += S;
+	   
+	float4 litColor = ambient + diffuse + spec;
+
+	// 분산광 재질의 알파와 텍스처의 알파의 곱을 전체적인 알파 값으로 사용한다.
+	litColor.a = gMaterial.Diffuse.a;
+
+    return litColor;
+}
+
+technique11 LightTech
+{
+    pass P0
+    {
+        SetVertexShader( CompileShader( vs_5_0, VS() ) );
+		SetGeometryShader( NULL );
+        SetPixelShader( CompileShader( ps_5_0, PS() ) );
+    }
+}

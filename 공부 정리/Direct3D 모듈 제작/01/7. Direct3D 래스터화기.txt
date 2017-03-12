@@ -1,0 +1,65 @@
+● 렌더 상태
+- Direct3D는 렌더링 파이프라인의 특정 측면의 구성에 쓰이는 관련 상태들을 '렌더 상태'라고 부르는 상태 집합으로 묶어서
+관리한다.
+- 렌더 상태를 대표하는 인터페이스들로는 다음이 있다.
+① ID3D11RasterizerState : 래스터화기 단계를 구성하는데 쓰이는 상태 집합을 대표한다.
+② ID3D11BlendState : 혼합 연산을 구성하는데 쓰이는 상태 집합을 대표한다.
+③ ID3D11DepthStencilState : 깊이 판정과 스텐실 판정을 구성하는데 쓰이는 상태 집합을 대표한다.
+- 렌더 상태 객체는 응용 프로그램 초기화 시점에서 전역 읽기 전용 접근이 가능한 곳에 선언된다. 
+=> 하나의 정적 클래스 안에 넣는 방식을 생각해볼 수 있다.
+
+
+
+
+
+● 래스터화기 단계의 구성을 위한 ID3D11RasterizerState의 생성 메서드 및 서술 구조체
+HRESULT ID3D11Device::CreateRasterizerState (
+	const D3D11_RASTERIZER_DESC *pRasterizerDesc,
+	ID3D11RasterizerState **ppRasterizerState);
+
+typedef struct D3D11_RASTERIZER_DESC {
+	D3D11_FILL_MODE FillMode;	// default : D3D11_FILL_SOLID,	remainder : D3D11_WIREFRAME
+	D3D11_CULL_MODE CullMode;	// default : D3D11_CULL_BACK,	remainder : D3D11_CULL_NONE, D3D11_CULL_FRONT
+	BOOL FrontCounterClockwise;	// default : false,		remainder : true -> 반시계 방향이 전면
+	INT DepthBias;			// default : 0
+	FLOAT DepthBiasClamp;		// default : 0.0f
+	FLOAT SlopeScaledDepthBias	// default : 0.0f
+	BOOL DepthClipEnable;		// default : true
+	BOOL ScissorEnable;		// default : false
+	BOOL MultisampleEnable		// default : false
+	BOOL AntialiasedLineEnable	// default : false
+} D3D11_RASTERIZER_DESC;
+
+
+
+
+
+● ID3D11RasterizerState 등록 메서드
+void ID3D11DeviceContext::RSSetState (
+	ID3D11RasterizerState *pRasterizerState);
+// 가변적인 렌더 상태에서는 응용 프로그램 수준에서 렌더 상태를 설정하는 것이 낫다.
+
+
+
+
+
+
+● 래스터화기 단계의 구성을 위한 ID3D11RasterizerState의 생성과 등록 과정
+코드.
+D3D11_RASTERIZER_DESC rsDesc;
+ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));	// D3D11_RASTERIZER_DESC만큼의 메모리 공간을 0으로 초기화한다.
+reDesc.FillMode = D3D11_FILL_SOLID;
+reDesc.CullMode = D3D11_CULL_NONE;
+reDesc.FrontCounterClockwise = false;
+reDesc.DepthClipEnable = true;
+
+HR(md3dDevice->CreateRasterizerState(&rsDesc, &mNoCullRS));
+
+
+
+
+
+
+● 래스터화기 렌더 상태를 기본 상태로 되돌리는 방법
+md3dImmediateContext->RSSetState(0);
+

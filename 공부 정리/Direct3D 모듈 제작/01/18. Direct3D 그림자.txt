@@ -1,0 +1,100 @@
+● 평행광 그림자
+- 물체의 각 정점을 거쳐 가는 반직선들과 그림자 평면의 교점 s들은 평면에 투영된 물체 그림자의 기하구조를 정의한다.
+- 지향 그림자 행렬을 S_dir로 표기한다.
+- S_w = n·L < 0 이면 L을 사용하는 것이 아닌 -L을 사용하여야 한다. => 절단을 방지하기 위함.
+수식.
+s = r(t_s) = p - ((n·p + d)L/n·L)L
+
+
+
+
+
+● 점광 그림자
+- 물체의 각 정점을 거쳐 가는 반직선들과 그림자 평면의 교점 s들은 평면에 투영된 물체 그림자의 기하구조를 정의한다.
+- 점광 그림자 행렬을 S_point로 표기한다.
+- w 성분 S_w는 -n·(p - L)로 정의된다.
+수식.
+s = r(t_s) = p - ((n·p + d)/(n·(p - L)))(p - L)
+
+
+
+
+
+● 범용 그림자 행렬
+- 동차좌표를 이용하면 점광과 지향광(평행광) 모두에 적용할 수 있는 범용 그림자 행렬을 만드는 것이 가능하다.
+- 위 내용은 다음 두 사실에 근거한다.
+① 만일 L_w = 0 이면 L은 무한히 멀리 있는 광원을 향한 방향(즉 평행광선들이 나아가는 방향의 반대 방향)을 뜻한다.	=> S_dir
+② 만일 L_w = 1 이면 L은 점광원의 위치를 서술한다.								=> S_point
+- 그림자가 드리우는 평면과 빛 벡터(반직선)에 근거하여 그림자 행렬을 만들어주는 XNA Math 라이브러리 함수가 존재한다.
+XMFINLINE XMMATRIX XMMatrixShadow(
+	FXMVECTOR ShadowPlane,
+	FXMVECTOR LightPosition);	// LightPosition이 0이면 S_dir 행렬, 1이면 S_point 행렬을 반환한다. 
+
+
+
+
+
+● 스텐실 버퍼를 이용한 이중 혼합 방지
+- 하나의 표면에 투영된 그림자가 하나 이상이 될 수 있다. 이때, 그림자가 중첩되므로 더 진하게 표현되고 결과적으로 얼룩져 보이게 된다.
+- 다음과 같이 스텐실 버퍼를 이용하여 해결한다.
+① 그림자를 렌더링 한 이후에는 유의미한 값으로 스텐실 버퍼를 갱신한다.
+② 갱신된 픽셀에는 그림자를 더 이상 렌더링할 수 없도록 조건문을 정의한다.
+코드.
+// 그림자를 50% 투명한 검은색으로 렌더링하기 위해 재질들을 다음과 같이 설정한다.
+mShadowMat.Ambient  = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+mShadowMat.Diffuse  = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.5f);
+mShadowMat.Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 16.0f);
+// 이중 혼합을 방지하기 위해 깊이·스텐실 상태를 다음과 같이 설정한다.
+D3D11_DEPTH_STENCIL_DESC noDoubleBlendDesc;
+noDoubleBlendDesc.DepthEnable      = true;
+noDoubleBlendDesc.DepthWriteMask   = D3D11_DEPTH_WRITE_MASK_ALL;
+noDoubleBlendDesc.DepthFunc        = D3D11_COMPARISON_LESS; 
+noDoubleBlendDesc.StencilEnable    = true;
+noDoubleBlendDesc.StencilReadMask  = 0xff;
+noDoubleBlendDesc.StencilWriteMask = 0xff;
+
+noDoubleBlendDesc.FrontFace.StencilFailOp      = D3D11_STENCIL_OP_KEEP;
+noDoubleBlendDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+noDoubleBlendDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_INCR;	// 0 -> 1
+noDoubleBlendDesc.FrontFace.StencilFunc   = D3D11_COMPARISON_EQUAL;	// ==
+
+// 후면 삼각형들은 렌더링하지 않으므로 이 설정들은 중요하지 않다.
+noDoubleBlendDesc.BackFace.StencilFailOp      = D3D11_STENCIL_OP_KEEP;
+noDoubleBlendDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+noDoubleBlendDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_INCR;
+noDoubleBlendDesc.BackFace.StencilFunc   = D3D11_COMPARISON_EQUAL;
+
+HR(device->CreateDepthStencilState(&noDoubleBlendDesc, &NoDoubleBlendDSS));
+
+// 두개골 그림자를 렌더링한다.
+activeSkullTech->GetDesc( &techDesc );
+for(UINT p = 0; p < techDesc.Passes; ++p)
+{
+	ID3DX11EffectPass* pass = activeSkullTech->GetPassByIndex( p );
+
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mSkullVB, &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mSkullIB, DXGI_FORMAT_R32_UINT, 0);
+
+	XMVECTOR shadowPlane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
+	XMVECTOR toMainLight = -XMLoadFloat3(&mDirLights[0].Direction);
+	XMMATRIX S =  XMMatrixShadow(shadowPlane, toMainLight);
+	XMMATRIX shadowOffsetY = XMMatrixTranslation(0.0f, 0.001f, 0.0f);
+
+	// 물체별 상수들을 설정한다.
+	XMMATRIX world = XMLoadFloat4x4(&mSkullWorld)*S*shadowOffsetY;
+	XMMATRIX worldInvTranspose = MathHelper::InverseTranspose(world);
+	XMMATRIX worldViewProj = world*view*proj;
+		
+	Effects::BasicFX->SetWorld(world);
+	Effects::BasicFX->SetWorldInvTranspose(worldInvTranspose);
+	Effects::BasicFX->SetWorldViewProj(worldViewProj);
+	Effects::BasicFX->SetMaterial(mShadowMat);
+
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDoubleBlendDSS, 0);	//
+	pass->Apply(0, md3dImmediateContext);
+	md3dImmediateContext->DrawIndexed(mSkullIndexCount, 0, 0);
+
+	// 기본 상태로 복원한다.
+	md3dImmediateContext->OMSetBlendState(0, blendFactor, 0xffffffff);
+	md3dImmediateContext->OMSetDepthStencilState(0, 0);
+}

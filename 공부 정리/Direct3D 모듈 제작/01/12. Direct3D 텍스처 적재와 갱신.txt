@@ -1,0 +1,102 @@
+● 텍스처 자원
+- ID3D11Texture1D, ID3D11Texture2D, ID3D11Texture3D는 ID3D11Resource를 상속한다.
+- 텍스처는 밉맵 수준이 존재할 수 있다.
+- GPU는 텍스처에 필터링, 다중표본화 등의 특별한 연산을 수행할 수 있다.
+- DXGI_FORMAT이라는 열거형을 텍스처 형식으로 사용한다.
+DXGI_FORMAT_R32G32B32_FLOAT
+DXGI_FORMAT_R16G16B16A16_UNORM
+DXGI_FORMAT_R32G32_UINT
+DXGI_FORMAT_R8G8B8A8_UNORM
+DXGI_FORMAT_R8G8B8A8_SNORM
+DXGI_FORMAT_R8G8B8A8_SINT
+DXGI_FORMAT_R8G8B8A8_UINT
+
+
+
+
+
+● 텍스처 좌표
+- 텍스처 좌표 (u, v)는 삼각형 정점들에 지정된 텍스처 좌표들을 삼각형 면을 따라 보간해서 구한다. => 아마 레스터화기에서 이루어지는 듯 하다.
+
+코드.
+// 기본적인 32바이트 정점 구조체
+struct Basic32
+{
+	XMFLOAT3 Pos;
+	XMFLOAT3 Normal;
+	XMFLOAT2 Tex;
+}
+
+const D3D11_INPUT_ELEMENT_DESC InputLayoutDesc::Basic32[3] =
+{
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+}
+
+
+
+
+
+● 텍스처 자료 적재와 셰이더 자원 뷰 생성
+코드.
+ID3D11ShaderResourceView* mDiffuseMapSRV;
+
+HR(D3DX11CreateShaderResourceViewFromFile(		// 지원하는 텍스처 파일 형식 : BMP, JPG, PNG, DDS,TIFF, GIF, WMP ; D3DX11_IMAGE_FILE_FORMAT 참고
+	md3dDevice, 					// 텍스처를 생성할 Direct3D 장치를 가리키는 포인터
+	L"Textures/WoodCrate01.dds", 			// 적재할 이미지를 담은 파일의 이름
+	0, 						// 추가적인 이미지 정보. 널 값 설정 시 원본 이미지 크기, 완전한 밉맵 사슬 생성이 적용
+	0, 						// 새로운 스레드를 띄워서 자원을 적재할 때 쓰인다. 널 값 설정 시 주 스레드에 자원을 적재한다.
+	&mDiffuseMapSRV, 				// 파일에서 적재한 텍스처에 대해 생성된 셰이더 자원 뷰를 가리키는 포인터
+	0 ));						// 네 번째 매개변수가 널 값이라면 여기도 널 값으로 지정한다.
+
+// 픽셀 셰이더 안에서 그 텍스처 자원에 접근할 수 있도록 적당한 효과 변수에 텍스처를 설정해주어야 한다.
+
+// 비수치 값들은 cbuffer에 추가할 수 없다.
+Texture2D gDiffuseMap;
+
+// C++ 응용 프로그램에서 다음과 같은 방식으로 효과의 Texture2D 객체(하나의 셰이더 자원 뷰 변수)에 대한 포인터를 얻는다.
+ID3DX11EffectShaderResourceVariable* DiffuseMap;
+
+DiffuseMap = mFX->GetVariableByName("gDiffuseMap")->AsShaderResource();
+
+// 얻은 효과의 Texture2D 객체에 대한 포인터를 얻었다면 C++ 인터페이스를 통해서 텍스처를 갱신할 수 있다.
+// C++ 텍스처 자원 뷰를 효과 텍스처 변수에 설정한다.
+fxDiffuseMap->SetResource(mDiffuseMapSRV);
+
+// ex. 나무 그리기
+fxDiffuseMap->SetResource(mTreeMapSRV);		// 나무 텍스처에 대한 셰이더 자원뷰를 내부 캐시에 갱신한다.
+pass->Apply(0, md3dImmediateContext);		// 실제로 상수 버퍼 갱신을 일괄적으로 진행한다.
+DrawTree();					// 나무 메시를 그린다.
+=> 텍스처 대지도(texture atlas)를 만들어 그 부분 집합을 이용함으로써 그리기 호출에 대한 추가 비용을 줄일 수 있다.
+
+
+
+
+
+● 텍스처 압축 형식
+- Direct3D가 지원하는 7가지 압축 텍스처 형식들
+① DXGI_FORMAT_BC1_UNORM : 세 가지 색상 채널을 지원하되 알파 성분을 1비트(on/off)로 표현
+② DXGI_FORMAT_BC2_UNORM : 세 가지 색상 채널을 지원하되 알파 성분을 4비트로 표현
+③ DXGI_FORMAT_BC3_UNORM : 세 가지 색상 채널을 지원하되 알파 성분을 8비트로 표현
+④ DXGI_FORMAT_BC4_UNORM : 단 하나의 색상 채널로만 이루어진 텍스처 ex. 회색조 이미지
+⑤ DXGI_FORMAT_BC5_UNORM : 두 가지 색상 채널을 지원하는 텍스처
+⑥ DXGI_FORMAT_BC6_UF16  : 압축된 HDR(high dynamic range; 고 동적 대역) 이미지 자료
+⑦ DXGI_FORMAT_BC7_UNORM : 고품질 RGBA 압축
+// 압축된 텍스처는 렌더링 파이프라인의 셰이더 단계에 대한 입력으로만 사용할 수 있다.
+// 압축 형식을 사용하기 위해서는 텍스처의 가로, 세로 모두 4의 배수이어야 한다. why. 블록 압축 알고리즘들은 4x4v픽셀 블록 단위로 작동
+- 텍스처 압축 방식
+코드.
+DXGI11_IMAGE_LOAD_INFO loadInfo;
+loadInfo.Format = DXGI_FORMAT_BC3_UNORM;
+
+HR(D3DX11CreateShaderResource(md3dDevice, L"Textures/darkbrick.bmp", &loadInfo, 0, &mDiffuseMapSRV, 0));
+
+// 자원 뷰에서 실제 2차원 텍스처를 얻는다.
+ID3D11Texture2D* tex;
+mDiffuseMapSRV->GetResource((ID3D11Resource**) &tex);
+
+// 그 2차원 텍스처를 서술하는 구조체를 얻는다.
+D3D11_TEXTURE2D_DESC texDesc;
+tex->GetDesc(&texDesc);			// 해당 코드를 디버깅하면 텍스처 형식(texDesc의 Format)을 통해 압축 적용 여부를 알 수 있다.
+// 압축되지 않으면, 원본 이미지 자체의 형식, 즉 압축되지 않은 DXGI_FORMAT_R8G8B8A8_UNORM 형식이 쓰일 것이다.

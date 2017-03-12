@@ -1,0 +1,168 @@
+● 정점 버퍼 생성
+- 정점 버퍼는 여러 개 달릴 수 있다. => 배열(ID3D11Buffer*) 형태
+- 정점 버퍼를 생성하려면 다음과 같은 과정을 거쳐야 한다.
+① 생성할 버퍼를 서술하는 D3D11_BUFFER_DESC 구조체를 채운다.
+② 버퍼의 초기화에 사용할 자료를 서술하는 D3D11_SUBRESOURECE_DATA 구조체를 채운다.
+
+코드.
+// d3dUtil.h에 정의되어 있는 색 상수
+namespace Colors
+{
+	XMGLOBALCONST XMVECTORF32 White     = {1.0f, 1.0f, 1.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Black     = {0.0f, 0.0f, 0.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Red       = {1.0f, 0.0f, 0.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Green     = {0.0f, 1.0f, 0.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Blue      = {0.0f, 0.0f, 1.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Yellow    = {1.0f, 1.0f, 0.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Cyan      = {0.0f, 1.0f, 1.0f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 Magenta   = {1.0f, 0.0f, 1.0f, 1.0f};
+
+	XMGLOBALCONST XMVECTORF32 Silver    = {0.75f, 0.75f, 0.75f, 1.0f};
+	XMGLOBALCONST XMVECTORF32 LightSteelBlue = {0.69f, 0.77f, 0.87f, 1.0f};
+}
+...
+struct Vertex
+{
+	XMFLOAT3 Pos;
+	XMFLOAT4 Color;
+};
+...
+// 정점 버퍼에 들어갈 데이터 값
+Vertex vertices[] =
+{
+	{ XMFLOAT3(-1.0f, -1.0f, -1.0f), (const float*)&Colors::White   },
+	{ XMFLOAT3(-1.0f, +1.0f, -1.0f), (const float*)&Colors::Black   },
+	{ XMFLOAT3(+1.0f, +1.0f, -1.0f), (const float*)&Colors::Red     },
+	{ XMFLOAT3(+1.0f, -1.0f, -1.0f), (const float*)&Colors::Green   },
+	{ XMFLOAT3(-1.0f, -1.0f, +1.0f), (const float*)&Colors::Blue    },
+	{ XMFLOAT3(-1.0f, +1.0f, +1.0f), (const float*)&Colors::Yellow  },
+	{ XMFLOAT3(+1.0f, +1.0f, +1.0f), (const float*)&Colors::Cyan    },
+	{ XMFLOAT3(+1.0f, -1.0f, +1.0f), (const float*)&Colors::Magenta }
+};
+
+// 정점 버퍼 인터페이스에 대한 포인터 생성
+D3D11_BUFFER_DESC vbd;
+① vbd.Usage = D3D11_USAGE_IMMUTABLE;				// 텍스처의 D3D11_USAGE와 동일한 내용이다.
+vbd.ByteWidth = sizeof(Vertex) * 8;				// 생성할 정점 버퍼의 크기
+vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;			// 결속 플래그
+vbd.CPUAccessFlags = 0;						// CPU 접근 불가
+vbd.MiscFlags = 0;						// 정점 버퍼에 쓰이지 않는다.
+vbd.StructureByteStride = 0;					// 구조적 버퍼에 저장된 원소 하나의 크기(바이트 단위)
+
+② D3D11_SUBRESOURCE_DATA vinitData;				
+vinitData.pSysMem = vertices;					// 정점 버퍼를 초기화할 자료를 담은 시스템 메모리 배열을 가리키는 포인터
+HR(md3dDevice->CreateBuffer(&vbd, &vinitData, &mBoxVB));
+
+① D3D11_USAGE Usage 
+- D3D11_USAGE_DEFAULT 같은 경우 ID3D11DeviceContext::UpdateSubresource 및 ID3D11DeviceContext::Map을 사용하는 것이 가능하다.
+- D3D11_USAGE_DYNAMIC 같은 경우 ID3D11DeviceContext::Map을 사용하는 것이 가능하다.
+- D3D11_USAGE_STAGING 같은 경우 ID3D11DeviceContext::CopyResource 및 ID3D11DeviceContext::CopySubresourceRegion을 사용하는 것이 가능하다.
+
+② D3D11_SUBRESOURCE_DATA
+typedef struct D3D11_SUBRESOURCE_DATA {
+	const void *pSysMem;			// 위에서 설명.
+	UINT SysMemPitch;			// 정점 버퍼에는 쓰이지 않는다.
+	UINT SysMemSlicePitch;			// 정점 버퍼에는 쓰이지 않는다.
+} D3D11_SUBRESOURCE_DATA;
+
+
+
+
+
+● 정점 버퍼 등록
+코드.
+UINT stride = sizeof(Vertex);
+UINT offset = 0;
+md3dImmediateContext->IASetVertexBuffers(
+	0,				// 정점 버퍼들을 붙이기 시작할 입력 슬롯의 색인
+	1,				// 정점 버퍼들의 수
+	&mBoxVB,			// 정점 버퍼들을 담은 배열의 첫 원소를 가리키는 포인터 
+	&stride, 			// 보폭(stride)들의 배열의 첫 원소를 가리키는 포인터
+	&offset);			// 오프셋들의 배열의 첫 원소를 가리키는 포인터
+// &mBoxVB는 그릴 메시의 원본이 들어있다고 보면 될 듯.
+
+
+
+
+
+● 정점 버퍼에 대한 그리기
+void ID3D11DeviceContext::Draw(
+	UINT VertexCount,		// 정점 버퍼의 원소(정점) 개수이다. 
+	UINT StartVertexLocation);	// 그리기 시작할 정점 버퍼 색인이다.
+
+
+
+
+
+● 색인 버퍼 생성
+- 정점 버퍼의 생성과 거의 비슷하다.
+코드.
+UINT indices[] = {
+	// front face
+	0, 1, 2,
+	0, 2, 3,
+
+	// back face
+	4, 6, 5,
+	4, 7, 6,
+
+	// left face
+	4, 5, 1,
+	4, 1, 0,
+
+	// right face
+	3, 2, 6,
+	3, 6, 7,
+
+	// top face
+	1, 5, 6,
+	1, 6, 2,
+
+	// bottom face
+	4, 0, 3, 
+	4, 3, 7
+};
+// 색인 버퍼를 서술하는 구조체를 채운다. 결속 플래그로
+// D3D11_BIND_INDEX_BUFFER를 지정한다는 점에 주목하자!
+D3D11_BUFFER_DESC ibd;
+ibd.Usage = D3D11_USAGE_IMMUTABLE;
+ibd.ByteWidth = sizeof(UINT) * 36;
+ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+ibd.CPUAccessFlags = 0;
+ibd.MiscFlags = 0;
+ibd.StructureByteStride = 0;
+// 색인 버퍼를 초기화할 자료를 지정한다.
+D3D11_SUBRESOURCE_DATA iinitData;
+iinitData.pSysMem = indices;
+// 색인 버퍼를 생성한다.
+HR(md3dDevice->CreateBuffer(&ibd, &iinitData, &mBoxIB));
+
+
+
+
+
+● 색인 버퍼 등록
+코드.
+md3dImmediateContext->IASetIndexBuffer(
+	mBoxIB, 			// 색인 버퍼 인터페이스 포인터 (하나만 달 수 있다.)
+	DXGI_FORMAT_R32_UINT, 		// 색인 형식 D3D11_BUFFER_DESC::ByteWidth멤버와 모순되지 않도록 하는 것이 중요하다.
+	0);				// 바이트 단위 오프셋 값으로, 입력 조립기가 색인 버퍼에서 색인 자료를 읽기 시작할 위치를 뜻한다.
+// DXGI_FORMAT_R32_UINT와 DXGI_FORMAT_R16_UINT는 색인 버퍼만이 지원하는 형식이다.
+
+
+
+
+
+● 색인 버퍼에 대한 그리기
+void ID3D11DeviceContext::DrawIndexed (
+	UINT IndexCount,		// 색인 버퍼의 원소(색인) 개수
+	UINT StartIndexoLcation,	// 그리기 시작할 색인 버퍼의 색인 (버퍼 안에서의 색인)
+	INT BaseVertexLocation);	// 기준 정점 위치
+
+코드.
+md3dImmediateContext->DrawIndexed(numSphereIndices, 0, 0);
+md3dImmediateContext->DrawIndexed(numBoxIndices, firstBoxIndex, firstBoxVertexPos);
+md3dImmediateContext->DrawIndexed(numCylIndices, firstCylIndex, firstCylVertexPos);
+// firstBoxVertexPos == numSphereIndices , firstCylVertexPos == numSphereIndices + numBoxIndices
+
+

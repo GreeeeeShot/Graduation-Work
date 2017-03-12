@@ -1,0 +1,173 @@
+● 마우스 픽킹 기본 전략
+- 선택 반직선을 계산한 다음에 장면의 물체들을 훑으면서 물체가 그 반직선과 교차하는지 판단한다.
+// 투영 창에 투영된 점 p가 클릭된 화면 점 s와 대응된다.
+- 마우스 픽킹 알고리즘은 다음 순서로 진행된다.
+① 클릭된 화면 점이 s라고 할 때, 그에 대응되는 투영 창의 점 p를 구한다.
+② 시야 공간의 원점에서 시작해서 p를 통과해 나아가는 반직선을 계산한다.
+③ 장면의 각 물체마다, 선택 반직선과 그 물체를 같은 공간으로 변환한다.
+④ 물체가 선택 반직선과 교차하는지 판정한다. // 일반적으로 카메라에 가장 가까운 것을 택한다.
+
+
+
+
+
+● 시야 공간에서의 선택 반직선 정의
+코드.
+void PickingApp::Pick(int xs, int ys)
+{
+	XMMATRIX P = mCam.Proj();
+
+	// 시야 공간에서 선택 반직선을 계산한다.
+	float xv = (+2.0f*xs/mClientWidth - 1.0f)/P(0, 0);
+	float yv = (-2.0f*ys/mClientHeight + 1.0f)/P(1, 1);
+
+	// 시야 공간의 반직선 정의.
+	XMVECTOR rayOrigin	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMVECTOR rayDir		= XMVectorSet(sv, yv, 1.0f, 0.0f);
+
+
+
+
+
+● 세계 공간에서 선택 반직선 정의
+- 시야 공간 선택 반직선이 rv(t) = q +tu (-∞ <= t <= ∞)	// q : 시야 공간의 원점(w = 1) u : 선택 반직선 방향 벡터(w = 0)
+- rv(t)에 시야 행렬 V의 역행렬, 이어서 세계 행렬 W의 역행렬을 적용함으로써 선택 반직선을 메시의 국소 공간 좌표계로 표현한다.
+// 정점 수백, 수천 개를 세계 공간으로 변환하는 것보다 선택 반직선을 메시의 국소 공간으로 변환하는 것이 비용이 훨씬 덜 든다.
+// 윗 주석이 의미가 있으려면, 렌더링을 위한 세계 행렬 적용과 마우스 픽킹이 별개의 공간에 이루어져야 한다랄까요...(사견)
+코드.
+// 반직선을 메시의 국소 공간으로 변환한다.
+XMMATRIX V = mCam.View();
+XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(V), V);
+
+XMMATRIX W = XMLoadFloat4x4(&mMeshWorld);
+XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
+
+XMMATRIX toLocal = XMMatrixMultiply(invView, invWorld);
+
+rayOrigin = XMVector3TransformCoord(rayOrigin, toLocal);		// q에 해당 Coord : 점 개념
+rayDir = XMVector3TransformNormal(rayDir, toLocal);			// n에 해당 Normal : 벡터 개념
+
+// 교차 판정을 위해 반직선 방향 벡터를 단위 길이로 만든다.
+rayDir = XMVector3Normalize(rayDir);
+
+
+
+
+
+● 반직선 대 메시 교차 판정
+- 메시를 이루는 삼각형 목록 중 하나라도 선택 반직선과 교차한다면 그 메시는 선택된 것이다.
+- (중요) 선택을 위해서는 메시 기하구조(정점들과 색인들)의 복사본을 시스템 메모리에 유지해야 한다.
+// why. CPU에서는 정적인 정점/색인 버퍼를 읽지 못하기 때문이다.
+코드. 
+// 반직선이 메시의 경계상자와 교차하는 경우에만 메시의 삼각형들에 대해
+// 반직선 대 삼각형 교차 판정을 수행한다.
+//
+// 경계상자와 교차하지 않는다면 반직선이 메시와 교차할 가능성이 없으므로,
+// 반직선 대 삼각형 교차 판정으로 시간을 낭비할 이유가 없다.
+
+// 아직 교차하는 삼각형을 찾지 못했으므로 -1로 초기화한다.
+mPickedTriangle = -1;
+float tmin = 0.0f;
+if(XNA::IntersectRayAxisAlignedBox(rayOrigin, rayDir, &mMeshBox, &tmin))
+{
+	// 반직선과 교차하는 가장 가까운 삼각형을 찾는다.
+	tmin = MathHelper::Infinity;
+	for(UINT i = 0; i < mMeshIndices.size()/3; ++i)
+	{
+		// 이 삼각형의 색인들
+		UINT i0 = mMeshIndices[i*3+0];
+		UINT i1 = mMeshIndices[i*3+1];
+		UINT i2 = mMeshIndices[i*3+2];
+
+		// 이 삼각형의 정점들
+		XMVECTOR v0 = XMLoadFloat3(&mMeshVertices[i0].Pos);
+		XMVECTOR v1 = XMLoadFloat3(&mMeshVertices[i1].Pos);
+		XMVECTOR v2 = XMLoadFloat3(&mMeshVertices[i2].Pos);
+
+		// 교차하는 가장 가까운 삼각형을 찾기 위해서는 
+		// 메시의 모든 삼각형을 판정해야 한다.
+		float t = 0.0f;
+		if(XNA::IntersectRayTriangle(rayOrigin, rayDir, v0, v1, v2, &t))
+		{
+			if( t < tmin )
+			{
+				// This is the new nearest picked triangle.
+				tmin = t;
+				mPickedTriangle = i;
+			}
+		}
+	}
+}
+
+
+
+
+
+● 반직선 대 AABB 교차 판정
+- AABB에 대한 교차 판정 메서드는 다음과 같다. (XNA::)
+BOOL IntersectRayAxisAlignedBox(
+	FXMVECTOR Origin,		// 반직선 원점
+	FXMVECTOR Direction,		// 반직선 방향(반드시 단위벡터이어야 함)
+	const AxisAlignedBox* pVolum,	// 축 정렬 경계상자
+①	FLOAT* pDist);			// 반직선 교점 매개변수
+
+① FLOAT* pDist
+- 반직선이 r(t) = q + tu라고 할 때, 이 함수는 다음과 같이 실제 교점 p에 해당하는 반직선 매개변수 t0을 마지막 인수를 통해 돌려준다.
+p = r(t0) = q + t0u
+
+
+
+
+
+● 반직선 대 구 교차 판정
+- 구에 대한 교차 판정 메서드는 다음과 같다. (XNA::)
+BOOL IntersectRaySphere(
+	FXMVECTOR Origin,
+	FXMVECTOR Direction,
+	const Sphere* pVolume,
+	FLOAT* pDist);
+
+
+
+
+
+● 반직선 대 삼각형 교차 판정
+- 삼각형에 대한 교차 판정 메서드는 다음과 같다. (XNA::)
+BOOL IntersectRayTriangle(
+	FXMVECTOR Origin,		// 반직선 원점
+	FXMVECTOR Direction,		// 반직선 방향(단위벡터)
+	FXMVECTOR V0,			// 삼각형 정점 v0
+	FXMVECTOR V1,			// 삼각형 정점 v1
+	FXMVECTOR V2,			// 삼각형 정점 v2
+	FLOAT* pDist);			// 반직선 교점 매개변수
+
+
+
+
+
+● 메시를 이루는 삼각형을 선택 후 강조하는 코드
+코드.
+// 선택된 삼각형을 눈에 띄는 재질로 다시 그린다.
+
+if(mPickedTriangle != -1)
+{
+	// 같은 삼각형을 두 번 그리는 것이므로 깊이 판정을 <에서 <=으로 바꾼다.
+	// 그래야 삼각형이 깊이 판정을 통과한다. 삼각형을 두 번 그리는 이유는,
+	// 선택된 삼각형을 강조하기 위해 다른 재질로 다시 그리기 때문이다. 만일
+	// <=를 사용하지 않는다면 두 번째로 그리는 삼각형은 깊이 판정에
+	// 실패한다.
+
+	md3dImmediateContext->OMSetDepthStencilState(
+		RenderStates::LessEqualDSS, 0);
+
+	Effects::BasicFX->SetMaterial(mPickedTriangleMat);
+	activeMeshTech->GetPassByIndex(p)->Apply(0,
+		md3dImmediateContext);
+
+	// 삼각형 하나만 그리는 것이므로 색인은 세 개이다. 메시 색인 버퍼의 색인들 중
+	// 선택된 삼각형에 해당하는 색인부터 그리도록 한다.
+	md3dImmediateContext->DrawIndexed(3, 3*mPickedTriangle, 0);
+
+	// 기본 상태를 복원한다.
+	md3dImmediateContext->OMSetDepthStencilState(0, 0);
+}

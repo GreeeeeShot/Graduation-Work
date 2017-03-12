@@ -1,0 +1,130 @@
+● 입력 배치 객체
+- 응용 프로그램에서 정점 버퍼의 원소는 다음처럼 표현될 수 있다.
+struct ExVertex
+{
+	XMFLOAT3 Pos;
+	XMFLOAT4 Color;
+}
+- 위 원소를 Direct3D에서 사용하기 위해서는 일단 그 원소 형태를 Direct3D에 알릴 필요가 있으며,
+그 수단이 바로 '입력 배치 객체'가 된다.
+- 입력 배치 객체는 D3D11_INPUT_ELEMENT_DESC 구조체들로 이루어진 배열을 통해서 구축하며,
+하나의 D3D11_INPUT_ELEMENT_DESC는 정점 구조체(위 ExVertex)의 한 성분을 서술(대응)한다.
+typedef struct D3D11_INPUT_ELEMENT_DESC {
+①	LPCSTR SemanticName;				// 성분에 부여된 문자열 이름으로, 의미소 역할을 한다. (매우 중요한 부분)
+②	UINT SemanticIndex;				// 의미소에 부여된 색인
+③	DXGI_FORMAT Format;				// 정점 성분의 자료 형식을 나타낸다.
+④	UINT InputSlot;					// 이 성분의 자료가 공급될 정점 버퍼 슬롯의 색인이다.
+⑤	UINT AlignedByteOffset;				// C++ 정점 구조체의 시작 위치와 이 정점 성분의 시작 위치 사이의 오프셋(바이트 단위)이다.
+⑥	D3D11_INPUT_CLASSIFICATION InputSlotClass;	// D3D11_INPUT_PER_VERTEX_DATA를 사용한다고 일단 알아두자.
+⑦	UINT InstanceDataStepRate;			// 일단 지금은 0을 지정한다.
+} D3D11_INPUT_ELEMENT_DESC;
+// 의미소 : 정점 구조체의 성분을 정점 셰이더 입력 서명과 대응시키는 역할을 한다.
+
+③ DXGI_FORMAT Format
+- 정점 성분(ex. XMFLOAT3 Pos)에 대응되는 비디오 메모리 공간 한 요소의 형식으로 자주 쓰이는 것은 다음과 같은 것들이 있다.
+DXGI_FORMAT_R32_FLOAT
+DXGI_FORMAT_R32G32_FLOAT
+DXGI_FORMAT_R32G32B32_FLOAT
+DXGI_FORMAT_R32G32B32A32_FLOAT
+
+DXGI_FORMAT_R8_UINT
+DXGI_FORMAT_R16G16_SINT
+DXGI_FORMAT_R32G32B32_UINT
+DXGI_FORMAT_R8G8B8A8_SINT		// 4차원 8비트 부호 있는 정수 벡터
+DXGI_FORMAT_R8G8B8A8_UINT		// 4차원 8비트 부호 없는 정수 벡터
+
+④ UINT InputSlot
+- 정점을 정의한 입력 배치 객체가 등록될 입력 슬롯의 색인이다.
+- 입력 슬롯은 0~15로 총 16개의 입력 배치 객체를 등록할 수 있다.
+- Direct3D는 서로 다른 입력 슬롯들로부터 입력된 성분들을 조합해서 정점 버퍼의 각 정점을 생성(해석 후 생성)한다.
+
+코드.
+위 ExVertex에 대응되는 입력 배치 객체를 서술하면 다음과 같을 것이다.
+// 입력 배치 서술
+D3D11_INPUT_ELEMENT_DESC desc1[] =
+{
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+};
+...
+// 입력 배치 인터페이스 포인터 생성
+HRESULT ID3D11Device::CreateInputLayout(		// 인터페이스를 생성하는 것이므로 D3D Device 인터페이스를 이용한다.
+	desc1,						// 정점 구조체를 서술하는 D3D11_INPUT_ELEMENT_DESC들의 배열 
+	2,						// 두 번째 인자로 전달된 배열의 원소 개수 => 정점 구조체 성분의 개수라고도 할 수 있다.
+	passDesc.pIAInputSignature,			// 정점 셰이더(입력 서명을 포함한)를 컴파일해서 얻은 바이트 코드를 가리키는 포인터 => 정점 셰이더와 입력 배치 간 입력 서명 동일해야할 것!
+	passDesc.IAInputSignatureSize,			// 그 바이트 코드의 크기(바이트 단위)
+	&mInputLayout);					// 생성된 입력 배치 인터페이스에 대한 포인터(ID3D11InputLayout* mInputLayout);
+...
+// 입력 배치를 IA에 등록 => 해당 입력 배치를 기반으로 정점 버퍼를 해석한 후 생성.
+md3dImmediateContext->IASetInputLayout(mInputLayout);
+
+
+
+
+
+● 본인이 생각하는 입력 배치 등록의 의미
+- 어떤 정점 버퍼를 다루는데 있어서 '특정 정점 셰이더'가 해당 정점 버퍼를 '해석하는 방식'을 등록하는 것이라 볼 수 있을 듯. 
+=> 2가지가 규정되는 것이지... 정점 버퍼를 해석하는 방식과 처리하는 방식
+
+
+
+
+
+● 정점 셰이더
+- 정점을 처리하는 일종의 함수로 효과 파일(.fx) 내 작성된다.
+코드.
+struct Vertex
+{
+	XMFLOAT3 Pos;
+	XMFLOAT4 Color;
+};
+
+cbuffer cbPerObject
+{
+	float4x4 gWorldViewProj;		// 상수 버퍼로, 세계, 시야, 투영 행렬을 하나로 결합한 것이다. 물체마다 갱신된다.
+};
+
+D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
+{
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0},
+	{"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+};
+
+void VS(
+	float3 iPosL : POSITION, 
+	float4 iColor : COLOR,
+	out float4 oPosH : SV_POSITION,
+	out float4 oColor : COLOR)
+{
+	// 동차 절단 공간으로 변환한다.
+	oPosH = mul(float4(iPosL, 1.0f), gWorldViewProj);
+	
+	// 정점 색상을 그대로 픽셀 셰이더에 전달한다.
+	oColor = iColor;
+}
+
+//or
+struct VertexIn
+{
+	float3 PosL	: POSITION;
+	float4 Color	: COLOR;
+};
+
+struct VertexOut
+{
+	float4 PosH	: SV_POSITION;
+	float4 Color	: COLOR;
+};
+
+VertexOut VS(VertexIn vin)		// 위 VS와 기능적으로 같은 일을 수행한다.
+{
+	VertexOut vout;
+
+	// 동차 절단 공간으로 변환한다.
+	vout.PosH = mul(float4(vin.iPosL, 1.0f), gWorldViewProj);
+	
+	// 정점 색상을 그대로 픽셀 셰이더에 전달한다.
+	vout.Color = vin.iColor;
+
+	return vout;
+}

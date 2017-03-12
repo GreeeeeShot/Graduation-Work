@@ -1,0 +1,199 @@
+● 절두체 평면 구축
+- 절두체 각 평면의 법선 벡터는 내부를 향한다고 가정한다.
+- 절두체 선별은 절두체를 이루는 여섯 개의 평면에 대한 경계 입체와의 교차 판정이라 할 수 있다.
+- 절두체를 구축하기 위해선 '상·하·좌·우 평면들의 기울기'와 '가까운·먼 평면까지의 거리가 필요하다.
+_DECLSPEC_ALIGN_16_ struct Frustum
+{
+	XMFLOAT3 Origin;		// 절두체의(그리고 투영의) 원점		; 보통 세계 공간에서 절두체 정의 시 필요.
+	XMFLOAT4 Orientation;		// 회전(방향)을 나타내는 단위 사원수.	; 보통 세계 공간에서 절두체 정의 시 필요.
+
+	FLOAT RightSlope;		// 양의 X 기울기(X/Z)
+	FLOAT LeftSlope;		// 음의 X 기울기
+	FLOAT TopSlope;			// 양의 Y 기울기(Y/Z)
+	FLOAT BottomSlope;		// 음의 Y 기울기
+	FLOAT Near, Far;		// 가까운·먼 평면의 Z.
+};
+- 절두체 평면 방정식을 유도하는 방법은 다음과 같은 것들이 있다.
+① 카메라의 수직 시야각과 종횡비, 가까운 평면과 먼 평면으로부터 유도
+② 투영행렬로부터 시야 공간의 절두체 평면 방정식 유도
+③ NDC 공간에서 시야 절두체에 투영 행렬의 역을 적용하여 유도	// XNA Collision 라이브러리가 사용하는 전략이다.
+코드.
+//-----------------------------------------------------------------------------
+// 원근투영 행렬로부터 절두체를 구축한다.
+// 그 행렬에는 투영 변환만 있어야 한다. 회전이나 이동, 비례가 있으면 절두체가
+// 정확하게 만들어지지 않을 수 있다.
+//-----------------------------------------------------------------------------
+VOID ComputeFrustumFromProjection( Frustum* pOut, XMMATRIX* pProjection )
+{
+    XMASSERT( pOut );
+    XMASSERT( pProjection );
+
+    // 동차 공간에서의 투영 절두체 꼭짓점들.
+    static XMVECTOR HomogenousPoints[6] =
+    {
+        {  1.0f,  0.0f, 1.0f, 1.0f },   // 오른쪽(먼 평면의)
+        { -1.0f,  0.0f, 1.0f, 1.0f },   // 왼쪽
+        {  0.0f,  1.0f, 1.0f, 1.0f },   // 위
+        {  0.0f, -1.0f, 1.0f, 1.0f },   // 아래
+
+        { 0.0f, 0.0f, 0.0f, 1.0f },     // 가까운
+        { 0.0f, 0.0f, 1.0f, 1.0f }      // 먼
+    };
+
+    XMVECTOR Determinant;							// 판별식 결과를 담을 변수로 옵션이다.
+    XMMATRIX matInverse = XMMatrixInverse( &Determinant, *pProjection );	// 투영 행렬의 역행렬을 구한다.
+
+    // 세계 공간에서의 절두체 꼭짓점들을 구한다.
+    XMVECTOR Points[6];
+
+    for( INT i = 0; i < 6; i++ )
+    {
+        // 점을 변환한다. ; 투영(NDC) 공간 -> 세계 공간
+        Points[i] = XMVector4Transform( HomogenousPoints[i], matInverse );
+    }
+
+    pOut->Origin = XMFLOAT3( 0.0f, 0.0f, 0.0f );
+    pOut->Orientation = XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f );
+
+    // 기울기들을 계산한다.
+    Points[0] = Points[0] * XMVectorReciprocal( XMVectorSplatZ( Points[0] ) );
+    Points[1] = Points[1] * XMVectorReciprocal( XMVectorSplatZ( Points[1] ) );
+    Points[2] = Points[2] * XMVectorReciprocal( XMVectorSplatZ( Points[2] ) );
+    Points[3] = Points[3] * XMVectorReciprocal( XMVectorSplatZ( Points[3] ) );
+
+    pOut->RightSlope = XMVectorGetX( Points[0] );
+    pOut->LeftSlope = XMVectorGetX( Points[1] );
+    pOut->TopSlope = XMVectorGetY( Points[2] );
+    pOut->BottomSlope = XMVectorGetY( Points[3] );
+
+    // 가까운 평면 거리와 먼 평면 거리를 계산한다.
+    Points[4] = Points[4] * XMVectorReciprocal( XMVectorSplatW( Points[4] ) );
+    Points[5] = Points[5] * XMVectorReciprocal( XMVectorSplatW( Points[5] ) );
+
+    pOut->Near = XMVectorGetZ( Points[4] );
+    pOut->Far = XMVectorGetZ( Points[5] );
+
+    return;
+}
+
+
+
+
+
+● 절두체 대 구 교차 판정
+- 수식에 관한 내용은 참고 자료를 참고한다.
+- 판정이 의미가 있으려면 구와 절두체가 같은 좌표계에 있어야 한다.
+코드.
+// 반환값 : 	0 = 교차하지 않음,
+//		1 = 교차,
+//		2 = A가 B에 완전히 포함됨.
+INT IntersectSphereFrustum(
+	const Sphere* pVolumeA,
+	const Frustum* pVolumeB);
+
+
+
+
+
+● 절두체 대 AABB 교차 판정
+- 전략은 위에 보인 절두체 대 구 교차와 동일하다.
+- 판정이 의미가 있으려면 AABB와 절두체가 같은 좌표계에 있어야 한다.
+① 평면 법선 벡터 n과 가장 잘 일치하는 벡터 PQ를 찾는다.					(☆)
+// x, y, z축 각각에 대해...
+for(int j = 0; j < 3; ++j)
+{
+	// PQ가 이 축에서의 평면 법선과 같은
+	// 방향을 가리키게 한다.
+	if(planeNormal[j] >= 0.0f)
+	{
+		P[j] = box.minPt[j];
+		Q[j] = bax.maxPt[j];
+	}
+	else
+	{
+		P[j] = box.maxPt[j];
+		Q[j] = bax.minPt[j];
+	}
+}
+② 충돌 체크를 진행한다.
+// 반환값	: 0 = 교차하지 않음, 
+//                1 = 교차, 
+//                2 = A가 B에 완전히 포함됨.
+//-----------------------------------------------------------------------------
+INT IntersectAxisAlignedBoxFrustum( const AxisAlignedBox* pVolumeA, const Frustum* pVolumeB )
+{
+	XMASSERT( pVolumeA );
+	XMASSERT( pVolumeB );
+
+	// AABB를 만든 후 OBB와 프러스텀 간 충돌체크를 진행한다.
+
+	OrientedBox BoxA;
+
+	BoxA.Center = pVolumeA->Center;
+	BoxA.Extents = pVolumeA->Extents;
+	BoxA.Orientation.x = 0.0f;
+	BoxA.Orientation.y = 0.0f;
+	BoxA.Orientation.z = 0.0f;
+	BoxA.Orientation.w = 1.0f;
+
+	return IntersectOrientedBoxFrustum( &BoxA, pVolumeB );
+}
+
+
+
+
+
+● 절두체 선별
+- 경계입체가 절두체와 교차하지 않는 물체는 그리기 호출을 통해 파이프라인에 제출할 필요가 없다.
+- CPU에서 추가적인 작업을 수행해야 하지만, 그 비용은 상대적으로 저렴하다.
+- 절두체를 선별하는 방식은 다음과 같다.
+① 메시의 AABB는 국소 공간에서 계산한다.
+② UpdateScene 메서드에서는 모든 인스턴스에 대해 절두체 선별을 수행한다.
+③ 절두체와 교차하는 인스턴스에 대해서는 해당 인스턴스별 자료를 동적 인스턴스 버퍼의 다음 번 가용 슬롯에 추가하고 나면
+mVisibleObjectCount 카운터를 증가한다.
+④ 절두체 선별을 위하여 시야 절두체를 해당 인스턴스의 국소 공간으로 변환해야 한다.
+// 인스턴스의 국소 공간이 아니더라도 같은 공간에 있으면 된다.
+코드.
+mCam.UpdateViewMatrix();
+mVisibleObjectCount = 0;
+
+if(mFrustumCullingEnabled)
+{
+	XMVECTOR detView = XMMatrixDeterminant(mCam.View());
+	XMMATRIX invView = XMMatrixInverse(&detView, mCam.View());
+	
+	D3D11_MAPPED_SUBRESOURCE mappedData; 
+	md3dImmediateContext->Map(mInstancedBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
+
+	InstancedData* dataView = reinterpret_cast<InstancedData*>(mappedData.pData);
+
+	for(UINT i = 0; i < mInstancedData.size(); ++i)
+	{
+		XMMATRIX W = XMLoadFloat4x4(&mInstancedData[i].World);
+		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
+
+		// 시야 공간에서 물체의 국소 공간으로 변환
+		XMMATRIX toLocal = XMMatrixMultiply(invView, invWorld);
+	
+		// 행렬을 개별 변환들로 분해한다.
+		XMVECTOR scale;
+		XMVECTOR rotQuat;
+		XMVECTOR translation;
+		XMMatrixDecompose(&scale, &rotQuat, &translation, toLocal);
+
+		// 카메라 절두체를 시야 공간에서 물체의 국소 공간으로 변환한다.
+		XNA::Frustum localspaceFrustum;
+		XNA::TransformFrustum(&localspaceFrustum, &mCamFrustum, XMVectorGetX(scale), rotQuat, translation);
+
+		// 국소 공간에서 AABB 대 절두체 교차 판정을 수행한다.
+		if(XNA::IntersectAxisAlignedBoxFrustum(&mSkullBox, &localspaceFrustum) != 0)
+		{
+			// 국소 공간에서 AABB 대 절두체 교차 판정을 수행한다.
+			dataView[mVisibleObjectCount++] = mInstancedData[i];
+		}
+	}
+
+	md3dImmediateContext->Unmap(mInstancedBuffer, 0);
+}
+
+md3dImmediateContext->DrawIndexedInstanced(mSkullIndexCount, mVisibleObjectCount, 0, 0, 0);

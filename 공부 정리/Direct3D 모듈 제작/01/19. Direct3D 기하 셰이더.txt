@@ -1,0 +1,137 @@
+● 기하 셰이더
+- 온전한 기본도형을 입력받는다. 즉, 메시를 구성하는 정점 목록을 입력으로 받는다.
+- 동차 절단 공간에서 기본도형들을 정의하는 정점들의 목록을 출력한다.
+- 이를 의사코드로 표현하면 다음과 같다.
+for(UINT i = 0; i < numTriangles; ++i)
+	OutputPrimitiveList = GeometryShader(T[i].vertexList);
+- 기하 셰이더의 일반적인 틀은 다음과 같다.
+[maxvertexcount(N)]	// 기하 셰이더가 한 번의 실행에서 출력할 최대 정점 개수 ; 스칼라 출력 개수 = maxvertexcount * 출력 정점 구조체의 스칼라 개수
+void ShaderName (
+①	PrimitiveType InputVertexType InputName [NumElements],
+②	inout StreamOutputObject<OutputVertexType> OutputName)
+{
+	//...기하 셰이더 본문
+}
+
+① PrimitiveType InputVertexType InputName [NumElements]
+⒜ PrimitiveType은 기하 셰이더가 받는 기본도형의 종류를 뜻하는 키워드로 
+point, line, triangle, lineadj, triangleadj를 사용할 수 있다.
+// 기하 셰이더는 온전한 기본도형을 입력으로 받기 때문에, 띠로 조립되는 기본도형에는 추가부담이 발생한다.
+
+② inout StreamOutputObject<OutputVertexType> OutputName
+- 출력 매개변수는 항상 스트림 형식(기하 셰이더가 출력하는 기본도형을 정의하는 정점들의 목록을 담는다.)이다.
+- 기하 셰이더에서 출력 스트림 목록에 정점을 추가할 때에는 다음과 같은 내장 Append 메서드를 사용한다.
+ex. void StreamOutputObject<OutputVertexType>::Append(OutputVertexType v);
+- 스트림 형식은 템플릿 형식으로, 총 3가지이며, 템플릿 인수는 출력 정점의 정점 형식을 지정한다.
+⒜ PointStream<OutputVertexType>	: 점 목록을 정의하는 정점들의 목록
+⒝ LineStream<OutputVertexType>		: 선 띠를 정의하는 정점들의 목록
+⒞ TriangleStream<OutputVertexType>	: 삼각형 띠를 정의하는 정점들의 목록
+// 기하 셰이더가 출력하는 정점들은 기본도형들을 형성하는데, 그 기본도형들의 종류는 스트림 형식(StreamOutputObject에 해당하는)에 의해 결정된다.
+// 선과 삼각형은 띠의 형태로 출력되는데 RestartStrip 함수를 호출함으로써 목록 형태 출력을 흉내낼 수 있다.
+
+
+
+
+
+● Append 메서드와 RestartStrip 메서드의 활용
+- 다음 기하 셰이더는 삼각형 하나를 입력받아서 같은 크기의 삼각형 네 개로 분할하여 출력한다.
+코드.
+struct VertexOut
+{
+	float3 PosL	: POSITION;
+	float3 NormalL	: NORMAL;
+	float2 Tex	: TEXCOORD;
+};
+
+struct GeoOut
+{
+	float4 PosH	: SV_POSITION;
+	float3 PosW	: POSITION;
+	float3 NormalW	: NORMAL;
+	float2 Tex	: TEXCOORD;
+	float FogLerp	: FOG;
+};
+
+void Subdivide (VertexOut inVerts[3], out VertexOut outVerts[6])
+{
+	VertexOut m[3];			// 확장된 정점 3개
+
+	// 각 변의 중점을 계산한다.
+	m[0].PosL = 0.5f*(inVerts[0].PosL + inVerts[1].PosL);
+	m[1].PosL = 0.5f*(inVerts[1].PosL + inVerts[2].PosL);
+	m[2].PosL = 0.5f*(inVerts[2].PosL + inVerts[0].PosL);
+
+	// 단위 구에 투영한다.
+	m[0].PosL = normalize(m[0].PosL);
+	m[1].PosL = normalize(m[1].PosL);
+	m[2].PosL = normalize(m[2].PosL);
+
+	// 법선을 유도한다.
+	m[0].NormalL = m[0].PosL;
+	m[1].NormalL = m[1].PosL;
+	m[2].NormalL = m[2].PosL;
+
+	// 텍스처 좌표를 보간한다.
+	m[0].Tex = 0.5f*(inVerts[0].Tex + inVerts[1].Tex);
+	m[1].Tex = 0.5f*(inVerts[1].Tex + inVerts[2].Tex);
+	m[2].Tex = 0.5f*(inVerts[2].Tex + inVerts[0].Tex);
+
+	outVerts[0] = inVerts[0];
+	outVerts[1] = m[0];
+	outVerts[2] = m[2];
+	outVerts[3] = m[1];
+	outVerts[4] = inVerts[2];
+	outVerts[5] = inVerts[1];
+};
+
+void OutputSubdivision(VertexOut v[6],
+	inout TriangleStream<GeoOut> triStream)
+{
+	GeoOut gout[6];
+
+	[unroll]
+	for(int i = 0; i < 6; ++i)
+	{
+		// 세계 공간으로 변환한다.
+		gout[i].PosW = mul(float4(v[i].PosL, 1.0f), gWorld).xyz;
+		gout[i].NormalW = mul(v[i].NormalL, (float3x3)gWorldInvTranspose);
+
+		// 동차 절단 공간으로 변환한다.
+		gout[i].PosH = mul(float4(v[i].PosL, 1.0f), gWorldViewProj);
+
+		gout[i].Tex = v[i].Tex;
+	}
+	
+	// 세분된 삼각형들을 두 개의 띠로 그린다.
+	// 띠1 : 아래쪽 삼각형 세 개
+	// 띠2 : 위쪽 삼각형 하나
+
+	[unroll]
+	for(int j = 0; j < 5; ++j)
+	{
+		triStream.Append(gout[j]);	// 띠 형태를 이루게 된다.
+	}
+	triStream.RestartStrip();		// 여기서 띠 형태 구성을 한 번 끊는다.
+
+	triStream.Append(gout[1]);
+	triStream.Append(gout[5]);
+	triStream.Append(gout[3]);
+}
+
+[maxvertexcount(8)]
+void GS (triangle VertexOut gin[3], inout TriangleStream<GeoOut> triStream)
+{
+	VertexOut v[6];
+	Subdivide(gin, v);
+	OutputSubdivision(v, triStream);
+}
+
+...
+technique11 Tech
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetGeometryShader(CompileShader)
+	}
+}

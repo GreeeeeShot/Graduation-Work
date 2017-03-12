@@ -1,0 +1,138 @@
+● 혼합 연산
+typedef enum D3D11_BLEND_OP
+{
+	D3D11_BLEND_OP_ADD = 1,				
+	D3D11_BLEND_OP_SUBTRACT = 2,			
+	D3D11_BLEND_OP_REV_SUBTRACT = 3,		
+	D3D11_BLEND_OP_MIN = 4,			// 혼합 계수 영향 x
+	D3D11_BLEND_OP_MAX = 5,			// 혼합 계수 영향 x
+} D3D11_BLEND_OP;
+
+
+
+
+
+● 혼합 계수
+D3D11_BLEND_ZERO
+D3D11_BLEND_ONE
+D3D11_BLEND_SRC_COLOR
+D3D11_BLEND_INV_SRC_COLOR
+D3D11_BLEND_SRC_ALPHA
+D3D11_BLEND_INV_SRC_ALPHA
+D3D11_BLEND_DEST_ALPHA
+D3D11_BLEND_INV_DEST_ALPHA
+D3D11_BLEND_DEST_COLOR
+D3D11_BLEND_INV_DEST_COLOR
+D3D11_BLEND_SRC_ALPHA_SAT		// clamp(c, 0, 1) 함수 적용
+D3D11_BLEND_BLEND_FACTOR		// ID3D11DeviceContext::OMSetBlendState 메서드의 둘째 매개변수로 주어진 색상	
+D3D11_BLEND_INV_BLEND_FACTOR
+// _COLOR로 끝나는 계수들은 알파 성분 혼합 공식에 사용할 수 없다.
+
+
+
+
+
+● 혼합 상태를 서술하는 D3D11_BLEND_DESC
+typedef struct D3D11_BLEND_DESC
+{
+	BOOL AlphaToCoverageEnable;				// 다중표본화 기법인 알파-포괄도 변환 활성화 여부
+	BOOL IndependentBlendEnable;				// 각 렌더 대상마다 개별적 혼합 수행 여부
+①	D3D11_RENDER_TARGET_BLEND_DESC RenderTarget[8];		// i번째 렌더 대상에 적용할 혼합 설정을 담은 구조체
+} D3D11_BLEND_DESC;
+// IndependetBlendEnable이 false이면, 모든 렌더 대상에 대해 RenderTarget[0]의 혼합 설정이 적용된다.
+
+① D3D11_RENDER_TARGET_BLEND_DESC RenderTarget[8];
+typedef struct D3D11_RENDER_TARGET_BLEND_DESC
+{
+	BOOL BlendEnable;			// 기본값 : false
+	D3D11_BLEND srcBlend;			// 기본값 : D3D11_BLEND_ONE
+	D3D11_BLEND DestBlend;			// 기본값 : D3D11_BLEND_ZERO
+	D3D11_BLEND_OP BlendOp;			// 기본값 : D3D11_BLEND_OP_ADD
+	D3D11_BLEND srcBlendAlpha;		// 기본값 : D3D11_BLEND_ONE
+	D3D11_BLEND DestBlendAlpha;		// 기본값 : D3D11_BLEND_ZERO
+	D3D11_BLEND_OP BlendOpAlpha;		// 기본값 : D3D11_BLEND_OP_ADD
+⒜	UINT8 RenderTargetWriteMask;		// 기본값 : D3D11_COLOR_WRITE_ENABLE_ALL ; 렌더 대상 쓰기 마스크
+} D3D11_RENDER_TARGET_BLEND_DESC;
+
+⒜ UINT8 RenderTargetWriteMask
+typedef enum D3D11_COLOR_WRITE_ENABLE
+{
+	D3D11_COLOR_WRITE_ENABLE_RED = 1,
+	D3D11_COLOR_WRITE_ENABLE_GREEN = 2,
+	D3D11_COLOR_WRITE_ENABLE_BLUE = 4,
+	D3D11_COLOR_WRITE_ENABLE_ALPHA = 8,
+	D3D11_COLOR_WRITE_ENABLE_ALL = 	(D3D11_COLOR_WRITE_ENABLE_RED |
+		D3D11_COLOR_WRITE_ENABLE_GREEN |
+		D3D11_COLOR_WRITE_ENABLE_BLUE |
+		D3D11_COLOR_WRITE_ENABLE_ALPHA)
+} D3D11_COLOR_WRITE_ENABLE;
+// 혼합을 비활성화하는 경우, 픽셀 셰이더가 돌려준 색상에 그 어떤 쓰기 마스크도 적용되지 않는다.
+
+
+
+
+
+● 혼합 상태에 대한 인터페이스 포인터 생성과 등록
+코드.
+D3D11_BLEND_DESC transparentDesc = {0};
+transparentDesc.AlphaToCoverageEnable = false;
+transparentDesc.IndependentBlendEnable = false;
+
+transparentDesc.RenderTarget[0].BlendEnable	= true;
+transparentDesc.RenderTarget[0].SrcBlend       	= D3D11_BLEND_SRC_ALPHA;
+transparentDesc.RenderTarget[0].DestBlend      	= D3D11_BLEND_INV_SRC_ALPHA;
+transparentDesc.RenderTarget[0].BlendOp        	= D3D11_BLEND_OP_ADD;
+transparentDesc.RenderTarget[0].SrcBlendAlpha  	= D3D11_BLEND_ONE;
+transparentDesc.RenderTarget[0].DestBlendAlpha 	= D3D11_BLEND_ZERO;
+transparentDesc.RenderTarget[0].BlendOpAlpha   	= D3D11_BLEND_OP_ADD;
+transparentDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+HR(device->CreateBlendState(
+	&transparentDesc, 			// 생성할 혼합 상태를 서술하는 D3D11_BLEND_DESC 구조체를 가리키는 포인터 
+	&TransparentBS));			// 생성된 혼합 상태 인터페이스 포인터
+...
+float blendFactor[] = {0.0f, 0.0f, 0.0f, 0.0f}; 
+md3dImmediateContext->OMSetBlendState(		// 첫 매개변수를 널 값으로 설정 시, 기본 상태가 적용된다.
+	RenderStates::TransparentBS, 		// 장치에 적용할 혼합 상태 객체를 가리키는 포인터
+	blendFactor, 				// 하나의 RGBA 색상 벡터를 정의하는 부동소수점 값 네 개의 배열을 가리키는 포인터 ; D3D11_BLEND_BLEND_FACTOR or D3D11_BLEND_INV_BLEND_FACTOR 관련
+	0xffffffff);				// 다중표본화 설정 ; 총 32개의 표본을 취할 수 있다. ; 0xffffffff 시 어떤 표본도 활성화하지 않는 것으로 단일표본화를 의미한다.
+
+
+
+
+
+● 효과 파일에서의 혼합 상태 정의
+코드.
+BlendState blend
+{
+	// 첫 렌더 대상을 위한 혼합 상태.
+	BlendEnable[0] = TRUE;
+	SrcBlend[0] = SRC_COLOR;
+	DestBlend[0] = INV_SRC_ALPHA;
+	BlendOp[0] = ADD;
+	SrcBlendAlpha[0] = ZERO;
+	DestBlendAlpha[0] = ZERO;
+	BlendOpAlpha[0] = ADD;
+	RenderTargetWriteMask[0] = 0x0F;
+
+	// 다중 렌더 대상의 둘째 렌더 대상을 위한 혼합 상태.
+	BlendEnable[1] = TRUE;
+	SrcBlend[1] = ONE;
+	DestBlend[1] = ZERO;
+	BlendOp[1] = ADD;
+	SrcBlendAlpha[1] = ZERO;
+	DestBlendAlpha[1] = ZERO;
+	BlendOpAlpha[1] = ADD;
+	RenderTargetWriteMask[1] = 0x0F;
+};
+
+technique11 Tech
+{
+	pass P0
+	{
+		...
+		// 이 패스에 대해서는 "blend"를 사용한다.
+		SetBlendState(blend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
+	}
+}
+// 상태 변수에 배정되는 값들은 대소문자를 구분하지 않는다.

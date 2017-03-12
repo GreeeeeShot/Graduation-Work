@@ -1,0 +1,334 @@
+● 효과 프레임워크
+- 특정한 렌더링 표과를 구현하는데 쓰이는 '셰이더 프로그램'들과 '렌더 상태'들, 상수 버퍼들, 
+적어도 하나의 패스로 이루어진 기법을 '효과'라고 부르는 단위로 조직화하고 관리하는 틀을 제공하는 일단의 편의용 코드 집합이다.
+// .fx파일에서 효과를 설정하는데 쓰이는 편의용 코드 집합이라 보면 될 듯.
+- 하나의 '효과'는 적어도 하나의 정점 셰이더, 적어도 하나의 픽셀 셰이더, 그리고 그 효과를 구현하는데 필요한
+렌더 상태들로 이루어진다.
+- 하나의 패스는 하나의 정점 셰이더와 픽셀 셰이더, 렌더 상태로 구성되며, 추가적으로 기하 셰이더와 테셀레이션 관련 셰이더들이
+포함될 수 있다.
+- 여러 기법은 하나의 효과 그룹으로 묶을 수 있으며, 효과 그룹을 명시적으로 정의하지 않으면 효과 파일 컴파일러는
+그 효과 파일에 있는 모든 기법을 담은 하나의 익명 효과 그룹을 생성한다.
+
+
+
+
+● 효과 프레임워크의 사용
+- 헤더 파일 d3dx11Effect.h을 포함시키고 라이브러리 파일 D3DX11Effects.lib, D3DX11EffectsD.lib를 링크한다.
+- DirectX SDK\Samples\C++\Effects11\Inc에 d3dx11Effect.h이 존재한다.
+- DirectX SDK\Samples\C++\Effects11에서 효과 프레임워크 라이브러리의 소스 코드 전체가 제공(적절히 수정할 수 있다.)되며,
+이를 각각 디버그 모드, 릴리즈 모드로 컴파일하면 D3DX11Effects.lib, D3DX11EffectsD.lib를 얻을 수 있다.
+
+
+
+
+
+● 하나의 효과 파일 코드 예시
+코드. 
+cbuffer cbPerObject
+{
+	float4x4 gWorldViewProj;
+};
+
+struct VertexIn
+{
+	float3 Pos	: POSITION;
+	float4 Color	: COLOR;
+};
+
+struct VertexOut
+{
+	float4 PosH	: SV_POSITION;
+	flost4 Color	: COLOR;
+};
+
+VertexOut VS (VertexIn vin)
+{
+	VertexOut vout;
+
+	// 동차 절단 공간으로 변환
+	vout.PosH = mul(float4(vin.Pos, 1.0f), gWorldViewProj);
+
+	// 정점 색상을 그대로 픽셀 셰이더에 전달한다.
+	vout.Color = vin.Color;
+
+	return vout;
+}
+
+float4 PS(VertexOut pin) : SV_Target
+{
+	return pin.Color;
+}
+
+RasterizerState WireframeRS	// 효과 파일 내 렌더 집합 생성 및 설정은 구체적인 렌더 상태하에서 작동하는 효과에서 유용하다.
+{
+	FillMode = Wireframe;	// 설정의 우변이 접두사(D3D11_FILL_같은)를 뺀 형태와 동일하다.
+	CullMode = Back;
+	FrontCounterClockwise = false;
+
+	// 명시적으로 설정하지 않은 속성들에 대해서는 기본값이 쓰인다. ('Direct3D 렌더상태'를 참고하자.)
+}
+
+technique11 ColorTech
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetPixelShader(CompileShader(ps_5_0, PS()));
+	}
+}
+
+
+
+
+
+● 응용 프로그램에서 사용할 효과 객체 생성
+코드.
+	DWORD shaderFlags = 0;
+#if defined( DEBUG ) || defined( _DEBUG )
+	shaderFlags |= D3D10_SHADER_DEBUG;			// 셰이더를 디버그 모드에서 컴파일 한다.
+	shaderFlags |= D3D10_SHADER_SKIP_OPTIMIZATION;		// 컴파일 시 최적화를 진행하지 않는다.
+#endif
+ 
+	// 효과를 실제로 사용하기 위해, .fx파일 안의 셰이더 프로그램들을 컴파일한다.
+	ID3D10Blob* compiledShader = 0;
+	ID3D10Blob* compilationMsgs = 0;
+	HRESULT hr = D3DX11CompileFromFile(
+		L"FX/color.fx",			// 컴파일할 셰이더 소스 코드를 담고 있는 .fx 파일의 이름
+		0, 				// 고급 옵션으로, 0(or NULL)으로 세팅해두자.
+		0, 				// 고급 옵션으로, 0(or NULL)으로 세팅해두자.
+①		0, 				// 셰이더 프로그램의 진입점
+		"fx_5_0", 			// 사용할 셰이더 버전을 뜻하는 문자열
+		shaderFlags, 			// 셰이더 버전을 뜻하는 문자열
+		0, 				// 고급 효과 컴파일 옵션으로, 0으로 세팅해두자.
+		0, 				// 셰이더를 비동기적으로 컴파일하기 위한 고급 옵션으로, 0으로 세팅해두자.
+②		&compiledShader, 		// 컴파일된 셰이더를 담은 'ID3D10Blob 구조체'를 가리키는 포인터
+③		&compilationMsgs, 		// 컴파일 오류 시 오류 메시지를 담은 문자열을 담은 'ID3D10Blob 구조체'를 가리키는 포인터 
+		0);				// 비동기 컴파일 시 오류 코드를 지정하는데 쓰인다. 여덟 번째 매개변수를 널로 지정해주었다면 해당 매개변수도 널을 지정한다.
+
+	// compilationMsgs can store errors or warnings.
+	if( compilationMsgs != 0 )
+	{
+		MessageBoxA(0, (char*)compilationMsgs->GetBufferPointer(), 0, 0);
+		ReleaseCOM(compilationMsgs);
+	}
+
+	// Even if there are no compilationMsgs, check to make sure there were no other errors.
+	if(FAILED(hr))
+	{
+		DXTrace(__FILE__, (DWORD)__LINE__, hr, L"D3DX11CompileFromFile", true);
+	}
+
+	HR(D3DX11CreateEffectFromMemory(
+		compiledShader->GetBufferPointer(), 	// 컴파일된 효과 자료를 가리키는 포인터
+		compiledShader->GetBufferSize(), 	// 컴파일된 효과 자료의 바이트 단위 크기
+		0, 					// 효과 플래그로 D3DX11ComileFromFile함수의 Flags2(7번째 매개변수)에 지정한 것과 일치해야 한다.
+		md3dDevice,				// Direct3D 11 장치를 가리키는 포인터 
+		&mFX));					// 생성된 효과 파일을 가리키는 포인터
+
+	// Done with compiled shader.
+	ReleaseCOM(compiledShader);
+
+	mTech    = mFX->GetTechniqueByName("ColorTech");
+	mfxWorldViewProj = mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
+
+① LPCSTR pFunctionName
+- 셰이더 프로그램의 진입점, 즉 셰이더 주 함수의 이름. 셰이더 프로그램(VS, PS 등)들을 '개별적'으로 컴파일할 때에만 쓰인다.
+ex. 이에 대한 내용은 '따라하기(05)'내 'CreateVertexShaderFromFile()' 메서드를 참고한다.
+- 효과 프레임워크를 사용하는 경우, 효과 파일에 정의된 기법 패스들에 셰이더 진입점이 정의(ex. VS(), PS())되어 있으므로, 
+해당 매개변수에는 널 값을 지정한다.
+
+②③ 관련
+ref. ID3D10Blob
+- 범용 메모리 블록을 나타내는 형식으로, 다음 두 메서드를 제공한다.
+⒜ LPVOID GetBufferPointer : 자료에 대한 void*를 돌려준다. 따라서, 자료 사용 시 적절한 형식의 캐스팅 설정이 필요하다.
+⒝ SIZE_T GetBufferSize : 메모리 블록의 바이트 단위 크기를 돌려준다.
+
+
+
+
+
+● C++ 응용 프로그램에서 효과 객체를 이용하여 상수 버퍼에 대한 내부 캐시 갱신하기
+코드.
+// 효과 파일 내 다음과 같은 상수 버퍼가 있다고 하자.
+cbuffer cbPerObject
+{
+	float4x4 gWVP
+	float4 gColor;
+	float gSize;
+	int gIndex;
+	bool gOptionOn;
+};
+
+// 생성한 효과 객체로부터 상수 버퍼 변수에 대한 포인터를 얻어온다.
+ID3DX11EffectMatrixVariable* fxWVPVar;
+ID3DX11EffectVectorVariable* fxColorVar;		// 갱신 시 4차원 벡터(XMVECTOR와 같은)를 기대한다.
+ID3DX11EffectScalarVariable* fxSizeVar;
+ID3DX11EffectScalarVariable* fxIndexVar;
+ID3DX11EffectScalarVariable* fxOptionOnVar;
+fxWVPVar = mFX->GetVariableByName("gWVP")->AsMatrix();
+fxColorVar = mFX->GetVariableByName("gColor")->AsVector();	
+fxSizeVar = mFX->GetVariableByName("gSize")->AsScalar();
+fxIndexVar = mFX->GetVariableByName("gIndex")->AsScalar();
+fxOptionOnVar = mFX->GetVariableByName("gOptionOn")->AsScalar();
+//ID3DX11Effect::GetVariableByName 메서드는 ID3DX11EffectVariable 형식의 포인터를
+// 돌려준다. 이 형식은 '범용' 효과 형식으로 특화된 형식(행렬, 벡터, 스칼라 등)에 대한 포인터를
+// 얻으려면 적절한 As- 메서드를 사용해야 한다.
+
+// C++ 인터페이스를 통해서 변수의 값을 갱신한다.
+fxWVPVar->SetMatrix((float*) &M);		// M이 XMMATRIX 형식의 객체라고 가정
+fxColorVar->SetFloatVector((float*) &V);	// V가 XMVECTOR 형식의 객체라고 가정
+fxSizeVar->SetFloat(5.0f);
+fxIndexVar->SetInt(77);
+fxOptionOnVar->SetBool(true);
+// 효과 객체의 내부 캐시가 갱신되는 것일 뿐, GPU 메모리 내 실제 상수 버퍼가 갱신되는 것은 아니다.
+// 실질적인 갱신 방법은 ID3DX11EffectPass::Apply 메서드를 이용하여 한 번에 일괄적으로 갱신하는 것이다.
+
+ref. ID3DX11EffectVariable::SetRawValue 메서드
+- 임의의 크기의 변수(이를테면 범용 구조체)를 설정할 때 유용하다.
+- MSDN Reference: https://msdn.microsoft.com/ko-kr/library/windows/desktop/bb173747(v=vs.85).aspx
+ex. 상수 버퍼 내 3차원 벡터를 갱신하는 경우
+ID3DX11EffectVariable* mfxEyePosVar;
+mfxEyePosVar = mFX->GetVariableByName("gEyePosW");
+...
+mfxEyePosVar->SetRawValue(&mEyePos, 0, sizeof(XMFLOAT3));
+
+
+
+
+
+● C++ 응용 프로그램에서 효과를 이용한 그리기
+- 상수 버퍼의 변수들을 적절히 갱신한 다음, 루프(for과 같은)로 기법의 각 패스를 훑으면서 각 패스를 적용해서
+기하구조를 그린다.
+
+코드.
+// 상수들을 설정한다. => 내부 캐시를 갱신한다.
+XMMATRIX world = XMLoadFloat4x4 (&mWorld);
+XMMATRIX view = XMLoadFloat4x4 (&mView);
+XMMATRIX proj = XMLoadFloat4x4 (&mProj);
+XMMATRIX worldViewProj = world*view*proj;
+
+mfxWorldViewProj->SetMatrix(reinterpret_cast<float*> (&worldViewProj));	// 내부 캐시 갱신
+
+D3DX11_TEXHNIQUE_DESC techDesc;
+mTech->GetDesc(&techDesc);
+for(UINT p = 0; p < techDesc.Passes; ++p)
+{
+①	mTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);	// 첫 번째 매개변수는 무조건 0으로 지정한다.
+
+	// 기하구조를 그린다.
+	md3dImmediateContext->DrawIndexed(36, 0, 0);
+}
+
+① ID3DX11EffectTechnique::GetPassByIndex
+- ID3DX11EffectTechnique::GetPassByIndex 메서드는 주어진 색인에 해당하는 패스를 나타내는 ID3DX11EffectPass 인터페이스를
+가리키는 포인터를 돌려준다.
+- ID3DX11EffectPass::Apply 메서드가 하는 일은 다음과 같다.
+⒜ GPU 메모리에 저장된 상수 버퍼를 새 변수 값들로 실질적으로 갱신한다.
+⒝ 패스에 설정된 셰이더 프로그램들을 파이프라인에 묶는다.
+⒞ 패스에 설정된 렌더 상태들을 적용한다.
+
+
+
+
+
+● [심화] 효과 파일을 응용 프로그램 빌드 과정에서 컴파일
+- fxc(DirectX SDK\Utilities\bin\x86) 컴파일러를 통해 오프라인에서 효과 파일을 따로 컴파일 할 수 있다.
+// 기존 방식으로는 실행 시점에서 D3DX11CompileFromFile 함수를 호출하여 효과 파일을 컴파일해야 했다.
+- 응용 프로그램의 빌드 공정 도중에 fxc를 실행해서 효과 파일들을 컴파일하도록 VC++ 프로젝트를 설정하는 방법은 다음과 같다.
+① 프로젝트 속성 대화상자의 VC++ 디렉터리 탭의 “실행 가능 디렉터리”에 DirectX SDK\Utilities\bin\x86이 추가되어 있어야 한다.
+② 프로젝트에 효과 파일들을 추가한다.
+③ 각 효과마다, 솔루션 탐색기에서 효과 파일을 오른쪽 클릭해서 속성을 선택한 후 사용자 정의 빌드 도구의 ‘명령줄 항목’을 다음과 같이 설정한다.
+(a) 디버그 모드 : fxc /Fc /Od /Zi /T fx_5_0 /Fo "%(RelativeDir)"\%(Filename).fxo" "%(FullPath)"
+// 컴파일 플래그 /FC /Od /Zi는 차례대로 어셈블리 목록 출력, 최적화 비활성화, 디버그 정보 생성을 뜻한다.
+(b) 릴리즈 모드 : fxc /T fx_5_0 /Fo "(RelativeDir) \%(Filename).fxo" "%(FullPath)"
+(c) 설명 : fxc compile for release: %(FullPath)
+(d) 출력 : %(RelativeDir)\%(Filename).fxo		// fxc가 효과 파일(.fx)을 컴파일하면, 그 결과물인 .fxo 파일이 만들어진다. 
+=> 이후 프로젝트 빌드 시 에러가 나면, 디버그 출력 창에 오류 및 경고 메시지가 표시된다.
+=> 이 설정을 거치면 .fx파일이 필요없어지므로 D3DX11CompileFromFile을 호출할 필요도 없다.
+=> 대신 .fxo 파일에서 컴파일된 셰이더 자료를 적재해서 D3DX11CreateEffectFromMemory 함수에 넘겨주어야 한다.
+
+코드.
+std::ifstream fin("fx\color.fxo", std::ios::binary);
+
+fin.seekg(0, std::ios_base::end);
+int size = (int)fin.tellg();
+
+fin.seekg(0, std::ios_base::beg);
+std::vector<char> compiledShader(size);
+
+fin.read(&compiledShader[0], size);
+fin.close();
+
+HR(D3DX11CreateEffectFromMemory(&compiledShader[0], size, 0, md3dDevice, &mFX));
+
+
+
+
+
+● [심화] '셰이더 생성기'로서의 효과 프레임워크
+- 하나의 렌더링 효과를 위해 여러 개의 기법을 사용하는 경우?
+ex. 품질에 따른 그림자 효과
+- 코드의 중복을 막으면서, 동적 분기의 비용을 없앨 수 있는 방법 
+=> 실행 전에 모든 종류의 '셰이더 변이'를 컴파일 시점(오프라인 시점)에 생성하는 것이다. 
+
+코드.
+// ...상수 버퍼, 정점 구조체 등은 생략
+
+VertexOut VS(VertexIn vin) { /*...구현 세부 생략...*/}
+
+#define LowQuality 0
+#define MediumQuality 1
+#define HighQuality 2
+
+float4 PS(VertexOut pin, uniform int gQuality) : SV_Target
+{
+	/* 모든 품질 수준에 공통인 작업을 수행한다. */
+
+	if(gQuality == LowQuality)
+	{
+		/* 저품질에 고유한 작업을 수행한다. */
+	}
+	else if(gQuality == MediumQuality)
+	{
+		/* 중간 품질에 고유한 작업을 수행한다. */
+	}
+	else
+	{
+		/* 고품질에 고유한 작업을 수행한다. */
+	}
+
+	/* 모든 품질 수준에 공통인 나머지 작업을 수행한다. */
+}
+
+technique11 ShadowsLow
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetPixelShader(CimpileShader(ps_5_0, PS(LowQuality)));
+	}
+}
+
+technique11 ShadowsMedium
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetPixelShader(CimpileShader(ps_5_0, PS(MediumQuality)));
+	}
+}
+
+technique11 ShadowsHigh
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetPixelShader(CimpileShader(ps_5_0, PS(HighQuality)));
+	}
+}
+// 각 경우에 대한 셰이더 변이들을 컴파일 시점에서 생성한다.
+// 이것이 가능한 이유는 uniform 변수를 컴파일 시점에 지정할 수 있기 때문이다.
+
+ref. uniform 변수
+- 균일 변수로서, 각 정점이나 각 픽셀마다 변하지는 않는 변수임을 의미한다. 균일 변수는
+모든 정점 또는 픽셀에 대해 같은 값을 가진다.(C++ 응용 프로그램에서 바꿀 때까지는.)

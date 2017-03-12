@@ -1,0 +1,328 @@
+● 시야 변환 개괄
+- 시야 공간에서 x, y, z축 각각은 카메라의 오른쪽, 위쪽, 정면 방향을 나타낸다.
+- 세계 공간에서 시야 공간으로의 좌표 변경 변환을 시야 변환이라고 부르며, 시야 행렬을 통해 이루어진다.
+- 카메라는 세계 공간에서 RT(회전 후 이동)로 구성된 행렬 W를 통해 그 위치와 좌표계 각 축의 방향이 설정된다.
+이를 시야 공간으로 변환하기 위하여, W의 역행렬을 모든 정점에 대하여 적용한다.
+
+
+
+
+
+● 카메라 클래스
+- 카메라 클래스가 저장하는 중요한 정보로 다음과 같은 것들이 있다.
+① 세계 공간에서의 시야 공간 좌표계의 원점과 x축, y축, z축에 해당하는 위치벡터, 오른쪽 벡터, 상향 벡터, 시선 벡터
+② 시야 절두체를 규정하는 속성들 (시야각, 근평면, 원평면, Aspect)
+코드.
+class Camera
+{
+public:
+	Camera();
+	~Camera();
+
+	// 세계 공간 카메라 위치를 조회 또는 설정
+	XMVECTOR GetPositionXM()const;
+	XMFLOAT3 GetPosition()const;
+	void SetPosition(float x, float y, float z);
+	void SetPosition(const XMFLOAT3& v);
+	
+	// 카메라 기저벡터들을 돌려준다.
+	XMVECTOR GetRightXM()const;
+	XMFLOAT3 GetRight()const;
+	XMVECTOR GetUpXM()const;
+	XMFLOAT3 GetUp()const;
+	XMVECTOR GetLookXM()const;
+	XMFLOAT3 GetLook()const;
+
+	// 절두체 속성들을 돌려준다.
+	float GetNearZ()const;
+	float GetFarZ()const;
+	float GetAspect()const;
+	float GetFovY()const;
+	float GetFovX()const;
+
+	// 시야 공간 기준의 가까운/먼 평면 크기를 돌려준다.
+	float GetNearWindowWidth()const;
+	float GetNearWindowHeight()const;
+	float GetFarWindowWidth()const;
+	float GetFarWindowHeight()const;
+	
+	// 절두체를 설정한다.
+	void SetLens(float fovY, float aspect, float zn, float zf);
+
+	// 카메라 위치와 시선 및 위쪽 방향으로 카메라 공간을 설정한다.
+	void LookAt(FXMVECTOR pos, FXMVECTOR target, FXMVECTOR worldUp);
+	void LookAt(const XMFLOAT3& pos, const XMFLOAT3& target, const XMFLOAT3& up);
+
+	// 시야 행렬과 투영 행렬을 돌려준다.
+	XMMATRIX View()const;
+	XMMATRIX Proj()const;
+	XMMATRIX ViewProj()const;
+
+	// 카메라를 거리 d만큼 횡이동, 축이동한다.
+	void Strafe(float d);
+	void Walk(float d);
+
+	// 카메라를 회전한다.
+	void Pitch(float angle);
+	void RotateY(float angle);
+
+	// 매 프레임마다, 카메라 위치나 방향을 수정한 후
+	// 이 메서드를 호출해서 시야 행렬을 재구축한다.
+	void UpdateViewMatrix();
+
+private:
+
+	// 세계 공간 기준의 카메라 좌표계
+	XMFLOAT3 mPosition;			// 시야 공간 원점
+	XMFLOAT3 mRight;			// 시야 공간 x축
+	XMFLOAT3 mUp;				// 시야 공간 y축
+	XMFLOAT3 mLook;				// 시야 공간 z축
+
+	// 절두체 속성들
+	float mNearZ;
+	float mFarZ;
+	float mAspect;
+	float mFovY;
+	float mNearWindowHeight;
+	float mFarWindowHeight;
+
+	// 시야 행렬과 투영 행렬
+	XMFLOAT4X4 mView;
+	XMFLOAT4X4 mProj;
+};
+
+
+
+
+
+● 주요 메서드 구현
+① XMVECTOR 반환 메서드들
+- 메서드를 사용하는 쪽에서 XMVECTOR를 필요로 할 때 따로 변환을 거칠 필요없이 다음과 같은 편의용 메서드를 제공한다.
+코드.
+XMVECTOR Camera::GetPositionXM() const
+{
+	return XMLoadFloat3(&mPosition);
+}
+
+XMFLOAT3 Camera::GetPosition() const
+{
+	return mPosition;
+}
+
+② SetLens 메서드
+- 시야 절두체는 시야를 제어한다는 점에서 카메라의 렌즈에 해당한다고 할 수 있다.
+- SetLens 메서드는 절두체 속성들을 설정해 두고, 투영 행렬도 구축한다.
+코드.
+void Camera::SetLens(float fovY, float aspect, float zn, float zf)
+{
+	// 속성들을 설정만 해 둔다.
+	mFovY = fovY;				// fovY는 Radian 단위이다.
+	mAspect = aspect;
+
+	mNearZ = zn;
+	mFarZ = zf;
+
+	mNearWindowHeight = 2.0f * mNearZ * tanf(0.5f * mFovY);
+	mFarWindowHeight = 2.0f * mFarZ * tanf(0.5f * mFovY);
+
+	XMMATRIX P = XMMatrixPerspectiveFovLH(mFovY, mAspect, mNearZ, mFarZ);
+	XMStoreFloat4x4(&mProj, P);
+}
+
+③ 유도된 절두체 정보
+- 직접적으로 설정하진 않았지만, 유도를 통해 얻어낼 필요가 있는 정보들이 있으며 그것은 다음과 같은 것이 있다.
+ex. 수평 시야각, 근 평면과 원 평면에서의 절두체의 너비와 높이
+코드.
+
+float Camera::GetFovX() const
+{
+	float halfWidth = 0.5f * GetNearWindowWidth();
+	return 2.0f * atan(halfWidth / mNearZ);
+}
+
+float Camera::GetNearWindowWidth() const
+{
+	return mAspect * mNearWindowHeight;
+}
+
+float Camera::GetNearWindowHeight() const
+{
+	return mNearWindowHeight;
+}
+
+float Camera::GetFarWindowWidth() const
+{
+	return mAspect * mFarWindowHeight;
+}
+
+float Camera::GetFarWindowHeight() const
+{
+	return mFarWindowHeight;
+}
+
+
+
+
+
+● 카메라 변환
+① 시선 벡터 방향으로 현재 위치에서 d만큼 움직인다.
+void Camera::Walk(float d)
+{
+	// mPosition += d*mRight
+	XMVECTOR s = XMVectorReplicate(d);
+	XMVECTOR l = XMLoadFloat3(&mLook);
+	XMVECTOR p = XMLoadFloat3(&mPosition);
+	XMStoreFloat3(&mPosition, XMVectorMultiplyAdd(s, l, p));
+}
+
+② 오른쪽 벡터 방향으로 현재 위치에서 d만큼 움직인다.
+void Camera::Strafe(float d)
+{
+	// mPosition += d*mRight;
+	XMVECTOR s = XMVectorReplicate(d);
+	XMVECTOR r = XMLoadFloat3(&mRight);
+	XMVECTOR p = XMLoadFloat3(&mPosition);
+	XMStoreFloat3(&mPosition, XMVectorMultiplyAdd(s, r, p));
+}
+
+③ 카메라를 카메라 로컬 좌표계의 y축을 기준으로 회전한다.
+void Camera::Pitch(float angle)
+{
+	// 상향 벡터와 시선 벡터를 오른쪽 벡터에 대해 회전한다.
+
+	XMMATRIX R = XMMatrixRotationAxis(XMLoadFloat3(&mRight), angle);
+
+	XMStoreFloat3(&mUp, XMVector3TransformNormal(XMLoadFloat3(&mUp), R));
+	XMStoreFloat3(&mLook, XMVector3TransformNormal(XMLoadFloat3(&mLook), R));
+}
+
+④ 카메라를 월드 좌표계의 y축을 기준으로 회전한다.
+void Camera::RotateY(float angle)
+{
+	// 기저벡터들을 세계의 y축에 대해 회전한다.
+
+	XMMATRIX R = XMMatrixRotationY(angle);
+
+	XMStoreFloat3(&mRight, XMVector3TransformNormal(XMLoadFloat3(&mRight), R));
+	XMStoreFloat3(&mUp, XMVector3TransformNormal(XMLoadFloat3(&mUp), R));
+	XMStoreFloat3(&mLook, XMVector3TransformNormal(XMLoadFloat3(&mLook), R));	
+}
+
+
+
+
+
+● 시야 행렬 구축
+- 시야 행렬을 설정하기 이전에, 카메라의 오른쪽 벡터, 상향 벡터 그리고 시선 벡터를 다시 정규직교화한다. (오차 누적 방지)
+코드.
+void Camera::UpdateViewMatrix()
+{
+	// 오차가 누적되었다고 간주할 수 있는 카메라의 로컬 좌표계 각 축을 나타내는 단위벡터들.
+	XMVECTOR R = XMLoadFloat3(&mRight);
+	XMVECTOR U = XMLoadFloat3(&mUp);
+	XMVECTOR L = XMLoadFloat3(&mLook);
+	XMVECTOR P = XMLoadFloat3(&mPosition);
+
+	//
+	// 오른쪽, 상향, 시선 벡터를 정규직교화한다.
+	//
+
+	// 시선 벡터를 단위벡터로 만든다.
+	L = XMVector3Normalize(L);					// 시선 벡터 정규화
+	
+	// 보정된 새 '상향'벡터를 계산해서 정규화한다.
+	U = XMVector3Normalize(XMVector3Cross(L, R));			// 상향 벡터 정규화
+
+	// 보정된 '오른쪽'벡터를 계산한다. 상향 벡터와 시선 벡터가
+	// 이미 정규직교이므로, 외적을 다시 정규화할 필요는 없다.
+	// ||up x look|| = ||up|| ||look|| sin90도 = 1
+	R = XMVector3Cross(U, L);					// 오른쪽 벡터 정규화
+
+	//
+	// 시야 행렬의 성분들을 채운다.
+	//
+	float x = -XMVectorGetX(XMVector3Dot(P, R));			// 시야 행렬의 4*1 성분
+	float y = -XMVectorGetY(XMVector3Dot(P, U));			// 시야 행렬의 4*2 성분
+	float z = -XMVectorGetZ(XMVector3Dot(P, L));			// 시야 행렬의 4*3 성분
+
+	XMStoreFloat3(&mRight, R);
+	XMStoreFloat3(&mUp, U);
+	XMStoreFloat3(&mLook, L);
+	
+	mView(0, 0) = mRight.x;
+	mView(1, 0) = mRight.y;
+	mView(2, 0) = mRight.z;
+	mView(3, 0) = x;
+
+	mView(0, 1) = mUp.x;
+	mView(1, 1) = mUp.y;
+	mView(2, 1) = mUp.z;
+	mView(3, 1) = x;
+
+	mView(0, 2) = mLook.x;
+	mView(1, 2) = mLook.y;
+	mView(2, 2) = mLook.z;
+	mView(3, 2) = x;
+
+	mView(0, 3) = 0.0f;
+	mView(1, 3) = 0.0f;
+	mView(2, 3) = 0.0f;
+	mView(3, 3) = 1.0f;
+}
+
+
+
+
+
+● 카메라가 추가됨에 따라...
+- 다음의 객체를 생성함에 따라 궤도 카메라 시스템에 관련된 변수들, 즉 mPhi, mTheta, mRadius, mView, mProj 등을 제거할 수 있다.
+Camera mCam;
+- 창의 크기가 변했을 때, 투영 행렬을 명시적으로 다시 만들 필요가 없다.
+void CameraApp::OnResize()
+{
+	D3DApp::OnResize();
+
+	mCam.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+}
+- UpdateScene 메서드에서는 키보드 입력에 기초해서 카메라를 이동한다.
+void CameraApp::UpdateScene(float dt)
+{
+	//
+	// 카메라를 제어한다.
+	//
+	if(GetAsyncKeyState('W') & 0x8000)
+		mCam.Walk(10.0f * dt);
+
+	if(GetAsyncKeyState('S') & 0x8000)
+		mCam.Walk(-10.0f * dt);
+
+	if(GetAsyncKeyState('A') & 0x8000)
+		mCam.Strafe(-10.0f * dt);
+
+	if(GetAsyncKeyState('D') & 0x8000)
+		mCam.Strafe(10.0f * dt);
+- OnMouseMove 메서드에서는 카메라의 시선 방향을 변경한다.
+void CameraApp::OnMouseMove(WPARAM btnState, int x, int y)
+{
+	if(btnState & MK_LBUTTON != 0)
+	{
+
+		//픽셀 하나가 1/4도(Radian X)에 해당하게 만든다.
+
+		float dx = XMConvertToRadians(0.25f * static_cast<float>(x-mLastMousePos.x));
+		float dy = XMConvertToRadians(0.25f * static_cast<float>(y-mLastMousePos.y));
+
+		mCam.Pitch(dy);
+		mCam.RotateY(dx);
+	}
+
+	mLastMousePos.x = x;
+	mLastMousePos.y = y;
+}
+- 마지막으로, 장면을 렌더링할 때 카메라 인스턴스로부터 시야 행렬과 투영 행렬을 가져온다.
+mCam.UpdateViewMatrix();
+
+XMMATRIX view = mCam.View();
+XMMATRIX proj = mCam.Proj();
+XMMATRIX viewProj = mCam.ViewProj();
+	

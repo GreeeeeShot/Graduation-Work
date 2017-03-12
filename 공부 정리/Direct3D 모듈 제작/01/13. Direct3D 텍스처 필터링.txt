@@ -1,0 +1,152 @@
+● 확대
+- 정점에 대해 보간된 텍스처 좌표 * 텍스처 해상도 = 화면이 요구하는 텍셀의 위치 => 해당 위치의 텍셀은 '겹선형 보간'을 통해 구해짐.
+
+
+
+
+
+● 축소
+- '밉 매핑'을 이용할 수 있다.
+- 원본 텍스쳐의 작은 버젼을 '밉맵 수준'이라 한다.	// 이러한 밉맵 수준은 평균을 통해 하향 표본화된 것으로 렌더링 이전에 미리 수행된다.
+- 일련의 밉맵 수준들의 집합을 '밉맵 사슬'이라 한다.
+
+
+
+
+
+● 축소에서 두 가지 필터링 방식
+① 밉맵의 점 필터링
+- 밉맵 사슬 내 밉맵 수준들 중 출력 영역에 적합한 밉맵 수준을 택하는 것.		// 상수 보간과 비슷
+- 택한 이후에는 선형 보간이 적용된다.
+② 밉맵의 선형 필터링
+- 출력 영역 사이즈보다 큰 밉맵 수준과 작은 밉맵 수준 각각에 대해 화면이 요구하는 텍셀의 위치를 구하고 이를 선형 필터링하여
+최종적인 텍셀 값을 얻는다.
+- 일종의 삼선형 보간이 이루어진다.
+
+
+
+
+
+● 밉맵 수준의 생성
+- .DDS(DirectDraw Surface의 약자) 같은 파일 형식은 자료 파일 안에 밉맵 수준들을 직접 내장할 수 있다.
+- DirectX Texture Tool이라는 도구는 텍스처 이미지로부터 밉맵 사슬을 생성해서 .DDS 파일로 저장하는 기능을 제공한다.
+- 완전한 밉맵 사슬을 내장할 수 없는 이미지 파일 형식의 경우에는 D3DX11CreateShaderResourceViewFromFile 함수나
+D3DX11CreateTextureFromFile 함수로 밉맵 사슬을 생성하면 된다.
+- D3DX11 함수들은 원본 자원 파일에 밉맵 사슬이 없으면 자동으로 밉맵 사슬을 생성해 준다.
+또한 밉맵 적용이 활성화되어 있으면 하드웨어가 자동으로 적절한 밉맵 수준을 선택해서 적용한다.
+
+
+
+
+
+● 텍스처 표본 추출기
+- 표본 추출기(효과 파일 내 SamplerState)객체는 무엇보다도 텍스처에 적용할 필터링에 대한 설정을 담는다.
+
+코드.
+// 다음은 표본 추출기 인스턴스 생성 예이다.
+SamplerState samAnisotropic
+{
+	Filter = ANISOTROPIC;			// 비등방 필터링 ; 그 외 : MIN_MAG_MIP_LINEAR, MIN_LINEAR_MAG_MIP_POINT, MIN_POINT_MAG_LINEAR_MIP_POINT;
+	MaxAnisotropy = 4;			// 최대 비등방도 X4
+
+	AddressU = WRAP;			
+	AddressV = WRAP;
+};
+
+코드.
+// 비수치 객체들은 cbuffer에 추가할 수 없다.
+Texture2D gDiffuseMap;
+
+SamplerState samAnisotropic
+{
+	Filter = ANISOTROPIC;
+	MaxAnisotropy = 4;
+
+	AddressU = WRAP;
+	AddressV = WRAP;
+};
+
+...
+
+struct VertexOut
+{
+	float4 PosH    : SV_POSITION;
+    float3 PosW    : POSITION;
+    float3 NormalW : NORMAL;
+	float2 Tex     : TEXCOORD;
+};
+
+float4 PS(VertexOut pin, uniform int gLightCount, uniform bool gUseTexure) : SV_Target
+{
+	...
+	if(gUseTexure)
+	{
+		// 2차원 텍스처에서 표본을 추출한다.
+		texColor = gDiffuseMap.Sample( 
+			samAnisotropic,			// 적용할 표본 추출기 
+			pin.Tex );			// 픽셀의 텍스처 좌표 (u, v)
+	}
+	...
+
+ref. C++ 응용 프로그램 내 표본 추출기 객체
+- D3D11_SAMPLER_DESC를 통해 표본 추출기 서술 
+-> ID3D11Device::CreateSamplerState 함수를 통해 표본 추출기에 대한 인터페이스 포인터(ID3D11SammplerState*) 획득
+-> ID3DX11EffectSamplerVariable::SetSampler 함수를 통해 표본 추출기 갱신
+
+
+
+
+
+● 변조 후 가산
+- litColor = texColor * (ambient + diffuse) + spec
+- 이러한 변조 방식에서는 주변광 재질과 분산광 재질이 픽셀별로 주어진다.
+
+
+
+
+
+● 텍스처 좌표 지정 모드
+- [0, 1] 구간 밖의 텍스처 좌표를 Direct3D가 처리하는 방식을 결정한다.
+① 순환 모드 : 이미지가 정수 경계마다 반복된다.
+SamplerState samTriLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = WRAP;
+	AddressV = WRAP;
+};
+② 테두리 색 모드 : 텍스처 이외의 영역은 프로그래머가 지정한 색으로 씌운다.
+SamplerState samTriLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = BORDER;
+	AddressV = BORDER;
+	// 파란 테두리 색
+	BorderColor = float4(0.0f, 0.0f, 1.0f, 1.0f);
+};
+③ 한정 모드 : 텍스처 이외의 영역은 가장 가까운 테두리 픽셀의 색상으로 씌운다.
+SamplerState samTriLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = CLAMP;
+	AddressV = CLAMP;
+};
+④ 거울 모드 : 이미지가 각 정수 경계마다 반대 방향으로 반복된다.
+SamplerState samTriLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = MIRROR;
+	AddressV = MIRROR;
+};
+
+
+
+
+
+● 텍스처 변환
+- 텍스처 좌표도 일종의 점이므로 이동하거나 회전, 비례 연산이 가능하다.
+코드.
+// 상수 버퍼 변수
+float4x4 gTexMtx;
+
+// 셰이더 프로그램에서
+vOut.texC = mul(float4(vIn.texC, 0.0f, 1.0f), gTexMtx).xy;	// 2차원 텍스처 좌표를 다루므로 처음 두 성분만 신경쓴다.
