@@ -222,11 +222,11 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	{
 		for (unsigned int i = 0; i < mesh_node[j].m_positionArray.size(); ++i)
 		{
-			nodetemp->mData[0] = mesh_node[j].m_positionArray[i].mData[0]*0.5;
-			nodetemp->mData[1] = mesh_node[j].m_positionArray[i].mData[1]* 0.5;
-			nodetemp->mData[2] = mesh_node[j].m_positionArray[i].mData[2]* 0.5;
-			nodetemp->mData[3] = RANDOM_COLOR;
-			nodetemp++;
+			nodetemp[m_nVertices].mData[0] = (float)mesh_node[j].m_positionArray[i].mData[0];
+			nodetemp[m_nVertices].mData[1] = (float)mesh_node[j].m_positionArray[i].mData[1];
+			nodetemp[m_nVertices].mData[2] = (float)mesh_node[j].m_positionArray[i].mData[2];
+			nodetemp[m_nVertices].mData[3] = RANDOM_COLOR;
+			
 			m_nVertices++;
 		}
 	}
@@ -277,7 +277,7 @@ void CCharacterMesh::CreateRasterizerState(ID3D11Device *pd3dDevice)
 	D3D11_RASTERIZER_DESC d3dRasterizerDesc;
 	ZeroMemory(&d3dRasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
 	d3dRasterizerDesc.CullMode = D3D11_CULL_BACK;
-	d3dRasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
+	d3dRasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	pd3dDevice->CreateRasterizerState(&d3dRasterizerDesc, &m_pd3dRasterizerState);
 }
 
