@@ -77,7 +77,7 @@ bool CScene::ProcessInput()
 
 void CScene::AnimateObjects(float fTimeElapsed)
 {
-	for (int i = 0; i < m_nObjects; i++) m_ppObjects[i]->Animate(fTimeElapsed);
+	//for (int i = 0; i < m_nObjects; i++) m_ppObjects[i]->Animate(fTimeElapsed);
 }
 
 void CScene::Render(ID3D11DeviceContext*pd3dDeviceContext, CCamera *pCamera)

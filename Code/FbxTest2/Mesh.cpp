@@ -222,9 +222,9 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	{
 		for (unsigned int i = 0; i < mesh_node[j].m_positionArray.size(); ++i)
 		{
-			nodetemp[m_nVertices].mData[0] = (float)mesh_node[j].m_positionArray[i].mData[0];
-			nodetemp[m_nVertices].mData[1] = (float)mesh_node[j].m_positionArray[i].mData[1];
-			nodetemp[m_nVertices].mData[2] = (float)mesh_node[j].m_positionArray[i].mData[2];
+			nodetemp[m_nVertices].mData[0] = (float)mesh_node[j].m_positionArray[i].mData[0]*0.5;
+			nodetemp[m_nVertices].mData[1] = (float)mesh_node[j].m_positionArray[i].mData[1]*0.5;
+			nodetemp[m_nVertices].mData[2] = (float)mesh_node[j].m_positionArray[i].mData[2]*0.5;
 			nodetemp[m_nVertices].mData[3] = RANDOM_COLOR;
 			
 			m_nVertices++;
@@ -232,19 +232,20 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	}
 	nodetemp = IVertexArray;
 
-	m_nStride = sizeof(m_nVertices);
+	m_nStride = sizeof(CDiffusedVertex);
 	m_nOffset = 0;
 	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	CDiffusedVertex* pvertex = new CDiffusedVertex[m_nVertices];
 
+	ZeroMemory(pvertex, sizeof(CDiffusedVertex)*m_nVertices);
+
 	CDiffusedVertex* temp = pvertex;
 	
-	for (int i = 0; i < m_nVertices; ++i)
+	for (unsigned int i = 0; i < m_nVertices; ++i)
 	{
-		temp->setVertex(IVertexArray->mData[0], IVertexArray->mData[1], IVertexArray->mData[2]);
+		temp->setVertex(IVertexArray[i].mData[0], IVertexArray[i].mData[1], IVertexArray[i].mData[2]);
 		temp++;
-		IVertexArray++;
 	}
 
 	D3D11_BUFFER_DESC d3dBufferDesc;
@@ -261,11 +262,6 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	CreateRasterizerState(pd3dDevice);
 
 	free(m_pFbxDX11);
-
-	for (int i = 0; i < p_nNode; ++i)
-	{
-		//free(IVertexArray++);
-	}
 }
 
 CCharacterMesh::~CCharacterMesh()

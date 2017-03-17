@@ -26,6 +26,7 @@ public:
 	CDiffusedVertex() { m_d3dxvPosition = D3DXVECTOR3(0.0f, 0.0f, 0.0f); m_d3dxcDiffuse = D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f); }
 	~CDiffusedVertex() {  }
 	void setVertex(float x, float y, float z) { m_d3dxvPosition = D3DXVECTOR3(x, y, z); }
+	void setVertex1(D3DXVECTOR3 vex) { m_d3dxvPosition = vex; }
 };
 
 class CMesh
