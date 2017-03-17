@@ -225,7 +225,7 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 			nodetemp[m_nVertices].mData[0] = (float)mesh_node[j].m_positionArray[i].mData[0]*0.5;
 			nodetemp[m_nVertices].mData[1] = (float)mesh_node[j].m_positionArray[i].mData[1]*0.5;
 			nodetemp[m_nVertices].mData[2] = (float)mesh_node[j].m_positionArray[i].mData[2]*0.5;
-			nodetemp[m_nVertices].mData[3] = RANDOM_COLOR;
+			nodetemp[m_nVertices].mData[3] = (float)mesh_node[j].m_positionArray[i].mData[3] * 0.5;
 			
 			m_nVertices++;
 		}
@@ -245,6 +245,7 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	for (unsigned int i = 0; i < m_nVertices; ++i)
 	{
 		temp->setVertex(IVertexArray[i].mData[0], IVertexArray[i].mData[1], IVertexArray[i].mData[2]);
+		temp->setColor(RANDOM_COLOR);
 		temp++;
 	}
 
