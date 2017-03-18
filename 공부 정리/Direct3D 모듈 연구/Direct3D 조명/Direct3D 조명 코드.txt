@@ -1,0 +1,98 @@
+● C++ 수준에서 Light 정의
+- 재질 정의
+코드.
+struct MATERIAL
+{
+	D3DXCOLOR m_d3dxcAmbient;
+	D3DXCOLOR m_d3dxcDiffuse;
+	D3DXCOLOR m_d3dxcSpecular; //(r,g,b,a=power)
+	D3DXCOLOR m_d3dxcEmissive;
+};
+- 평행광 정의
+struct DirectionalLight
+{
+	DirectionalLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+
+	XMFLOAT3 Direction;
+	float Pad;		// 더미 메모리 공간 
+}
+- 점광 정의
+struct PointLight
+{
+	PointLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+
+	// (Position, Range) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Position;
+	float Range;
+
+	// (A0, A1, A2, Pad) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Att;		//감쇠 매개 변수
+	float Pad;
+}
+- 점적광 정의
+struct SpotLight
+{
+	SpotLight() { ZeroMemory(this, sizeof(this)); }
+
+	XMFLOAT4 Ambient;
+	XMFLOAT4 Diffuse;
+	XMFLOAT4 Specular;
+
+	// (Position, Range) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Position;
+	float Range;
+
+	// (Direction, Spot) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Direction;
+	float Spot;		// 점적광 원뿔을 제어하는 데 쓰이는 지수
+
+	// (Att, Pad) 형태로 하나의 4차원 벡터에 채워 넣는다.
+	XMFLOAT3 Att;
+	float Pad;
+}
+
+- 포괄 광원 정의
+기존 코드.
+struct LIGHT
+{
+	D3DXCOLOR m_d3dxcAmbient;
+	D3DXCOLOR m_d3dxcDiffuse;
+	D3DXCOLOR m_d3dxcSpecular;
+	D3DXVECTOR3 m_d3dxvPosition;
+	float m_fRange;
+	D3DXVECTOR3 m_d3dxvDirection;
+	float m_nType;
+	D3DXVECTOR3 m_d3dxvAttenuation;
+	float m_fFalloff;
+	float m_fTheta; //cos(m_fTheta)
+	float m_fPhi; //cos(m_fPhi)
+	float m_bEnable;
+	float padding;
+};
+새로이 시도해볼 코드.
+struct LIGHT
+{
+	D3DXCOLOR m_d3dxcAmbient;
+	D3DXCOLOR m_d3dxcDiffuse;
+	D3DXCOLOR m_d3dxcSpecular;
+
+	D3DXVECTOR3 m_d3dxvPosition;
+	float m_nType;
+
+	D3DXVECTOR3 m_d3dxvDirection;
+	float Spot;
+	
+	D3DXVECTOR3 m_d3dxvAtt;
+	float m_fRange;
+
+	D3DXVECTOR3 padding;
+	float m_bEnable;
+};
