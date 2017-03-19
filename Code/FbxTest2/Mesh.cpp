@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Mesh.h"
-#include "FBXRender.h"
-#include <vector>
+
 
 
 CMesh::CMesh(ID3D11Device *pd3dDevice)
@@ -187,67 +186,19 @@ void CCubeMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 
 CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 {
-	FBX_LOADER::CFBXLoader* m_pFbxDX11 = new FBX_LOADER::CFBXLoader;
-	const char filename[256] = "make_hole_pir.FBX";
-	if (FAILED(m_pFbxDX11->LoadFBX(filename, FBX_LOADER::CFBXLoader::eAXIS_OPENGL)))
+	m_pFbxDX11 = new FBX_LOADER::CFBXLoader;
+	strcpy_s(m_filename, "walk-pir.FBX");
+	if (FAILED(m_pFbxDX11->LoadFBX(m_filename, FBX_LOADER::CFBXLoader::eAXIS_OPENGL)))
 	{
 		MessageBox(NULL,
 			L"FBX Error", L"Error", MB_OK);
 	}
-	unsigned int p_nNode = m_pFbxDX11->GetNodesCount();
 	
-	//memcpy(IVertexArray, m_pMesh->GetControlPoints(), m_nVertices * sizeof(FbxVector4));
-
-
-	//FbxMesh* m_pMesh = new FbxMesh(m_pFbxDX11->getMesh(m_pFbxDX11->GetRootNode()));
-	
-	//m_nVertices = m_pMesh->GetControlPointsCount();
-	m_nVertices = 0;
-	FBX_LOADER::FBX_MESH_NODE* mesh_node = new FBX_LOADER::FBX_MESH_NODE[p_nNode];
-	unsigned int nvertex = 0;
-	for (unsigned int i = 0; i < p_nNode; ++i)
-	{
-		FBX_LOADER::FBX_MESH_NODE temp = m_pFbxDX11->GetNode(static_cast<unsigned int>(i));
-		mesh_node[i].name = temp.name;
-		mesh_node[i].parentName = temp.parentName;
-		mesh_node[i].indexArray = temp.indexArray;
-		mesh_node[i].m_positionArray = temp.m_positionArray;
-		memcpy(mesh_node[i].mat4x4, temp.mat4x4, sizeof(float) * 16);
-		nvertex += 1;
-	}
-
-	FbxVector4* IVertexArray = new FbxVector4[mesh_node[1].m_positionArray.size()];
-	FbxVector4* nodetemp = IVertexArray;
-	for (unsigned int j = 0; j < p_nNode; ++j)
-	{
-		for (unsigned int i = 0; i < mesh_node[j].m_positionArray.size(); ++i)
-		{
-			nodetemp[m_nVertices].mData[0] = (float)mesh_node[j].m_positionArray[i].mData[0]*0.5;
-			nodetemp[m_nVertices].mData[1] = (float)mesh_node[j].m_positionArray[i].mData[1]*0.5;
-			nodetemp[m_nVertices].mData[2] = (float)mesh_node[j].m_positionArray[i].mData[2]*0.5;
-			nodetemp[m_nVertices].mData[3] = (float)mesh_node[j].m_positionArray[i].mData[3] * 0.5;
-			
-			m_nVertices++;
-		}
-	}
-	nodetemp = IVertexArray;
+	m_nVertices=get_PositionVector(m_pFbxDX11);
 
 	m_nStride = sizeof(CDiffusedVertex);
 	m_nOffset = 0;
 	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-	CDiffusedVertex* pvertex = new CDiffusedVertex[m_nVertices];
-
-	ZeroMemory(pvertex, sizeof(CDiffusedVertex)*m_nVertices);
-
-	CDiffusedVertex* temp = pvertex;
-	
-	for (unsigned int i = 0; i < m_nVertices; ++i)
-	{
-		temp->setVertex(IVertexArray[i].mData[0], IVertexArray[i].mData[1], IVertexArray[i].mData[2]);
-		temp->setColor(RANDOM_COLOR);
-		temp++;
-	}
 
 	D3D11_BUFFER_DESC d3dBufferDesc;
 	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
@@ -257,7 +208,7 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 	d3dBufferDesc.CPUAccessFlags = 0;
 	D3D11_SUBRESOURCE_DATA d3dBufferData;
 	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3dBufferData.pSysMem = pvertex;
+	d3dBufferData.pSysMem = m_pVertex;
 	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_pd3dVertexBuffer);
 
 	CreateRasterizerState(pd3dDevice);
@@ -267,6 +218,9 @@ CCharacterMesh::CCharacterMesh(ID3D11Device *pd3dDevice) : CMesh(pd3dDevice)
 
 CCharacterMesh::~CCharacterMesh()
 {
+	m_pVertex->~CDiffusedVertex();
+	m_pFbxDX11->Release();
+	m_meshnode->Release();
 }
 
 void CCharacterMesh::CreateRasterizerState(ID3D11Device *pd3dDevice)
@@ -281,4 +235,46 @@ void CCharacterMesh::CreateRasterizerState(ID3D11Device *pd3dDevice)
 void CCharacterMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 {
 	CMesh::Render(pd3dDeviceContext);
+}
+
+int CCharacterMesh::get_PositionVector(FBX_LOADER::CFBXLoader* pLoader)
+{
+	int nNode = pLoader->GetNodesCount();
+	FBX_LOADER::FBX_MESH_NODE* meshNode = new FBX_LOADER::FBX_MESH_NODE[nNode];
+	for (int i = 0; i < nNode; ++i)
+	{
+		FBX_LOADER::FBX_MESH_NODE currentNode = pLoader->GetNode(static_cast<unsigned int>(i));
+		meshNode[i].name = currentNode.name;
+		meshNode[i].parentName = currentNode.parentName;
+		meshNode[i].m_positionArray = currentNode.m_positionArray;
+	}
+
+	std::vector<FbxVector4> vertex;
+
+	int nVertice=0;
+
+	for (int i = 0; i < nNode; ++i)
+	{
+		for (int j = 0; j < meshNode[i].m_positionArray.size(); ++j)
+		{
+			FbxVector4 vec;
+			vec.mData[0] = meshNode[i].m_positionArray[j].mData[0];
+			vec.mData[1] = meshNode[i].m_positionArray[j].mData[1];
+			vec.mData[2] = meshNode[i].m_positionArray[j].mData[2];
+			vertex.push_back(vec);
+			nVertice++;
+		}
+	}
+
+	m_pVertex = new CDiffusedVertex[nVertice];
+
+	for (int i = 0; i < nVertice; ++i)
+	{
+		m_pVertex[i].setVertex(vertex[i].mData[0], vertex[i].mData[1], vertex[i].mData[2]);
+	}
+
+	
+	delete [] meshNode;
+	
+	return nVertice;
 }

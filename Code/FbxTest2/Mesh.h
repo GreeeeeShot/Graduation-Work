@@ -1,6 +1,11 @@
 #pragma once
+
+#include "FBXRender.h"
+#include <vector>
+
 /*정점의 색상을 무작위로(Random) 설정하기 위해 사용한다. 각 정점의 색상은 난수(Random Number)를 생성하여 지정한다.*/
 #define RANDOM_COLOR D3DXCOLOR((rand() * 0xFFFFFF) / RAND_MAX)
+#define FILE_NAME "walk-pir.FBX"
 
 // 메쉬를 구성하는 정점에 대한 클래스이다.
 class CVertex
@@ -27,7 +32,7 @@ public:
 	~CDiffusedVertex() {  }
 	void setVertex(float x, float y, float z) { m_d3dxvPosition = D3DXVECTOR3(x, y, z); }
 	void setVertex1(D3DXVECTOR3 vex) { m_d3dxvPosition = vex; }
-	void setColor(float r) { m_d3dxcDiffuse = r; }
+	void setColor(D3DXCOLOR color) { m_d3dxcDiffuse = color; }
 };
 
 class CMesh
@@ -89,10 +94,16 @@ public:
 
 class CCharacterMesh : public CMesh
 {
+protected:
+	FBX_LOADER::CFBXLoader* m_pFbxDX11;
+	FBX_LOADER::FBX_MESH_NODE* m_meshnode;
+	char m_filename[256];
+	CDiffusedVertex* m_pVertex;
 public:
 	CCharacterMesh(ID3D11Device *pd3dDevice);
 	virtual ~CCharacterMesh();
 	
+	int get_PositionVector(FBX_LOADER::CFBXLoader* pLoader);
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 };

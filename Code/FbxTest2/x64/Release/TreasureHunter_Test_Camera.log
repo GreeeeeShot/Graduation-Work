@@ -1,79 +1,32 @@
-﻿  stdafx.cpp
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(12): warning C4005: 'DXGI_STATUS_OCCLUDED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50092): note: 'DXGI_STATUS_OCCLUDED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(13): warning C4005: 'DXGI_STATUS_CLIPPED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50101): note: 'DXGI_STATUS_CLIPPED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(14): warning C4005: 'DXGI_STATUS_NO_REDIRECTION': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50110): note: 'DXGI_STATUS_NO_REDIRECTION'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(15): warning C4005: 'DXGI_STATUS_NO_DESKTOP_ACCESS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50119): note: 'DXGI_STATUS_NO_DESKTOP_ACCESS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(16): warning C4005: 'DXGI_STATUS_GRAPHICS_VIDPN_SOURCE_IN_USE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50128): note: 'DXGI_STATUS_GRAPHICS_VIDPN_SOURCE_IN_USE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(17): warning C4005: 'DXGI_STATUS_MODE_CHANGED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50137): note: 'DXGI_STATUS_MODE_CHANGED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(18): warning C4005: 'DXGI_STATUS_MODE_CHANGE_IN_PROGRESS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50146): note: 'DXGI_STATUS_MODE_CHANGE_IN_PROGRESS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(21): warning C4005: 'DXGI_ERROR_INVALID_CALL': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50161): note: 'DXGI_ERROR_INVALID_CALL'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(22): warning C4005: 'DXGI_ERROR_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50170): note: 'DXGI_ERROR_NOT_FOUND'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(23): warning C4005: 'DXGI_ERROR_MORE_DATA': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50179): note: 'DXGI_ERROR_MORE_DATA'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(24): warning C4005: 'DXGI_ERROR_UNSUPPORTED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50188): note: 'DXGI_ERROR_UNSUPPORTED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(25): warning C4005: 'DXGI_ERROR_DEVICE_REMOVED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50197): note: 'DXGI_ERROR_DEVICE_REMOVED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(26): warning C4005: 'DXGI_ERROR_DEVICE_HUNG': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50206): note: 'DXGI_ERROR_DEVICE_HUNG'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(27): warning C4005: 'DXGI_ERROR_DEVICE_RESET': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50216): note: 'DXGI_ERROR_DEVICE_RESET'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(28): warning C4005: 'DXGI_ERROR_WAS_STILL_DRAWING': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50225): note: 'DXGI_ERROR_WAS_STILL_DRAWING'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(29): warning C4005: 'DXGI_ERROR_FRAME_STATISTICS_DISJOINT': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50235): note: 'DXGI_ERROR_FRAME_STATISTICS_DISJOINT'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(30): warning C4005: 'DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50244): note: 'DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(31): warning C4005: 'DXGI_ERROR_DRIVER_INTERNAL_ERROR': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50254): note: 'DXGI_ERROR_DRIVER_INTERNAL_ERROR'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(32): warning C4005: 'DXGI_ERROR_NONEXCLUSIVE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50263): note: 'DXGI_ERROR_NONEXCLUSIVE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(33): warning C4005: 'DXGI_ERROR_NOT_CURRENTLY_AVAILABLE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50272): note: 'DXGI_ERROR_NOT_CURRENTLY_AVAILABLE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(34): warning C4005: 'DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50282): note: 'DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(35): warning C4005: 'DXGI_ERROR_REMOTE_OUTOFMEMORY': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50291): note: 'DXGI_ERROR_REMOTE_OUTOFMEMORY'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(917): warning C4005: 'D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50469): note: 'D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(918): warning C4005: 'D3D11_ERROR_FILE_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50478): note: 'D3D11_ERROR_FILE_NOT_FOUND'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(919): warning C4005: 'D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50488): note: 'D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(920): warning C4005: 'D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50497): note: 'D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\d3d10.h(608): warning C4005: 'D3D10_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50445): note: 'D3D10_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\d3d10.h(609): warning C4005: 'D3D10_ERROR_FILE_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50454): note: 'D3D10_ERROR_FILE_NOT_FOUND'의 이전 정의를 참조하십시오.
-  Camera.cpp
+﻿  Camera.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 c:\users\shot\documents\github\graduation-work\code\fbxtest2\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   CameraOperator.cpp
 c:\users\shot\documents\github\graduation-work\code\fbxtest2\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 CameraOperator.cpp(48): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 CameraOperator.cpp(95): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 CameraOperator.cpp(103): warning C4244: '=': 'double'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   GameFramework.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 c:\users\shot\documents\github\graduation-work\code\fbxtest2\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   Mesh.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 Mesh.cpp(197): warning C4267: '초기화 중': 'size_t'에서 'unsigned int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+Mesh.cpp(247): warning C4244: '인수': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+Mesh.cpp(248): warning C4244: '인수': 'UINT'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   Object.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   Player.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 c:\users\shot\documents\github\graduation-work\code\fbxtest2\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   Scene.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   Shader.cpp
 Shader.cpp(73): warning C4267: '=': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   Timer.cpp
   TreasureHunter_Test_Camera.cpp
+c:\users\shot\documents\github\graduation-work\code\fbxtest2\Mesh.h(30): warning C4244: '인수': 'float'에서 'UINT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 c:\users\shot\documents\github\graduation-work\code\fbxtest2\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   FBXLoader.cpp
   FBXRender.cpp
@@ -633,14 +586,6 @@ libfbxsdk-md.lib(ScalarSample.obj) : error LNK2038: 'RuntimeLibrary'에 대해 �
 libfbxsdk-md.lib(ArrayPropertyWriter.obj) : error LNK2038: 'RuntimeLibrary'에 대해 불일치가 검색되었습니다. 'MDd_DynamicDebug' 값이 'MTd_StaticDebug'(Mesh.obj에 위치) 값과 일치하지 않습니다.
 libfbxsdk-md.lib(ArrayPropertyReader.obj) : error LNK2038: 'RuntimeLibrary'에 대해 불일치가 검색되었습니다. 'MDd_DynamicDebug' 값이 'MTd_StaticDebug'(Mesh.obj에 위치) 값과 일치하지 않습니다.
 LINK : warning LNK4098: 'MSVCRTD' defaultlib가 다른 라이브러리와 충돌합니다. /NODEFAULTLIB:library를 사용하십시오.
-Camera.obj : error LNK2001: D3DXMatrixLookAtLH 외부 기호를 확인할 수 없습니다.
-Camera.obj : error LNK2001: D3DXMatrixPerspectiveFovLH 외부 기호를 확인할 수 없습니다.
-Camera.obj : error LNK2001: D3DXMatrixTranspose 외부 기호를 확인할 수 없습니다.
-CameraOperator.obj : error LNK2001: D3DXVec3Normalize 외부 기호를 확인할 수 없습니다.
-CameraOperator.obj : error LNK2001: D3DXMatrixRotationAxis 외부 기호를 확인할 수 없습니다.
-CameraOperator.obj : error LNK2001: D3DXVec3TransformNormal 외부 기호를 확인할 수 없습니다.
-GameFramework.obj : error LNK2001: D3D11CreateDeviceAndSwapChain 외부 기호를 확인할 수 없습니다.
-Shader.obj : error LNK2001: D3DX11CompileFromFileW 외부 기호를 확인할 수 없습니다.
 libfbxsdk-md.lib(H5FDstdio.obj) : error LNK2001: __imp_calloc 외부 기호를 확인할 수 없습니다.
 libfbxsdk-md.lib(H5LT.obj) : error LNK2001: __imp_calloc 외부 기호를 확인할 수 없습니다.
 libfbxsdk-md.lib(fbxalloc.obj) : error LNK2001: __imp_calloc 외부 기호를 확인할 수 없습니다.
@@ -1178,4 +1123,4 @@ libfbxsdk-md.lib(iff_work.obj) : error LNK2001: __imp_putenv 외부 기호를 �
 OLDNAMES.lib(putenv.obi) : error LNK2001: __imp_putenv 외부 기호를 확인할 수 없습니다.
 OLDNAMES.lib(unlink.obi) : error LNK2001: __imp__unlink 외부 기호를 확인할 수 없습니다.
 OLDNAMES.lib(putenv.obi) : error LNK2001: __imp__putenv 외부 기호를 확인할 수 없습니다.
-C:\Users\shot\Documents\GitHub\Graduation-Work\Code\FbxTest2\x64\Release\TreasureHunter_Test_Camera.exe : fatal error LNK1120: 86개의 확인할 수 없는 외부 참조입니다.
+C:\Users\shot\Documents\GitHub\Graduation-Work\Code\FbxTest2\x64\Release\TreasureHunter_Test_Camera.exe : fatal error LNK1120: 78개의 확인할 수 없는 외부 참조입니다.
