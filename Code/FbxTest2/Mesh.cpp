@@ -250,7 +250,6 @@ int CCharacterMesh::get_PositionVector(FBX_LOADER::CFBXLoader* pLoader)
 	}
 
 	std::vector<FbxVector4> vertex;
-
 	int nVertice=0;
 
 	for (int i = 0; i < nNode; ++i)
