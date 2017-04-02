@@ -1,29 +1,12 @@
 #pragma once
-#include "FBXLoader.h"
-#include <vector>
+
 /*정점의 색상을 무작위로(Random) 설정하기 위해 사용한다. 각 정점의 색상은 난수(Random Number)를 생성하여 지정한다.*/
 #define RANDOM_COLOR D3DXCOLOR((rand() * 0xFFFFFF) / RAND_MAX)
 
+#include "FBXLoadData.h"
+
 #define FILE_NAME "walk-snow.FBX"
 
-class CFbxLoadData
-{
-protected:
-	FBX_LOADER::CFBXLoader* m_pFbxDX11;
-	FBX_LOADER::FBX_MESH_NODE* m_meshnode;
-	char m_filename[256];
-public:
-	D3DXVECTOR3* m_posvec;
-	D3DXVECTOR3* m_norvec;
-	D3DXVECTOR3* m_matvec;
-	D3DXVECTOR2* m_tex;
-	UINT* m_index;
-	int m_nVertices;
-
-	CFbxLoadData();
-	~CFbxLoadData();
-	void getNodeData();
-};
 
 class CTexture
 {
@@ -219,7 +202,7 @@ public:
 class CLightingCharacterMesh : public CLightingMesh
 {
 public:
-	CLightingCharacterMesh(ID3D11Device *pd3dDevice,CFbxLoadData* data);
+	CLightingCharacterMesh(ID3D11Device *pd3dDevice,FbxLoadData* data);
 	virtual ~CLightingCharacterMesh();
 
 	//재질을 설정하기 위한 상수 버퍼이다.
@@ -252,7 +235,7 @@ public:
 class CTexturedLightingCharacterMesh : public CLightingMesh
 {
 public:
-	CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice, CFbxLoadData* data);
+	CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice, FbxLoadData* data);
 	virtual ~CTexturedLightingCharacterMesh();
 
 	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);

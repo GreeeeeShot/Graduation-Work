@@ -60,7 +60,7 @@
     <ClInclude Include="FBXLoader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="FBXRender.h">
+    <ClInclude Include="FbxLoadData.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -101,7 +101,7 @@
     <ClCompile Include="FBXLoader.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="FBXRender.cpp">
+    <ClCompile Include="FbxLoadData.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

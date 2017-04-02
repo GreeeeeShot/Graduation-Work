@@ -1,135 +1,6 @@
 #include "stdafx.h"
 #include "Mesh.h"
 
-CFbxLoadData::CFbxLoadData()
-{
-	m_pFbxDX11 = new FBX_LOADER::CFBXLoader;
-	strcpy_s(m_filename, "walk-pir.FBX");
-	if (FAILED(m_pFbxDX11->LoadFBX(m_filename, FBX_LOADER::CFBXLoader::eAXIS_OPENGL)))
-	{
-		MessageBox(NULL,
-			L"FBX Error", L"Error", MB_OK);
-	}
-	getNodeData();
-}
-
-CFbxLoadData::~CFbxLoadData()
-{
-}
-
-void CFbxLoadData::getNodeData()
-{
-	int nNode = m_pFbxDX11->GetNodesCount();
-	FBX_LOADER::FBX_MESH_NODE* meshNode = new FBX_LOADER::FBX_MESH_NODE[nNode];
-	for (int i = 0; i < nNode; ++i)
-	{
-		FBX_LOADER::FBX_MESH_NODE currentNode = m_pFbxDX11->GetNode(static_cast<unsigned int>(i));
-		meshNode[i].name = currentNode.name;
-		meshNode[i].parentName = currentNode.parentName;
-		meshNode[i].m_positionArray = currentNode.m_positionArray;
-		meshNode[i].m_normalArray = currentNode.m_normalArray;
-		meshNode[i].indexArray = currentNode.indexArray;
-		meshNode[i].m_texcoordArray = currentNode.m_texcoordArray;
-		meshNode[i].m_materialArray = currentNode.m_materialArray;
-		meshNode[i].elements = currentNode.elements;
-		memcpy(meshNode[i].mat4x4, currentNode.mat4x4, sizeof(currentNode.mat4x4));
-	}
-
-	std::vector<FbxVector4> vertex;
-	int nVertice = 0;
-
-	for (int i = 0; i < nNode; ++i)
-	{
-		for (int j = 0; j < meshNode[i].m_positionArray.size(); ++j)
-		{
-			FbxVector4 vec;
-			vec.mData[0] = meshNode[i].m_positionArray[j].mData[0] * 0.5;
-			vec.mData[1] = meshNode[i].m_positionArray[j].mData[1] * 0.5;
-			vec.mData[2] = meshNode[i].m_positionArray[j].mData[2] * 0.5;
-			vertex.push_back(vec);
-			nVertice++;
-		}
-	}
-
-	m_posvec = new D3DXVECTOR3[nVertice];
-
-	for (int i = 0; i < nVertice; ++i)
-	{
-		m_posvec[i].x = vertex[i].mData[0];
-		m_posvec[i].y = vertex[i].mData[1];
-		m_posvec[i].z = vertex[i].mData[2];
-	}
-
-	vertex.clear();
-	nVertice = 0;
-
-	for (int i = 0; i < nNode; ++i)
-	{
-		for (int j = 0; j < meshNode[i].m_normalArray.size(); ++j)
-		{
-			FbxVector4 vec;
-			vec.mData[0] = meshNode[i].m_normalArray[j].mData[0];
-			vec.mData[1] = meshNode[i].m_normalArray[j].mData[1];
-			vec.mData[2] = meshNode[i].m_normalArray[j].mData[2];
-			vertex.push_back(vec);
-			nVertice++;
-		}
-	}
-
-	m_norvec = new D3DXVECTOR3[nVertice];
-
-	for (int i = 0; i < nVertice; ++i)
-	{
-		m_norvec[i].x = vertex[i].mData[0];
-		m_norvec[i].y = vertex[i].mData[1];
-		m_norvec[i].z = vertex[i].mData[2];
-	}
-
-	nVertice = 0;
-	std::vector<unsigned int> v;
-
-	for (int i = 0; i < nNode; ++i)
-	{
-		for (int j = 0; j < meshNode[i].indexArray.size(); ++j)
-		{
-			v.push_back(meshNode[i].indexArray[j]);
-			nVertice++;
-		}
-	}
-
-	m_index = new UINT[nVertice];
-
-	for (int i = 0; i < nVertice; ++i)
-	{
-		m_index[i] = v[i];
-	}
-
-	vertex.clear();
-	nVertice = 0;
-
-	for (int i = 0; i < nNode; ++i)
-	{
-		for (int j = 0; j < meshNode[i].m_normalArray.size(); ++j)
-		{
-			FbxVector4 vec;
-			vec.mData[0] = meshNode[i].m_texcoordArray[j].mData[0];
-			vec.mData[1] = meshNode[i].m_texcoordArray[j].mData[1];
-			vertex.push_back(vec);
-			nVertice++;
-		}
-	}
-	m_tex = new D3DXVECTOR2[nVertice];
-
-	for (int i = 0; i < nVertice; ++i)
-	{
-		m_tex[i].x = vertex[i].mData[0];
-		m_tex[i].y = vertex[i].mData[1];
-	}
-
-	m_nVertices = nVertice;
-
-	delete[] meshNode;
-}
 
 CTexture::CTexture(int nTextures)
 {
@@ -509,14 +380,10 @@ void CLightingCubeMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 	CMesh::Render(pd3dDeviceContext);
 }
 
-CLightingCharacterMesh::CLightingCharacterMesh(ID3D11Device *pd3dDevice,CFbxLoadData* data) : CLightingMesh(pd3dDevice)
+CLightingCharacterMesh::CLightingCharacterMesh(ID3D11Device *pd3dDevice,FbxLoadData* data) : CLightingMesh(pd3dDevice)
 {
-	
-
 	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	
-	
-	
+		
 	UINT* pIndices;
 	
 	// 법선 벡터 버퍼 생성
@@ -796,7 +663,7 @@ void CTexturedLightingCubeMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 	CLightingMesh::Render(pd3dDeviceContext);
 }
 
-CTexturedLightingCharacterMesh::CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice, CFbxLoadData* data) : CLightingMesh(pd3dDevice)
+CTexturedLightingCharacterMesh::CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice, FbxLoadData* data) : CLightingMesh(pd3dDevice)
 {
 	m_nVertices = data->m_nVertices;
 	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -807,55 +674,7 @@ CTexturedLightingCharacterMesh::CTexturedLightingCharacterMesh(ID3D11Device *pd3
 	{
 		pVertices[i] = CTexturedNormalVertex(data->m_posvec[i], data->m_norvec[i], data->m_tex[i]);
 	}
-	/*
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
 
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, -fz), D3DXVECTOR3(0.0f, 0.0f, -1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, HALF_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, +fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(TOP_TEX_COORD_U, TOP_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, +fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, TOP_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, -fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, HALF_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, +fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(TOP_TEX_COORD_U, TOP_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, -fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, -fz), D3DXVECTOR3(0.0f, 1.0f, 0.0f), D3DXVECTOR2(TOP_TEX_COORD_U, TOP_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, +fz), D3DXVECTOR3(0.0f, 0.0f, 1.0f), D3DXVECTOR2(MAX_TEX_COORD_U, SIDE_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, -fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, MAX_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, -fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(BOTTOM_TEX_COORD_U, MAX_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, +fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(BOTTOM_TEX_COORD_U, BOTTOM_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, -fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, MAX_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, +fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(BOTTOM_TEX_COORD_U, BOTTOM_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, +fz), D3DXVECTOR3(0.0f, -1.0f, 0.0f), D3DXVECTOR2(HALF_TEX_COORD_U, BOTTOM_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, +fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, -fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, -fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, +fy, +fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, -fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(-fx, -fy, +fz), D3DXVECTOR3(-1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, HALF_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, -fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, +fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, +fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, +fy, -fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, SIDE_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, +fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(MAX_TEX_COORD_U, HALF_TEX_COORD_V));
-	pVertices[i++] = CTexturedNormalVertex(D3DXVECTOR3(+fx, -fy, -fz), D3DXVECTOR3(1.0f, 0.0f, 0.0f), D3DXVECTOR2(SIDE_TEX_COORD_U, HALF_TEX_COORD_V));
-	*/
 	m_nBuffers = 1;
 	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
 	m_pnVertexStrides = new UINT[1];

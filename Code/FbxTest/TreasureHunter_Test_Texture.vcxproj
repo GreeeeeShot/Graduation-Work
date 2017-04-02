@@ -155,8 +155,8 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraOperator.h" />
+    <ClInclude Include="FbxLoadData.h" />
     <ClInclude Include="FBXLoader.h" />
-    <ClInclude Include="FBXRender.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object.h" />
@@ -172,8 +172,8 @@
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraOperator.cpp" />
+    <ClCompile Include="FbxLoadData.cpp" />
     <ClCompile Include="FBXLoader.cpp" />
-    <ClCompile Include="FBXRender.cpp" />
     <ClCompile Include="GameFramework.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Object.cpp" />

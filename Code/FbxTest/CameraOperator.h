@@ -6,7 +6,7 @@
 #define ZOOM_OUT_LIMIT_DISTANCE		50.0f	// Meters
 #define ZOOM_AT_ONCE_DISTANCE		50.0f	// Meters
 
-#define DEGREE_X_LOWER_LIMIT		20.0f	// Degree
+#define DEGREE_X_LOWER_LIMIT		-70.0f	// Degree
 #define DEGREE_X_UPPER_LIMIT		70.0f	// Degree
 
 #define CAMERA_DISTANCE				100.0f	// Meters

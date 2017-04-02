@@ -8,6 +8,8 @@ CGameFramework::CGameFramework()
 	m_pDXGISwapChain = NULL;
 	m_pd3dRenderTargetView = NULL;
 	m_pd3dDeviceContext = NULL;
+	m_pd3dDepthStencilBuffer = NULL;
+	m_pd3dDepthStencilView = NULL;
 
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
@@ -281,6 +283,7 @@ void CGameFramework::FrameAdvance()
 
 	float fClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
 	m_pd3dDeviceContext->ClearRenderTargetView(m_pd3dRenderTargetView, fClearColor);
+	if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	if (m_pPlayer) m_pPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
 
 	CCamera *pCamera = &(m_pPlayer->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;

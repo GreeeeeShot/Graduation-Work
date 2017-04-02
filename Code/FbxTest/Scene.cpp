@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Scene.h"
+
 #include <string>
 
 
@@ -75,7 +76,7 @@ void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 	ID3D11ShaderResourceView *pd3dTexture = NULL;
 	//DirectX::ScratchImage image = LoadTextureFromFile("snow.tga");
 	//DirectX::CreateShaderResourceView(pd3dDevice, image.GetImages(), image.GetImageCount(), image.GetMetadata(), &pd3dTexture);
-	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("snow.png"), NULL, NULL, &pd3dTexture, NULL);
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("pirate.png"), NULL, NULL, &pd3dTexture, NULL);
 	
 	CTexture *pJungleTexture = new CTexture(1);
 	pJungleTexture->SetTexture(0, pd3dTexture, pd3dSamplerState);
@@ -83,7 +84,9 @@ void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 	CShader *pTexturedLightingShader = new CTexturedLightingShader();
 	pTexturedLightingShader->CreateShader(pd3dDevice);				// 세계 행렬 및 재질 상수 버퍼를 생성한다.
 
-	CFbxLoadData data;
+	FbxLoadData data("skydoom.FBX");
+
+	//FbxCharacLoad* Character("walk-pir.FBX");
 
 	//CTexturedLightingCubeMesh *pCubeMesh = new CTexturedLightingCubeMesh(pd3dDevice, 15.0f, 15.0f, 15.0f);
 	CTexturedLightingCharacterMesh *pCubeMesh = new CTexturedLightingCharacterMesh(pd3dDevice,&data);
