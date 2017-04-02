@@ -1,5 +1,3 @@
-#include "Light.fx"
-
 cbuffer cbViewProjectionMatrix : register(b0)
 {
 	matrix gmtxView : packoffset(c0);

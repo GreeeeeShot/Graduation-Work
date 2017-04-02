@@ -31,7 +31,7 @@ private:
 	_TCHAR m_pszBuffer[50];
 	//다음은 게임의 장면(Scene)을 관리하는 객체에 대한 포인터를 나타낸다.
 	CScene *m_pScene;
-	CPlayer *m_pPlayer;
+	CPlayer **m_ppPlayers;
 
 	ID3D11Buffer *m_pd3dcbColor;
 
@@ -43,11 +43,12 @@ public:
 	void OnDestroy();
 
 	//디바이스, 스왑 체인, 디바이스 컨텍스트, 디바이스와 관련된 뷰를 생성하는 함수이다. 
-	bool CreateRenderTargetView();
+	bool CreateRenderTargetDepthStencilView();
 	bool CreateDirect3DDisplay();
 
 	//렌더링할 메쉬, 객체를 생성하고 소멸하는 함수이다. 
 	void BuildObjects();
+	void SetPlayersToScene(CScene *pScene, CPlayer **ppPlayers);
 	void ReleaseObjects();
 
 	//프레임워크의 핵심(사용자 입력, 애니메이션, 렌더링)을 구성하는 함수이다. 

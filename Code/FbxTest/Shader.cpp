@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Shader.h"
 #include "Object.h"
+#include "LightResource.h"
+#include "TextureResource.h"
 
 CShader::CShader()
 {

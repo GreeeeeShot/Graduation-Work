@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "TextureResource.h"
+#include "MeshResource.h"
+#include "ShaderResource.h"
+#include "BlendingResource.h"
 #include "GameFramework.h"
 
 
@@ -16,7 +20,7 @@ CGameFramework::CGameFramework()
 
 	m_pScene = NULL;
 	_tcscpy_s(m_pszBuffer, _T("TreasureHunter ("));
-	m_pPlayer = NULL;
+	m_ppPlayers = NULL;
 }
 
 
@@ -40,18 +44,40 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	return(true);
 }
 
-bool CGameFramework::CreateRenderTargetView()
+bool CGameFramework::CreateRenderTargetDepthStencilView()
 {
 	HRESULT hResult = S_OK;
 
-	//스왑 체인의 후면버퍼에 대한 렌더 타겟 뷰를 생성한다.
 	ID3D11Texture2D *pd3dBackBuffer;
 	if (FAILED(hResult = m_pDXGISwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&pd3dBackBuffer))) return(false);
 	if (FAILED(hResult = m_pd3dDevice->CreateRenderTargetView(pd3dBackBuffer, NULL, &m_pd3dRenderTargetView))) return(false);
 	if (pd3dBackBuffer) pd3dBackBuffer->Release();
 
-	//렌더 타겟 뷰를 생성하고 출력-병합 단계에 연결한다.
-	m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, NULL);
+	//렌더 타겟과 같은 크기의 깊이 버퍼(Depth Buffer)를 생성한다.
+	D3D11_TEXTURE2D_DESC d3dDepthStencilBufferDesc;
+	ZeroMemory(&d3dDepthStencilBufferDesc, sizeof(D3D11_TEXTURE2D_DESC));
+	d3dDepthStencilBufferDesc.Width = m_nWndClientWidth;
+	d3dDepthStencilBufferDesc.Height = m_nWndClientHeight;
+	d3dDepthStencilBufferDesc.MipLevels = 1;
+	d3dDepthStencilBufferDesc.ArraySize = 1;
+	d3dDepthStencilBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dDepthStencilBufferDesc.SampleDesc.Count = 1;
+	d3dDepthStencilBufferDesc.SampleDesc.Quality = 0;
+	d3dDepthStencilBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	d3dDepthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	d3dDepthStencilBufferDesc.CPUAccessFlags = 0;
+	d3dDepthStencilBufferDesc.MiscFlags = 0;
+	if (FAILED(hResult = m_pd3dDevice->CreateTexture2D(&d3dDepthStencilBufferDesc, NULL, &m_pd3dDepthStencilBuffer))) return(false);
+
+	//생성한 깊이 버퍼(Depth Buffer)에 대한 뷰를 생성한다.
+	D3D11_DEPTH_STENCIL_VIEW_DESC d3dViewDesc;
+	ZeroMemory(&d3dViewDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
+	d3dViewDesc.Format = d3dDepthStencilBufferDesc.Format;
+	d3dViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	d3dViewDesc.Texture2D.MipSlice = 0;
+	if (FAILED(hResult = m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, &d3dViewDesc, &m_pd3dDepthStencilView))) return(false);
+
+	m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
 
 	return(true);
 }
@@ -114,7 +140,7 @@ bool CGameFramework::CreateDirect3DDisplay()
 	if (!m_pDXGISwapChain || !m_pd3dDevice || !m_pd3dDeviceContext) return(false);
 
 	//렌더 타겟 뷰를 생성하는 함수를 호출한다.
-	if (!CreateRenderTargetView()) return(false);
+	if (!CreateRenderTargetDepthStencilView()) return(false);
 
 	return(true);
 }
@@ -181,17 +207,17 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 		m_nWndClientWidth = LOWORD(lParam);
 		m_nWndClientHeight = HIWORD(lParam);
 
-		m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+		if (m_pd3dRenderTargetView) m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
 
 		if (m_pd3dRenderTargetView) m_pd3dRenderTargetView->Release();
+		if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer->Release();
+		if (m_pd3dDepthStencilView) m_pd3dDepthStencilView->Release();
 
 		m_pDXGISwapChain->ResizeBuffers(2, m_nWndClientWidth, m_nWndClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
-		CreateRenderTargetView();
+		CreateRenderTargetDepthStencilView();
 
-		/*CCamera *pCamera = m_pPlayer->GetCamera();
-		if (pCamera) pCamera->SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);*/
-		m_pPlayer->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
+		m_ppPlayers[0]->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
 
 		break;
 	}
@@ -219,6 +245,8 @@ void CGameFramework::OnDestroy()
 	//Direct3D와 관련된 객체를 소멸한다. 
 	if (m_pd3dDeviceContext) m_pd3dDeviceContext->ClearState();
 	if (m_pd3dRenderTargetView) m_pd3dRenderTargetView->Release();
+	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer->Release();
+	if (m_pd3dDepthStencilView) m_pd3dDepthStencilView->Release();
 	if (m_pDXGISwapChain) m_pDXGISwapChain->Release();
 	if (m_pd3dDeviceContext) m_pd3dDeviceContext->Release();
 	if (m_pd3dDevice) m_pd3dDevice->Release();
@@ -226,26 +254,77 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::BuildObjects()
 {
+	CTextureResource::CreateTextureResource(m_pd3dDevice);
+	CMeshResource::CreateMeshResource(m_pd3dDevice);
+	CShaderResource::CreateShaderResource(m_pd3dDevice);
+	CMaterialResource::CreateMaterialResource(m_pd3dDevice);
+	CBlendingResource::CreateBlendingResource(m_pd3dDevice);
+
+	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	m_pd3dDeviceContext->OMSetBlendState(CBlendingResource::pTransparentBlending, blendFactors, 0xffffffff);
+	
+	CShader *pTexturedLightingShader = new CTexturedLightingShader();
+	pTexturedLightingShader->CreateShaderVariables(m_pd3dDevice);
+	
 	//CScene 클래스 객체를 생성하고 CScene 클래스 객체의 BuildObjects() 멤버 함수를 호출한다.
 	m_pScene = new CScene();
-
 	//플레이어 객체를 생성한다.
-	m_pPlayer = new CPlayer();
+	m_ppPlayers = new CPlayer*[2];
 
-	m_pPlayer->InitCameraOperator();
-	m_pPlayer->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
-	m_pPlayer->m_CameraOperator.GenerateProjectionMatrix(1.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 90.0f);
-	m_pPlayer->m_CameraOperator.GenerateViewMatrix();
-	m_pPlayer->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+	m_ppPlayers[0] = new CPlayer();
+	m_ppPlayers[1] = new CPlayer();
 
-	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice);
+	CMaterial *pStandardMaterial = new CMaterial();
+	pStandardMaterial->m_Material.m_d3dxcDiffuse = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pStandardMaterial->m_Material.m_d3dxcAmbient = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+	pStandardMaterial->m_Material.m_d3dxcSpecular = D3DXCOLOR(1.0f, 1.0f, 1.0f, 8.0f);
+	pStandardMaterial->m_Material.m_d3dxcEmissive = D3DXCOLOR(0.0f, 0.0f, 0.0f, 1.0f);
+
+	m_ppPlayers[0]->SetMaterial(pStandardMaterial);
+	m_ppPlayers[0]->SetMesh(CMeshResource::pPirateMesh);
+	m_ppPlayers[0]->SetShader(pTexturedLightingShader);
+	CTexture *pTexture = new CTexture(1);
+	pTexture->SetTexture(0, CTextureResource::ppd3dTexture[4], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	m_ppPlayers[0]->SetTexture(pTexture);
+	m_ppPlayers[0]->SetPosition(-7.0f, 40.0f, 7.0f);
+
+	m_ppPlayers[0]->InitCameraOperator();
+	m_ppPlayers[0]->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
+	m_ppPlayers[0]->m_CameraOperator.GenerateProjectionMatrix(1.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 90.0f);
+	//m_ppPlayers[0]->m_CameraOperator.GenerateViewMatrix();
+	m_ppPlayers[0]->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+
+	m_ppPlayers[1]->SetMaterial(pStandardMaterial);
+	m_ppPlayers[1]->SetMesh(CMeshResource::pPirateMesh);
+	m_ppPlayers[1]->SetShader(pTexturedLightingShader);
+	CTexture *pTexture2 = new CTexture(1);
+	pTexture2->SetTexture(0, CTextureResource::ppd3dTexture[4], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	m_ppPlayers[1]->SetTexture(pTexture2);
+	m_ppPlayers[1]->SetPosition(-7.0f, 40.0f, 3.0f);
+
+	m_ppPlayers[1]->InitCameraOperator();
+	m_ppPlayers[1]->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
+	m_ppPlayers[1]->m_CameraOperator.GenerateProjectionMatrix(1.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 90.0f);
+	//m_ppPlayers[1]->m_CameraOperator.GenerateViewMatrix();
+	m_ppPlayers[1]->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+
+	if (m_pScene)
+	{
+		m_pScene->BuildObjects(m_pd3dDevice);
+		m_pScene->SetPlayers(m_ppPlayers);
+	}
+}
+
+void CGameFramework::SetPlayersToScene(CScene *pScene, CPlayer **ppPlayers)
+{
+	pScene->SetPlayers(ppPlayers);
 }
 
 void CGameFramework::ReleaseObjects()
 {
 	if (m_pScene) m_pScene->ReleaseObjects();
 	if (m_pScene) delete m_pScene;
-	if (m_pPlayer) delete m_pPlayer;
+	if (m_ppPlayers) delete []m_ppPlayers;
 
 	if (m_pd3dcbColor) m_pd3dcbColor->Release();
 }
@@ -253,18 +332,23 @@ void CGameFramework::ReleaseObjects()
 void CGameFramework::ProcessInput()
 {
 	static UCHAR pKeyBuffer[256];
-
+	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	if (GetKeyboardState(pKeyBuffer))
 	{
-		if (pKeyBuffer[VK_UP] & 0xF0) m_pPlayer->m_CameraOperator.RotateLocalX(ROTATION_DEGREE_PER_SEC, m_GameTimer.GetTimeElapsed());
-		if (pKeyBuffer[VK_DOWN] & 0xF0) m_pPlayer->m_CameraOperator.RotateLocalX(-ROTATION_DEGREE_PER_SEC, m_GameTimer.GetTimeElapsed());
-		if (pKeyBuffer[VK_LEFT] & 0xF0) m_pPlayer->m_CameraOperator.RotateLocalY(ROTATION_DEGREE_PER_SEC, m_GameTimer.GetTimeElapsed());
-		if (pKeyBuffer[VK_RIGHT] & 0xF0) m_pPlayer->m_CameraOperator.RotateLocalY(-ROTATION_DEGREE_PER_SEC, m_GameTimer.GetTimeElapsed());
-		if (pKeyBuffer[VK_LBUTTON] & 0xF0) m_pPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
-		if (pKeyBuffer[VK_RBUTTON] & 0xF0) m_pPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+		if (pKeyBuffer['F'] & 0xF0)			m_ppPlayers[0]->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+		if (pKeyBuffer['R'] & 0xF0)			m_ppPlayers[0]->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+		if (pKeyBuffer['Q'] & 0xF0)			m_ppPlayers[0]->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+		if (pKeyBuffer['E'] & 0xF0)			m_ppPlayers[0]->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+		if (pKeyBuffer[VK_UP] & 0xF0)		m_ppPlayers[0]->m_d3dxvMoveDir.z += 2.0f;
+		if (pKeyBuffer[VK_DOWN] & 0xF0)		m_ppPlayers[0]->m_d3dxvMoveDir.z -= 2.0f;
+		if (pKeyBuffer[VK_LEFT] & 0xF0)		m_ppPlayers[0]->m_d3dxvMoveDir.x -= 2.0f;
+		if (pKeyBuffer[VK_RIGHT] & 0xF0)	m_ppPlayers[0]->m_d3dxvMoveDir.x += 2.0f;
+		if (pKeyBuffer['S'] & 0xF0)	m_ppPlayers[0]->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
+		if (pKeyBuffer['W'] & 0xF0)	m_ppPlayers[0]->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+		m_ppPlayers[0]->ProofreadLocalAxis();
 	}
-	m_pPlayer->m_CameraOperator.GenerateViewMatrix(true);
-	m_pPlayer->m_CameraOperator.OriginalZoomState();
+	m_ppPlayers[0]->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);
+	m_ppPlayers[0]->m_CameraOperator.OriginalZoomState();
 }
 
 void CGameFramework::AnimateObjects()
@@ -284,16 +368,15 @@ void CGameFramework::FrameAdvance()
 	float fClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
 	m_pd3dDeviceContext->ClearRenderTargetView(m_pd3dRenderTargetView, fClearColor);
 	if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-	if (m_pPlayer) m_pPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
+	if (m_ppPlayers[0]) m_ppPlayers[0]->UpdateShaderVariables(m_pd3dDeviceContext);
 
-	CCamera *pCamera = &(m_pPlayer->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
+	CCamera *pCamera = &(m_ppPlayers[0]->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
 	if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, pCamera);
+	if (m_ppPlayers[0]) m_ppPlayers[0]->Render(m_pd3dDeviceContext);
+	if (m_ppPlayers[1]) m_ppPlayers[1]->Render(m_pd3dDeviceContext);
+
 	m_pDXGISwapChain->Present(0, 0);
 
-	/*현재의 프레임 레이트를 문자열로 가져와서 주 윈도우의 타이틀로 출력한다. m_pszBuffer 문자열이 "LapProject ("으로 초기화되었으므로 (m_pszBuffer+12)에서부터 프레임 레이트를 문자열로 출력하여 “ FPS)” 문자열과 합친다.
-	_itow_s(m_nCurrentFrameRate, (m_pszBuffer+12), 37, 10);
-	wcscat_s((m_pszBuffer+12), 37, _T(" FPS)"));
-	*/
 	m_GameTimer.GetFrameRate(m_pszBuffer + 16, 37);
 	::SetWindowText(m_hWnd, m_pszBuffer);
 }

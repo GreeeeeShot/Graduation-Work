@@ -40,8 +40,8 @@ void FbxLoadData::getNodeData()
 		{
 			FbxVector4 vec;
 			vec.mData[0] = meshNode[i].m_positionArray[j].mData[0];
-			vec.mData[1] = meshNode[i].m_positionArray[j].mData[2];
-			vec.mData[2] = -meshNode[i].m_positionArray[j].mData[1];
+			vec.mData[1] = meshNode[i].m_positionArray[j].mData[1];
+			vec.mData[2] = meshNode[i].m_positionArray[j].mData[2];
 			vertex.push_back(vec);
 			nVertice++;
 		}
@@ -50,19 +50,12 @@ void FbxLoadData::getNodeData()
 	m_posvec = new D3DXVECTOR3[nVertice];
 
 
-	for (int i = 0; i < nVertice / 3; ++i)
+	for (int i = 0; i < nVertice; ++i)
 	{
-		m_posvec[i * 3].x = vertex[i * 3 + 2].mData[0];
-		m_posvec[i * 3].y = vertex[i * 3 + 2].mData[1];
-		m_posvec[i * 3].z = vertex[i * 3 + 2].mData[2];
-		m_posvec[i * 3 + 1].x = vertex[i * 3 + 1].mData[0];
-		m_posvec[i * 3 + 1].y = vertex[i * 3 + 1].mData[1];
-		m_posvec[i * 3 + 1].z = vertex[i * 3 + 1].mData[2];
-		m_posvec[i * 3 + 2].x = vertex[i * 3].mData[0];
-		m_posvec[i * 3 + 2].y = vertex[i * 3].mData[1];
-		m_posvec[i * 3 + 2].z = vertex[i * 3].mData[2];
+		m_posvec[i].x = vertex[i].mData[0]*0.005;
+		m_posvec[i].y = vertex[i].mData[1]*0.005;
+		m_posvec[i].z = vertex[i].mData[2]*0.005;
 	}
-
 
 	vertex.clear();
 	nVertice = 0;

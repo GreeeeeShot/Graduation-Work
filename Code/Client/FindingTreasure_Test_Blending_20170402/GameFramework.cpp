@@ -284,7 +284,7 @@ void CGameFramework::BuildObjects()
 	m_ppPlayers[0]->SetMesh(CMeshResource::pPirateMesh);
 	m_ppPlayers[0]->SetShader(pTexturedLightingShader);
 	CTexture *pTexture = new CTexture(1);
-	pTexture->SetTexture(0, CTextureResource::ppd3dTexture[TEXTURE_GRASS_0], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	pTexture->SetTexture(0, CTextureResource::ppd3dTexture[1], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	m_ppPlayers[0]->SetTexture(pTexture);
 	m_ppPlayers[0]->SetPosition(-7.0f, 40.0f, 7.0f);
 
@@ -298,7 +298,7 @@ void CGameFramework::BuildObjects()
 	m_ppPlayers[1]->SetMesh(CMeshResource::pPirateMesh);
 	m_ppPlayers[1]->SetShader(pTexturedLightingShader);
 	CTexture *pTexture2 = new CTexture(1);
-	pTexture2->SetTexture(0, CTextureResource::ppd3dTexture[TEXTURE_WOOD_0], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	pTexture2->SetTexture(0, CTextureResource::ppd3dTexture[4], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	m_ppPlayers[1]->SetTexture(pTexture2);
 	m_ppPlayers[1]->SetPosition(-7.0f, 40.0f, 3.0f);
 
