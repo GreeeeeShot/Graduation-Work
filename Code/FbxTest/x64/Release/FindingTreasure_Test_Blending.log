@@ -1,9 +1,2 @@
-﻿  GameFramework.cpp
-c:\users\shot\desktop\findingtreasure_test_blending_20170402\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
-  코드를 생성하고 있습니다.
-  9 of 1647 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    8 functions had inline decision re-evaluated but remain unchanged
-  코드를 생성했습니다.
-  FindingTreasure_Test_Blending.vcxproj -> C:\Users\shot\Desktop\FindingTreasure_Test_Blending_20170402\x64\Release\FindingTreasure_Test_Blending.exe
-  FindingTreasure_Test_Blending.vcxproj -> C:\Users\shot\Desktop\FindingTreasure_Test_Blending_20170402\x64\Release\FindingTreasure_Test_Blending.pdb (Full PDB)
+﻿  FindingTreasure_Test_Blending.vcxproj -> D:\졸업작품\Direct3D\Direct3D 연구소\Direct3D 졸작 코드 제작실\제작 일지\GitHub\Graduation-Work\Code\FbxTest\x64\Release\FindingTreasure_Test_Blending.exe
+  FindingTreasure_Test_Blending.vcxproj -> D:\졸업작품\Direct3D\Direct3D 연구소\Direct3D 졸작 코드 제작실\제작 일지\GitHub\Graduation-Work\Code\FbxTest\x64\Release\FindingTreasure_Test_Blending.pdb (Full PDB)

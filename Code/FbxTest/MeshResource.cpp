@@ -407,14 +407,14 @@ CTexturedLightingCharacterMesh::CTexturedLightingCharacterMesh(ID3D11Device *pd3
 
 	CTexturedLightingVertex* pVertices = new CTexturedLightingVertex[m_nVertices];
 
-	m_AABB.m_d3dxvMax = D3DXVECTOR3(0.5, 0.5, 0.5);
-	m_AABB.m_d3dxvMin = D3DXVECTOR3(-0.5, -0.5, -0.5);
+	m_AABB.m_d3dxvMax = D3DXVECTOR3(0.3, 0.5, 0.25);
+	m_AABB.m_d3dxvMin = D3DXVECTOR3(-0.3, -0.5, -0.25);
 
 	//직육면체의 한 면에 텍스쳐 전체가 맵핑되도록 텍스쳐 좌표를 설정한다.
 
 	for (int i = 0; i < m_nVertices; ++i)
 	{
-		pVertices[i] = CTexturedLightingVertex(data->m_posvec[i], data->m_norvec[i], data->m_tex[i]);
+		pVertices[i] = CTexturedLightingVertex(data->m_posvec[i], -data->m_norvec[i], data->m_tex[i]);
 	}
 
 	m_nBuffers = 1;
