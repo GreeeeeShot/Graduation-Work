@@ -391,7 +391,7 @@ namespace FBX_LOADER
 			for (int pol = 0; pol<lPolygonsize; pol++)
 			{
 				int index = pMesh->GetPolygonVertex(i, pol);//폴리곤의 인덱스를 갖고옴
-				meshNode->indexArray.push_back(indx);//인덱스행렬에 집어넣음
+				meshNode->indexArray.push_back(index);//인덱스행렬에 집어넣음
 
 				pos = pMesh->GetControlPointAt(index); //인덱스의 컨트롤 포인트를 갖고옴
 				pMesh->GetPolygonVertexNormal(i, pol, nor);//폴리곤 버텍스의 노말값

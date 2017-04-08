@@ -6,6 +6,7 @@
 #include "GameFramework.h"
 
 
+
 CGameFramework::CGameFramework()
 {
 	m_pd3dDevice = NULL;

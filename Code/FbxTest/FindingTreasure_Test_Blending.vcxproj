@@ -147,6 +147,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d11.lib;d3dx11.lib;d3dx11d.lib;d3dcompiler.lib;d3dx9.lib;d3dx9d.lib;dxerr.lib;dxguid.lib;dxgi.lib;winmm.lib;libfbxsdk-md.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>ws2_32.lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -161,6 +162,7 @@
     <ClInclude Include="FBXLoader.h" />
     <ClInclude Include="FindingTreasure_Test_Blending.h" />
     <ClInclude Include="GameFramework.h" />
+    <ClInclude Include="IOCP_Init.h" />
     <ClInclude Include="LightResource.h" />
     <ClInclude Include="MeshResource.h" />
     <ClInclude Include="Object.h" />
@@ -186,6 +188,8 @@
     <ClCompile Include="FBXLoader.cpp" />
     <ClCompile Include="FindingTreasure_Test_Blending.cpp" />
     <ClCompile Include="GameFramework.cpp" />
+    <ClCompile Include="IOCP_Client.cpp" />
+    <ClCompile Include="IOCP_Server.cpp" />
     <ClCompile Include="LightResource.cpp" />
     <ClCompile Include="MeshResource.cpp" />
     <ClCompile Include="Object.cpp" />
