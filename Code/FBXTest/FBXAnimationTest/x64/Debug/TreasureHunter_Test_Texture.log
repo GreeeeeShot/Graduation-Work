@@ -1,0 +1,6 @@
+﻿  failed writing C:\Users\shot\Desktop\A��AU\fbx\20170413��O��I����AI��C A��Ca��oE��\x64\Debug\TexturedPS.cso
+  failed writing C:\Users\shot\Desktop\A��AU\fbx\20170413��O��I����AI��C A��Ca��oE��\x64\Debug\TexturedVS.cso
+  FBXLoader.cpp
+c:\users\shot\desktop\졸작\fbx\20170413애니메이션 진행상황\fbxloader.h(301): warning C4267: 'return': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  TreasureHunter_Test_Texture.vcxproj -> C:\Users\shot\Desktop\졸작\fbx\20170413애니메이션 진행상황\x64\Debug\TreasureHunter_Test_Texture.exe
+  TreasureHunter_Test_Texture.vcxproj -> C:\Users\shot\Desktop\졸작\fbx\20170413애니메이션 진행상황\x64\Debug\TreasureHunter_Test_Texture.pdb (Full PDB)

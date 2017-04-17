@@ -1,0 +1,21 @@
+﻿1>------ 빌드 시작: 프로젝트: TreasureHunter_Test_Texture, 구성: Debug x64 ------
+1>  failed writing C:\Users\shot\Desktop\A��AU\fbx\TreasureHunter_Test_Texture_20170314\x64\Debug\TexturedPS.cso
+1>  failed writing C:\Users\shot\Desktop\A��AU\fbx\TreasureHunter_Test_Texture_20170314\x64\Debug\TexturedVS.cso
+1>  FBXLoader.cpp
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(661): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(668): error C2059: 구문 오류: '}'
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(677): error C2039: 'FbxMesh': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(677): error C2039: 'pMesh': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(678): error C2039: 'FbxTime': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(678): error C2039: 'pTime': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(679): error C2039: 'FbxVector4': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(679): error C2039: 'pVertexArray': 'fbxsdk::FbxAnimCurve'의 멤버가 아닙니다.
+1>  c:\program files\autodesk\fbx\fbx sdk\2017.1\include\fbxsdk\scene\animation\fbxanimutilities.h(33): note: 'fbxsdk::FbxAnimCurve' 선언을 참조하십시오.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(679): error C2761: 'void FBX_LOADER::CFBXLoader::ReadVertexCacheData(fbxsdk::FbxMesh *,fbxsdk::FbxTime &,fbxsdk::FbxVector4 *)': 멤버 함수를 재선언할 수 없습니다.
+1>c:\users\shot\desktop\졸작\fbx\treasurehunter_test_texture_20170314\fbxloader.cpp(680): error C2448: 'FBX_LOADER::CFBXLoader::ReadVertexCacheData': 함수 스타일 이니셜라이저가 함수 정의처럼 나타납니다.
+========== 빌드: 성공 0, 실패 1, 최신 0, 생략 0 ==========
