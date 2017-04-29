@@ -4,6 +4,7 @@
 
 CGameFramework::CGameFramework()
 {
+	current_time = 0.0;
 	m_pd3dDevice = NULL;
 	m_pDXGISwapChain = NULL;
 	m_pd3dRenderTargetView = NULL;
@@ -267,7 +268,7 @@ void CGameFramework::ProcessInput()
 
 void CGameFramework::AnimateObjects()
 {
-	if (m_pScene) m_pScene->AnimateObjects(m_GameTimer.GetTimeElapsed());
+	if (m_pScene) m_pScene->AnimateObjects(m_pd3dDevice,100.0);
 }
 
 void CGameFramework::FrameAdvance()
@@ -293,4 +294,5 @@ void CGameFramework::FrameAdvance()
 	*/
 	m_GameTimer.GetFrameRate(m_pszBuffer + 16, 37);
 	::SetWindowText(m_hWnd, m_pszBuffer);
+	current_time += m_GameTimer.GetTimeElapsed();
 }

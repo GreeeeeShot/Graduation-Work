@@ -155,9 +155,10 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraOperator.h" />
-    <ClInclude Include="FBXLoader.h" />
-    <ClInclude Include="FBXRender.h" />
+    <ClInclude Include="FBXExporter.h" />
     <ClInclude Include="GameFramework.h" />
+    <ClInclude Include="Material.h" />
+    <ClInclude Include="MathHelper.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="Player.h" />
@@ -168,13 +169,15 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="TreasureHunter_Test_Texture.h" />
+    <ClInclude Include="Utilities.h" />
+    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraOperator.cpp" />
-    <ClCompile Include="FBXLoader.cpp" />
-    <ClCompile Include="FBXRender.cpp" />
+    <ClCompile Include="FBXExporter.cpp" />
     <ClCompile Include="GameFramework.cpp" />
+    <ClCompile Include="MathHelper.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -188,6 +191,7 @@
     </ClCompile>
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="TreasureHunter_Test_Texture.cpp" />
+    <ClCompile Include="Utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="TreasureHunter_Test_Texture.rc" />

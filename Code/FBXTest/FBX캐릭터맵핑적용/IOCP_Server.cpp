@@ -20,6 +20,7 @@ struct OverlappedEX {
 
 struct CLIENT {
 	float x;
+	float y;
 	float z;
 	bool team;
 	bool connect;

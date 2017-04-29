@@ -1,34 +1,11 @@
 #pragma once
-#include "FBXLoader.h"
+
+#include "FBXExporter.h"
 #include <vector>
 /*정점의 색상을 무작위로(Random) 설정하기 위해 사용한다. 각 정점의 색상은 난수(Random Number)를 생성하여 지정한다.*/
 #define RANDOM_COLOR D3DXCOLOR((rand() * 0xFFFFFF) / RAND_MAX)
 
 #define FILE_NAME "walk-snow.FBX"
-
-class CFbxLoadData
-{
-protected:
-	FBX_LOADER::CFBXLoader* m_pFbxDX11;
-	FBX_LOADER::FBX_MESH_NODE* m_meshnode;
-	char m_filename[256];
-public:
-	D3DXVECTOR3* m_posvec;
-	D3DXVECTOR3* m_norvec;
-	D3DXVECTOR3* m_matvec;
-	D3DXVECTOR2* m_tex;
-	UINT* m_index;
-	int m_nVertices;
-
-	CFbxLoadData();
-	~CFbxLoadData();
-	void getNodeData();
-	void onTime() { 
-	//	m_pFbxDX11->onTime();
-	};
-	void GetControlPoint();
-	void AniTimePerData();
-};
 
 class CTexture
 {
@@ -178,8 +155,6 @@ public:
 class CCharacterMesh : public CMesh
 {
 protected:
-	FBX_LOADER::CFBXLoader* m_pFbxDX11;
-	FBX_LOADER::FBX_MESH_NODE* m_meshnode;
 	char m_filename[256];
 	//tga_image texture;
 
@@ -187,7 +162,6 @@ public:
 	CCharacterMesh(ID3D11Device *pd3dDevice);
 	virtual ~CCharacterMesh();
 
-	int get_PositionVector(FBX_LOADER::CFBXLoader* pLoader);
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 
@@ -220,7 +194,7 @@ public:
 	virtual void CreateRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 };
-
+/*
 class CLightingCharacterMesh : public CLightingMesh
 {
 public:
@@ -243,7 +217,7 @@ public:
 	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
 };
-
+*/
 class CTexturedLightingCubeMesh : public CLightingMesh
 {
 public:
@@ -256,10 +230,14 @@ public:
 
 class CTexturedLightingCharacterMesh : public CLightingMesh
 {
+protected:
+	CTexturedNormalVertex* pVertices;
+	FBXExporter* myExporter;
 public:
-	CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice, CFbxLoadData* data);
+	CTexturedLightingCharacterMesh(ID3D11Device *pd3dDevice);
 	virtual ~CTexturedLightingCharacterMesh();
 
 	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
+	virtual void Animation(ID3D11Device *pd3dDevice, int t);
 };

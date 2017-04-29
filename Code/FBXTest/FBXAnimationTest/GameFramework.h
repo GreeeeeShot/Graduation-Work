@@ -39,6 +39,8 @@ public:
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
+	float current_time;
+
 	//디바이스, 스왑 체인, 디바이스 컨텍스트, 디바이스와 관련된 뷰를 생성하는 함수이다. 
 	bool CreateRenderTargetView();
 	bool CreateDirect3DDisplay();

@@ -42,8 +42,7 @@ private:
 	LIGHTS *m_pLights;
 	ID3D11Buffer *m_pd3dcbLights;
 
-protected:
-	CFbxLoadData* data;
+	CTexturedLightingCharacterMesh *pCubeMesh;
 
 public:
 	CScene();
@@ -60,7 +59,7 @@ public:
 	void ReleaseShaderVariables();
 
 	bool ProcessInput();
-	void AnimateObjects(float fTimeElapsed);
+	void AnimateObjects(ID3D11Device *pd3dDevice,float fTimeElapsed);
 	void Render(ID3D11DeviceContext*pd3dDeviceContext, CCamera *pCamera);		// 카메라 절두체 기법을 위하여 매개변수로 pCamera가 존재한다.
 };
 

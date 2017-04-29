@@ -7,6 +7,7 @@ CScene::CScene()
 {
 	m_ppObjects = NULL;
 	m_nObjects = 0;
+	pCubeMesh = NULL;
 
 	m_pLights = NULL;
 	m_pd3dcbLights = NULL;
@@ -83,11 +84,9 @@ void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 	CShader *pTexturedLightingShader = new CTexturedLightingShader();
 	pTexturedLightingShader->CreateShader(pd3dDevice);				// 세계 행렬 및 재질 상수 버퍼를 생성한다.
 
-	
-	data = new CFbxLoadData;
 
-	//CTexturedLightingCubeMesh *pCubeMesh = new CTexturedLightingCubeMesh(pd3dDevice, 15.0f, 15.0f, 15.0f);
-	CTexturedLightingCharacterMesh *pCubeMesh = new CTexturedLightingCharacterMesh(pd3dDevice,data);
+	pCubeMesh = new CTexturedLightingCharacterMesh(pd3dDevice);
+	//CTexturedLightingCubeMesh *pCubeMesh = new CTexturedLightingCubeMesh(pd3dDevice);
 	CGameObject *pObject = new CGameObject();
 
 	// 다음의 재질은 빨간 색을 잘 반사한다.
@@ -185,9 +184,6 @@ void CScene::ReleaseShaderVariables()
 
 void CScene::UpdateShaderVariable(ID3D11DeviceContext *pd3dDeviceContext, LIGHTS *pLights)
 {
- 	data->onTime();
-
-	data->AniTimePerData();
 
 	D3D11_MAPPED_SUBRESOURCE d3dMappedResource;
 	pd3dDeviceContext->Map(m_pd3dcbLights, 0, D3D11_MAP_WRITE_DISCARD, 0, &d3dMappedResource);
@@ -212,9 +208,11 @@ bool CScene::ProcessInput()
 	return(false);
 }
 
-void CScene::AnimateObjects(float fTimeElapsed)
+void CScene::AnimateObjects(ID3D11Device *pd3dDevice,float fTimeElapsed)
 {
-	for (int i = 0; i < m_nObjects; i++);// m_ppObjects[i]->Animate(fTimeElapsed);
+	//for (int i = 0; i < m_nObjects; i++);// m_ppObjects[i]->Animate(fTimeElapsed);
+	pCubeMesh->Animation(pd3dDevice, fTimeElapsed);
+	
 }
 
 
