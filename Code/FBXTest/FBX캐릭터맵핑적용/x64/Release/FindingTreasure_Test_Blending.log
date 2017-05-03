@@ -1,78 +1,55 @@
-﻿  compilation succeeded; see C:\Users\shot\Documents\GitHub\Graduation-Work\Graduation-Work\Code\FBXTest\FBXĳ���͸�������\TexturedPS.fxo
-  compilation succeeded; see C:\Users\shot\Documents\GitHub\Graduation-Work\Graduation-Work\Code\FBXTest\FBXĳ���͸�������\TexturedVS.fxo
-  stdafx.cpp
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(12): warning C4005: 'DXGI_STATUS_OCCLUDED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50092): note: 'DXGI_STATUS_OCCLUDED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(13): warning C4005: 'DXGI_STATUS_CLIPPED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50101): note: 'DXGI_STATUS_CLIPPED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(14): warning C4005: 'DXGI_STATUS_NO_REDIRECTION': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50110): note: 'DXGI_STATUS_NO_REDIRECTION'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(15): warning C4005: 'DXGI_STATUS_NO_DESKTOP_ACCESS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50119): note: 'DXGI_STATUS_NO_DESKTOP_ACCESS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(16): warning C4005: 'DXGI_STATUS_GRAPHICS_VIDPN_SOURCE_IN_USE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50128): note: 'DXGI_STATUS_GRAPHICS_VIDPN_SOURCE_IN_USE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(17): warning C4005: 'DXGI_STATUS_MODE_CHANGED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50137): note: 'DXGI_STATUS_MODE_CHANGED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(18): warning C4005: 'DXGI_STATUS_MODE_CHANGE_IN_PROGRESS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50146): note: 'DXGI_STATUS_MODE_CHANGE_IN_PROGRESS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(21): warning C4005: 'DXGI_ERROR_INVALID_CALL': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50161): note: 'DXGI_ERROR_INVALID_CALL'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(22): warning C4005: 'DXGI_ERROR_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50170): note: 'DXGI_ERROR_NOT_FOUND'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(23): warning C4005: 'DXGI_ERROR_MORE_DATA': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50179): note: 'DXGI_ERROR_MORE_DATA'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(24): warning C4005: 'DXGI_ERROR_UNSUPPORTED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50188): note: 'DXGI_ERROR_UNSUPPORTED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(25): warning C4005: 'DXGI_ERROR_DEVICE_REMOVED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50197): note: 'DXGI_ERROR_DEVICE_REMOVED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(26): warning C4005: 'DXGI_ERROR_DEVICE_HUNG': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50206): note: 'DXGI_ERROR_DEVICE_HUNG'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(27): warning C4005: 'DXGI_ERROR_DEVICE_RESET': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50216): note: 'DXGI_ERROR_DEVICE_RESET'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(28): warning C4005: 'DXGI_ERROR_WAS_STILL_DRAWING': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50225): note: 'DXGI_ERROR_WAS_STILL_DRAWING'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(29): warning C4005: 'DXGI_ERROR_FRAME_STATISTICS_DISJOINT': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50235): note: 'DXGI_ERROR_FRAME_STATISTICS_DISJOINT'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(30): warning C4005: 'DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50244): note: 'DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(31): warning C4005: 'DXGI_ERROR_DRIVER_INTERNAL_ERROR': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50254): note: 'DXGI_ERROR_DRIVER_INTERNAL_ERROR'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(32): warning C4005: 'DXGI_ERROR_NONEXCLUSIVE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50263): note: 'DXGI_ERROR_NONEXCLUSIVE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(33): warning C4005: 'DXGI_ERROR_NOT_CURRENTLY_AVAILABLE': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50272): note: 'DXGI_ERROR_NOT_CURRENTLY_AVAILABLE'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(34): warning C4005: 'DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50282): note: 'DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\dxgitype.h(35): warning C4005: 'DXGI_ERROR_REMOTE_OUTOFMEMORY': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50291): note: 'DXGI_ERROR_REMOTE_OUTOFMEMORY'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(917): warning C4005: 'D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50469): note: 'D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(918): warning C4005: 'D3D11_ERROR_FILE_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50478): note: 'D3D11_ERROR_FILE_NOT_FOUND'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(919): warning C4005: 'D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50488): note: 'D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS'의 이전 정의를 참조하십시오.
-C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include\d3d11.h(920): warning C4005: 'D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50497): note: 'D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\d3d10.h(608): warning C4005: 'D3D10_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50445): note: 'D3D10_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS'의 이전 정의를 참조하십시오.
-c:\program files (x86)\microsoft directx sdk (june 2010)\include\d3d10.h(609): warning C4005: 'D3D10_ERROR_FILE_NOT_FOUND': 매크로 재정의
-  C:\Program Files (x86)\Windows Kits\8.1\Include\shared\winerror.h(50454): note: 'D3D10_ERROR_FILE_NOT_FOUND'의 이전 정의를 참조하십시오.
-  BlendingResource.cpp
+﻿  BlendingResource.cpp
   Camera.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   CameraOperator.cpp
 c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
   FbxLoadData.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+FbxLoadData.cpp(18): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(55): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(56): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(57): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(80): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(81): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(82): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(122): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(123): warning C4244: '=': 'double'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(142): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(178): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(179): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(180): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(203): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(204): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(205): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(245): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(246): warning C4244: '=': 'double'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(261): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(297): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(298): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(299): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(300): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(301): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(302): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(303): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(304): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(305): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(328): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(329): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(330): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(370): warning C4244: '=': 'fbxsdk::FbxDouble'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+FbxLoadData.cpp(371): warning C4244: '=': 'double'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   FBXLoader.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
   FindingTreasure_Test_Blending.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
+FindingTreasure_Test_Blending.cpp(34): warning C4996: 'freopen': This function or variable may be unsafe. Consider using freopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.10240.0\ucrt\stdio.h(240): note: 'freopen' 선언을 참조하십시오.
   GameFramework.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   IOCP_Client.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
+IOCP_Client.cpp(140): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  C:\Program Files (x86)\Windows Kits\8.1\Include\um\WinSock2.h(1850): note: 'inet_addr' 선언을 참조하십시오.
+IOCP_Client.cpp(144): warning C4996: 'WSAAsyncSelect': Use WSAEventSelect() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
+  C:\Program Files (x86)\Windows Kits\8.1\Include\um\WinSock2.h(2699): note: 'WSAAsyncSelect' 선언을 참조하십시오.
   IOCP_Server.cpp
 IOCP_Server.cpp(107): warning C4244: '=': 'float'에서 'BYTE'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 IOCP_Server.cpp(108): warning C4244: '=': 'float'에서 'BYTE'(으)로 변환하면서 데이터가 손실될 수 있습니다.
@@ -82,25 +59,26 @@ IOCP_Server.cpp(191): warning C4244: '인수': 'unsigned __int64'에서 'int'(�
 IOCP_Server.cpp(202): warning C4244: '인수': 'unsigned __int64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 IOCP_Server.cpp(220): warning C4244: '인수': 'unsigned __int64'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
 IOCP_Server.cpp(299): warning C4800: 'int': 'true' 또는 'false'로 bool 값을 강제하고 있습니다(성능 경고).
-  LightResource.cpp
   MeshResource.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+MeshResource.cpp(410): warning C4305: '인수': 'double'에서 'FLOAT'(으)로 잘립니다.
+MeshResource.cpp(411): warning C4305: '인수': 'double'에서 'FLOAT'(으)로 잘립니다.
   Object.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
   PhysicalCollision.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   Player.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   Scene.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\CameraOperator.h(2): warning C4067: 전처리기 지시문 다음에 예기치 않은 토큰이 있습니다. 줄 바꿈 문자가 필요합니다.
   Shader.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+Shader.cpp(75): warning C4267: '=': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   ShaderResource.cpp
-  TextureResource.cpp
-  Timer.cpp
-  VertexResource.cpp
-  컴파일하고 있습니다...
   Voxel.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
   VoxelTerrain.cpp
-c:\users\shot\documents\github\graduation-work\graduation-work\code\fbxtest\fbx캐릭터맵핑적용\FBXLoader.h(12): fatal error C1083: 포함 파일을 열 수 없습니다. 'fbxsdk.h': No such file or directory
+VoxelTerrain.cpp(145): warning C4244: '인수': 'int'에서 'FLOAT'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다.
+  1660 of 1662 functions (99.9%) were compiled, the rest were copied from previous compilation.
+    17 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  FindingTreasure_Test_Blending.vcxproj -> C:\Users\shot\Documents\GitHub\Graduation-Work\Graduation-Work\Code\FBXTest\FBX캐릭터맵핑적용\x64\Release\FindingTreasure_Test_Blending.exe
+  FindingTreasure_Test_Blending.vcxproj -> C:\Users\shot\Documents\GitHub\Graduation-Work\Graduation-Work\Code\FBXTest\FBX캐릭터맵핑적용\x64\Release\FindingTreasure_Test_Blending.pdb (Full PDB)
