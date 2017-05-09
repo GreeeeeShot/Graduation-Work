@@ -76,7 +76,7 @@ void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 	ID3D11ShaderResourceView *pd3dTexture = NULL;
 	//DirectX::ScratchImage image = LoadTextureFromFile("snow.tga");
 	//DirectX::CreateShaderResourceView(pd3dDevice, image.GetImages(), image.GetImageCount(), image.GetMetadata(), &pd3dTexture);
-	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("pirate.png"), NULL, NULL, &pd3dTexture, NULL);
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("pir.png"), NULL, NULL, &pd3dTexture, NULL);
 	
 	CTexture *pJungleTexture = new CTexture(1);
 	pJungleTexture->SetTexture(0, pd3dTexture, pd3dSamplerState);
@@ -208,10 +208,10 @@ bool CScene::ProcessInput()
 	return(false);
 }
 
-void CScene::AnimateObjects(ID3D11Device *pd3dDevice,float fTimeElapsed)
+void CScene::AnimateObjects(ID3D11DeviceContext *pd3dDeviceContext,float fTimeElapsed)
 {
 	//for (int i = 0; i < m_nObjects; i++);// m_ppObjects[i]->Animate(fTimeElapsed);
-	pCubeMesh->Animation(pd3dDevice, fTimeElapsed);
+	pCubeMesh->Animation(pd3dDeviceContext, fTimeElapsed*30.0);
 	
 }
 

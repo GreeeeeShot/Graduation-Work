@@ -724,31 +724,37 @@ CTexturedLightingCharacterMesh::~CTexturedLightingCharacterMesh()
 
 }
 
-void CTexturedLightingCharacterMesh::Animation(ID3D11Device *pd3dDevice,int t)
+void CTexturedLightingCharacterMesh::Animation(ID3D11DeviceContext *pd3dDeviceContext,float t)
 {
-	D3DXVECTOR3* vec;
-	myExporter->AnimationToVertex(&vec, t);
+	//정점 버퍼를 매핑하여 정점 버퍼 포인터를 가져온다.
+	D3D11_MAPPED_SUBRESOURCE d3dMappedResource;
+	pd3dDeviceContext->Map(m_ppd3dVertexBuffers[0], 0, D3D11_MAP_WRITE_DISCARD, 0, &d3dMappedResource);
+	CTexturedNormalVertex* Vertices = (CTexturedNormalVertex *)d3dMappedResource.pData;
+
+	if (Vertices == NULL)
+		return;
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+		
+	nor = myExporter->CopyNormalVertex();
+	uv = myExporter->CopyUVVertex();
+
+	myExporter->AnimationToVertex(&vec, (int)t);
+	
+	
+
 	for (int i = 0; i < m_nVertices; ++i)
 	{
-		pVertices[i].m_d3dxvPosition = vec[i];
+		Vertices[i] = CTexturedNormalVertex(vec[i], nor[i], uv[i]);
 	}
+
 	delete[] vec;
-	
-	D3D11_BUFFER_DESC d3dBufferDesc;
-	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
-	d3dBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	d3dBufferDesc.ByteWidth = sizeof(CTexturedNormalVertex) * m_nVertices;
-	d3dBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	d3dBufferDesc.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA d3dBufferData;
-	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
-	d3dBufferData.pSysMem = pVertices;
-	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_ppd3dVertexBuffers[0]);
+	delete[] nor;
+	delete[] uv;
 
-	m_pnVertexStrides[0] = sizeof(CTexturedNormalVertex);
-	m_pnVertexOffsets[0] = 0;
-
-	SetRasterizerState(pd3dDevice);
+	pd3dDeviceContext->Unmap(m_ppd3dVertexBuffers[0], 0);
 }
 
 void CTexturedLightingCharacterMesh::SetRasterizerState(ID3D11Device *pd3dDevice)

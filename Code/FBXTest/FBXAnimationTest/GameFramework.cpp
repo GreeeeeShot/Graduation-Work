@@ -268,7 +268,7 @@ void CGameFramework::ProcessInput()
 
 void CGameFramework::AnimateObjects()
 {
-	if (m_pScene) m_pScene->AnimateObjects(m_pd3dDevice,100.0);
+	if (m_pScene) m_pScene->AnimateObjects(m_pd3dDeviceContext,current_time);
 }
 
 void CGameFramework::FrameAdvance()

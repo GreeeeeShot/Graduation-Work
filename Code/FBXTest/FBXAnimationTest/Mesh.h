@@ -239,5 +239,5 @@ public:
 
 	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
-	virtual void Animation(ID3D11Device *pd3dDevice, int t);
+	virtual void Animation(ID3D11DeviceContext *pd3dDeviceContext, float t);
 };
