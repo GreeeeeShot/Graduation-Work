@@ -48,6 +48,7 @@ ID3D11ShaderResourceView** CTextureResource::ppd3dTextureUI = NULL;
 ID3D11ShaderResourceView** CTextureResource::ppd3dTextureEffect = NULL;
 ID3D11SamplerState** CTextureResource::ppd3dSamplerState = NULL;
 
+CTexture* CTextureResource::pSkydomTexture = NULL;
 CTexture* CTextureResource::pPirateTexture = NULL;
 CTexture* CTextureResource::pGrassTexture = NULL;
 CTexture* CTextureResource::pWoodTexture = NULL;
@@ -76,8 +77,9 @@ CTextureResource::~CTextureResource()
 
 void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice)
 {
-	ppd3dTexture = new ID3D11ShaderResourceView*[10];
+	ppd3dTexture = new ID3D11ShaderResourceView*[11];
 
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/sky.png"), NULL, NULL, &ppd3dTexture[10], NULL);
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/pirate.png"), NULL, NULL, &ppd3dTexture[9], NULL);
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/grass.png"), NULL, NULL, &ppd3dTexture[0], NULL);
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/wood.png"), NULL, NULL, &ppd3dTexture[1], NULL);
@@ -115,6 +117,7 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice)
 	d3dSamplerDesc.MaxLOD = 0;
 	pd3dDevice->CreateSamplerState(&d3dSamplerDesc, &ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 
+	pSkydomTexture = new CTexture(1);
 	pPirateTexture = new CTexture(1);
 	pGrassTexture = new CTexture(1);
 	pWoodTexture = new CTexture(1);
@@ -127,6 +130,7 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice)
 	pEmptySnowTexture = new CTexture(1);
 	pIceTexture = new CTexture(1);
 
+	pSkydomTexture->SetTexture(0, ppd3dTexture[10], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	pPirateTexture->SetTexture(0, ppd3dTexture[9], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	pGrassTexture->SetTexture(0, ppd3dTexture[0], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	pWoodTexture->SetTexture(0, ppd3dTexture[1], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);

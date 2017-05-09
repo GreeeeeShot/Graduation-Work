@@ -1008,6 +1008,81 @@ void CTexturedLightingCharacterMesh::Render(ID3D11DeviceContext *pd3dDeviceConte
 	CLightingMesh::Render(pd3dDeviceContext);
 }
 
+
+SkydomMesh::SkydomMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
+{
+	Skydom = new FBXExporter();
+	Skydom->Initialize();
+	Skydom->LoadScene("Skydom.FBX");
+	Skydom->ImportFBX();
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+
+	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	vec = Skydom->CopyMeshVertex(&m_nVertices);
+	nor = Skydom->CopyNormalVertex();
+	uv = Skydom->CopyUVVertex();
+
+	CTexturedVertex* pVertices = new CTexturedVertex[m_nVertices];
+
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		pVertices[i] = CTexturedVertex(D3DXVECTOR3(vec[i].x*10.f, vec[i].y*10.f, vec[i].z*10.f), uv[i]);
+	}
+
+	m_nBuffers = 1;
+	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
+	m_pnVertexStrides = new UINT[1];
+	m_pnVertexOffsets = new UINT[1];
+
+	D3D11_BUFFER_DESC d3dBufferDesc;
+	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	d3dBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	d3dBufferDesc.ByteWidth = sizeof(CTexturedVertex) * m_nVertices;
+	d3dBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	d3dBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_SUBRESOURCE_DATA d3dBufferData;
+	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3dBufferData.pSysMem = pVertices;
+	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_ppd3dVertexBuffers[0]);
+
+	m_pnVertexStrides[0] = sizeof(CTexturedVertex);
+	m_pnVertexOffsets[0] = 0;
+
+	delete[] vec;
+	delete[] nor;
+	delete[] uv;
+
+	SetRasterizerState(pd3dDevice);
+}
+
+SkydomMesh::~SkydomMesh()
+{
+}
+
+void SkydomMesh::Animate(ID3D11DeviceContext *pd3dDeviceContext, float t)
+{
+	
+}
+
+void SkydomMesh::SetRasterizerState(ID3D11Device *pd3dDevice)
+{
+	D3D11_RASTERIZER_DESC d3dRasterizerDesc;
+	ZeroMemory(&d3dRasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	d3dRasterizerDesc.CullMode = D3D11_CULL_FRONT;
+	d3dRasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	pd3dDevice->CreateRasterizerState(&d3dRasterizerDesc, &m_pd3dRasterizerState);
+}
+
+void SkydomMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
+{
+	CLightingMesh::Render(pd3dDeviceContext);
+}
+
+CMesh* CMeshResource::pSkyMesh = NULL;
 CMesh* CMeshResource::pAABBMesh = NULL;
 CMesh* CMeshResource::pShipMesh = NULL;
 CMesh* CMeshResource::pTreasureChestMesh = NULL;
@@ -1037,6 +1112,7 @@ CMeshResource::~CMeshResource()
 
 void CMeshResource::CreateMeshResource(ID3D11Device *pd3dDevice)
 {
+	pSkyMesh = new SkydomMesh(pd3dDevice);
 	pAABBMesh = new CDiffusedCubeMesh(pd3dDevice, 1.05f, 1.05f, 1.05f, D3DXCOLOR(1.0f, 0.0f, 0.0f, 1.0f));
 	pShipMesh = new CTexturedLightingCubeMesh(pd3dDevice, 4.0f, 3.0f, 6.0f);
 	pTreasureChestMesh = new CTexturedLightingCubeMesh(pd3dDevice, 0.8f, 0.86f, 0.8f);

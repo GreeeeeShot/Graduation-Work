@@ -24,6 +24,8 @@ CScene::CScene(char* cSceneTextFileName)
 	m_pPlayersMgrInform = NULL;
 	m_cSceneTextFileName = cSceneTextFileName;
 
+	m_skydom = NULL;
+
 	m_pLights = NULL;
 	m_pd3dcbLights = NULL;
 
@@ -39,6 +41,13 @@ CScene::~CScene()
 void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 {
 	CEffectManager::InitEffectManager();
+
+	m_skydom = new CGameObject();
+	m_skydom->SetMaterial(CMaterialResource::pStandardMaterial);
+	m_skydom->SetTexture(CTextureResource::pSkydomTexture);
+	m_skydom->SetMesh(CMeshResource::pSkyMesh);
+	m_skydom->SetShader(CShaderResource::pTexturedNotLightingShader);
+	m_skydom->SetPosition(0.f, 0.f, 0.f);
 
 	m_pWaveEffect = new CWaveObject();
 	m_pWaveEffect->SetMaterial(CMaterialResource::pWaveMaterial);
@@ -1000,7 +1009,7 @@ void CScene::Render(ID3D11DeviceContext*pd3dDeviceContext, CCamera *pCamera)
 		m_pShips[i]->Render(pd3dDeviceContext);
 	}
 	m_pTreasureChest->Render(pd3dDeviceContext);
-
+	m_skydom->Render(pd3dDeviceContext);
 	m_pVoxelTerrain->Render(pd3dDeviceContext, pCamera);
 	
 	if (m_pWaveEffect) m_pWaveEffect->Render(pd3dDeviceContext);

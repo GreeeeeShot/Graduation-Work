@@ -41,6 +41,7 @@ public:
 	static ID3D11ShaderResourceView **ppd3dTextureEffect;
 	static ID3D11SamplerState **ppd3dSamplerState;
 
+	static CTexture* pSkydomTexture;
 	static CTexture* pPirateTexture;
 	static CTexture* pGrassTexture;
 	static CTexture* pWaveTexture;

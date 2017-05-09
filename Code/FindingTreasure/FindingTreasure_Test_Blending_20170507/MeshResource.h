@@ -211,6 +211,19 @@ public:
 	virtual void Animate(ID3D11DeviceContext *pd3dDeviceContext, float t);
 };
 
+class SkydomMesh : public CLightingMesh
+{
+protected:
+	FBXExporter* Skydom;
+public:
+	SkydomMesh(ID3D11Device *pd3dDevice);
+	virtual ~SkydomMesh();
+
+	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
+	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
+	virtual void Animate(ID3D11DeviceContext *pd3dDeviceContext, float t);
+};
+
 class CMeshResource
 {
 public:
@@ -221,6 +234,7 @@ public:
 	static CMesh *pShipMesh;
 	static CMesh *pTreasureChestMesh;
 
+	static CMesh *pSkyMesh;
 	static CMesh *pPirateMesh;
 	static CMesh *pSnowWomanMesh;
 	static CMesh* pWaveMesh;

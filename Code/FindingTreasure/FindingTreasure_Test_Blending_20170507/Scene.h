@@ -28,6 +28,8 @@ private:
 	/*CGameObject **m_ppObjects;*/
 	CPlayersMgrInform *m_pPlayersMgrInform;
 	
+	CGameObject *m_skydom;
+
 	char* m_cSceneTextFileName;
 	CPlayer *m_pTreasureChest;
 	CGameObject *m_pShips[2];
