@@ -70,7 +70,7 @@ CMesh::~CMesh()
 
 	if (m_ppd3dVertexBuffers)
 	{
-		for (int i = 0; i < m_nBuffers; i++) m_ppd3dVertexBuffers[i]->Release();
+		//for (int i = 0; i < m_nBuffers; i++) m_ppd3dVertexBuffers[i]->Release();
 	}
 	if (m_AABB.m_pRenderObject) delete m_AABB.m_pRenderObject;
 	if (m_pnVertexStrides) delete[] m_pnVertexStrides;

@@ -364,9 +364,9 @@ void Time_Thread()
 					}
 					Sleep(10);
 					// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
-					g_clients[i].vl_lock.lock();
+//					g_clients[i].vl_lock.lock();
 					CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[i].player, t);
-					g_clients[i].vl_lock.unlock();
+//					g_clients[i].vl_lock.unlock();
 					
 					if (g_clients[i].player.GetPosition().y < -1.0f)
 					{
@@ -445,9 +445,7 @@ void Accept_Thread()
 		//SendPutPlayerPacket(new_id, new_id);
 		
 		float fx = 0.2f, fy = 0.45f, fz = 0.2f;
-		g_clients[new_id].player.m_pMesh->m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
-		g_clients[new_id].player.m_pMesh->m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
-		g_clients[new_id].player.m_pMesh->m_AABB.m_pRenderObject = new CGameObject();
+		g_clients[new_id].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
 		g_clients[new_id].player.InitCameraOperator();
 		for (int i = 0; i < MAX_USER; ++i)
 		{

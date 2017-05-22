@@ -355,7 +355,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 					+ (d3dxvColLayerRow.x))])
 			{
 				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
-				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+				//pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
 				float fDistance = 0.0f;
 
 				if (!pCollidedVoxel->m_bIsSlope)
@@ -455,7 +455,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 					pPlayer->Moving(d3dxvRevision);
 					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
 
-					pPlayer->m_d3dxvVelocity.y = 0.0;
+					pPlayer->m_d3dxvVelocity.y = 0.0f;
 					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
 					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
 					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
@@ -499,7 +499,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 					+ (d3dxvInspectionIdx.x))]) != NULL)
 			{
 				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
-				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+				//pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
 
 				if (CPhysicalCollision::IsCollided(
 					&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
