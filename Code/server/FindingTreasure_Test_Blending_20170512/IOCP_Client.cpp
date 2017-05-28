@@ -48,7 +48,8 @@ void ProcessPacket(char *ptr)
 		x = my_packet->x;
 		z = my_packet->z;
 		id = my_packet->id;
-		y = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y;
+		y = my_packet->y;
+		//y = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y;
 		//std::cout<<"Position: " << x<<", " << y << ", " << z << std::endl;
 		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetMove(x, y, z);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(x,y, z));
@@ -145,7 +146,7 @@ void ClientMain(HWND main_window_handle,const char* serverip)
 	recv_wsabuf.len = BUF_SIZE;
 }
 
-void SetPacket(CHARACTER_MOVE move)
+void SetPacket(int x,int y, int z)
 {
 	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(send_buffer);
 	int id = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID;
@@ -155,7 +156,7 @@ void SetPacket(CHARACTER_MOVE move)
 	my_packet->Lookx = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GetLook().x;
 	my_packet->Lookz = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GetLook().z;
 	//std::cout<<"Client Look" << (float)my_packet->Lookx << ", " <<(float)my_packet->Lookz << std::endl;
-	if (move == RIGHT)
+	if (x>0)
 	{
 		my_packet->type = CS_RIGHT;
 		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
@@ -164,7 +165,7 @@ void SetPacket(CHARACTER_MOVE move)
 			printf("Error while sending packet [%d]", error_code);
 		}
 	}
-	if (move == LEFT)
+	if (x<0)
 	{
 		my_packet->type = CS_LEFT;
 		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
@@ -173,7 +174,7 @@ void SetPacket(CHARACTER_MOVE move)
 			printf("Error while sending packet [%d]", error_code);
 		}
 	}
-	if (move == UP)
+	if (z>0)
 	{
 		my_packet->type = CS_UP;
 		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
@@ -182,7 +183,7 @@ void SetPacket(CHARACTER_MOVE move)
 			printf("Error while sending packet [%d]", error_code);
 		}
 	}
-	if (move == DOWN)
+	if (z<0)
 	{
 		my_packet->type = CS_DOWN;
 		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
@@ -191,11 +192,15 @@ void SetPacket(CHARACTER_MOVE move)
 			printf("Error while sending packet [%d]", error_code);
 		}
 	}
-	if (move == JUMP) {
+	if (y>0) {
 		my_packet->type = CS_JUMP;
-		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+		}
 	}
-
+	/*
 	if (move == X_STOP)
 	{
 		my_packet->type = CS_XSTOP;
@@ -213,5 +218,5 @@ void SetPacket(CHARACTER_MOVE move)
 			int error_code = WSAGetLastError();
 			printf("Error while sending packet [%d]", error_code);
 		}
-	}
+	}*/
 }

@@ -171,40 +171,37 @@ void DisconnectClient(int ci)
 
 void ProcessPacket(int ci, unsigned char packet[])
 {
+	
 	switch (packet[1])
 	{
 	case CS_UP:
-		g_clients[ci].xMove = 1;
+		g_clients[ci].player.m_d3dxvMoveDir.z += 10.f;
 		break;
 	case CS_DOWN:
-		g_clients[ci].xMove = 2;
+		g_clients[ci].player.m_d3dxvMoveDir.z -= 10.f;
 		break;
 	case CS_LEFT:
-		g_clients[ci].zMove = 1;
+		g_clients[ci].player.m_d3dxvMoveDir.x -= 10.f;
 		break;
 	case CS_RIGHT:
-		g_clients[ci].zMove = 2;
-		break;
-	case CS_XSTOP:
-		g_clients[ci].xMove = 0;
-		break;
-	case CS_ZSTOP:
-		g_clients[ci].zMove = 0;
+		g_clients[ci].player.m_d3dxvMoveDir.x += 10.f;
 		break;
 	case CS_JUMP:
-		g_clients[ci].vl_lock.lock();
-		g_clients[ci].player.m_d3dxvMoveDir.y += 5.f;
-		g_clients[ci].vl_lock.unlock();
+		g_clients[ci].player.m_d3dxvMoveDir.y = 5.f;
 		break;
 	default:
 		std::cout << "Unknown Packet Type from Client" << ci << std::endl;
 		while (true);
 	}
 	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(packet);
+	//std::cout << "Client x,y,z :" << (float)my_packet->Movex << "," << (int)my_packet->Movey << "," << (int)my_packet->Movez << std::endl;
 	g_clients[ci].vl_lock.lock();
 	g_clients[ci].player.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.GetLook().y, (float)my_packet->Lookz));
 	g_clients[ci].player.m_CameraOperator.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.m_CameraOperator.GetLook().y, (float)my_packet->Lookz));
-	g_clients[ci].vl_lock.unlock();
+
+ 	g_clients[ci].vl_lock.unlock();
+
+	//std::cout <<"x,y,z :" <<(int)my_packet->Movex << "," << (int)my_packet->Movey <<"," << (int)my_packet->Movez << std::endl;
 	//std::cout << "Look : "<<(float)my_packet->Lookx << ", " << (double)my_packet->Lookz << std::endl;
 
 	//std::cout << ci <<" X Y Z : (" << g_clients[ci].player.GetPosition().x<<", " << g_clients[ci].player.GetPosition().y << ", " <<g_clients[ci].player.GetPosition().z <<")"<< std::endl;
@@ -297,14 +294,14 @@ void Time_Thread()
 	while (true)
 	{
 		g_RespawnManager.UpdateRespawnManager(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
-		if (current_time > 1.0)
+		if (current_time > 0.1)
 		{
 			current_time = 0.0;
 			for (int i = 0; i < MAX_USER; ++i)
 			{
 				if (g_clients[i].connect == false)
 					continue;
-				if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
+				/*if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
 				{
 					g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
 					g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
@@ -312,7 +309,7 @@ void Time_Thread()
 				}
 				g_clients[i].vl_lock.lock();
 				if (g_clients[i].xMove == 1) {
-					g_clients[i].player.m_d3dxvMoveDir.x += 0.1f;
+					
 				}
 				else if (g_clients[i].xMove == 2)
 					g_clients[i].player.m_d3dxvMoveDir.x -= 0.1f;
@@ -324,7 +321,7 @@ void Time_Thread()
 				else
 					g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
 				g_clients[i].vl_lock.unlock();
-				
+				*/
 				g_clients[i].vl_lock.lock();
 				g_clients[i].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
 				g_clients[i].vl_lock.unlock();
@@ -332,8 +329,7 @@ void Time_Thread()
 				{
 					//std::cout << "a" << std::endl;
 					float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
-					/*
-					if (CPhysicalCollision::IsCollided(
+					/*if (CPhysicalCollision::IsCollided(
 					&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
 					&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
 					{
@@ -345,6 +341,7 @@ void Time_Thread()
 					g_clients[i].player.Moving(d3dxvRevision);
 					g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
 					g_clients[i].player.m_d3dxvVelocity.y = 0.0;
+					
 					if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
 					}
 					else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
@@ -362,7 +359,7 @@ void Time_Thread()
 							CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, &g_clients[j].player);
 						}
 					}
-					Sleep(10);
+					Sleep(13);
 					// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
 //					g_clients[i].vl_lock.lock();
 					CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[i].player, t);

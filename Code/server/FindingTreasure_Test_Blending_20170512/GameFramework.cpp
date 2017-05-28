@@ -188,12 +188,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			break;
 		default:
 			break;
-		case VK_UP:case VK_DOWN:
-			SetPacket(Z_STOP);
-			break;
-		case VK_RIGHT:case VK_LEFT:
-			SetPacket(X_STOP);
-			break;
 		}
 		m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed = false;
 		break;
@@ -203,21 +197,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case 'a': case 'A':
 		case '1': case '2': case '3': case '4' : case '5':
 			m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			break;
-		case VK_UP:
-				SetPacket(UP);
-			break;
-		case VK_DOWN:
-				SetPacket(DOWN);
-			break;
-		case VK_RIGHT:
-				SetPacket(RIGHT);
-			break;
-		case VK_LEFT:
-				SetPacket(LEFT);
-			break;
-		case VK_SPACE:
-				SetPacket(JUMP);
 			break;
 		}
 	default:
@@ -394,8 +373,10 @@ void CGameFramework::ProcessInput()
 		return;
 	if (m_pPlayersMgrInform->GetMyPlayer()->m_bIsActive)
 	{
+
 		if (GetKeyboardState(pKeyBuffer))
 		{
+			//int x = 0, y = 0, z = 0;
 			if (pKeyBuffer['S'] & 0xF0 && !pMyPlayer->m_VoxelPocket[pMyPlayer->m_iVoxelPocketSlotIdx].m_bIsActive) {
 				pMyPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, fTimeElapsed);
@@ -415,22 +396,28 @@ void CGameFramework::ProcessInput()
 				pMyPlayer->SetFBXAnimForType(PIRATE_ANIM_TYPE_IDLE);
 				if (pKeyBuffer[VK_SPACE] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.y = 5.0f;
+					SetPacket(0, 5, 0);
 				}
 				if (pKeyBuffer[VK_UP] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.z += 2.0f;
+					SetPacket(0, 0, 2);
 				}
 				if (pKeyBuffer[VK_DOWN] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.z -= 2.0f;
+					SetPacket(0, 0, -2);
 				}
 				if (pKeyBuffer[VK_LEFT] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.x -= 2.0f;
+					SetPacket(-2, 0, 0);
 				}
 				if (pKeyBuffer[VK_RIGHT] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.x += 2.0f;
+					SetPacket(2, 0, 0);
 				}
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->m_bIsDigOrInstall = false;
+				
 			}
 			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
@@ -438,6 +425,7 @@ void CGameFramework::ProcessInput()
 			if (pKeyBuffer['E'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['W'] & 0xF0)			pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
 			pMyPlayer->ProofreadLocalAxis();
+		
 		}
 		pMyPlayer->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);
 		pMyPlayer->m_CameraOperator.OriginalZoomState();
