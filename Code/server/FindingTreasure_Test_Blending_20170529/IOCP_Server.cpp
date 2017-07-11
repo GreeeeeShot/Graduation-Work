@@ -1,18 +1,22 @@
 #include "stdafx.h"
 
-#include<mutex>
+#include <mutex>
+#include <unordered_set>
+#include <chrono>
+#include <queue>
 
 #include "IOCP_Init.h"
 #include "IOCP_Server.h"
 #include "RespawnManager.h"
 
+using namespace std::chrono;
 
 HANDLE g_hiocp;
 SOCKET g_ssocket;
 CPlayer* g_box=NULL;
 CRespawnManager g_RespawnManager;
 
-enum OPTYPE { OP_SEND, OP_RECV };
+enum OPTYPE { OP_SEND, OP_RECV , USER_MOVE};
 
 struct OverlappedEX {
 	WSAOVERLAPPED over;
@@ -27,6 +31,9 @@ struct CLIENT {
 	int xMove;
 	int zMove;
 
+	high_resolution_clock::time_point last_move_time;
+	bool is_active;
+
 	CPlayer player;
 
 	SOCKET client_socket;
@@ -36,6 +43,27 @@ struct CLIENT {
 	int curr_packat_size;
 	std::mutex vl_lock;
 };
+
+enum Event_Type { E_MOVE , RESPAWN_TIME };
+
+struct Timer_Event {
+	int object_id;
+	high_resolution_clock::time_point exec_time;
+	Event_Type event;
+};
+
+class mycomp {
+	bool reverse;
+public:
+	mycomp() {}
+	bool operator() (const Timer_Event lhs, const Timer_Event rhs) const
+	{
+		return (lhs.exec_time > rhs.exec_time);
+	}
+};
+
+std::priority_queue <Timer_Event, std::vector <Timer_Event>, mycomp> timer_queue;
+std::mutex tq_lock;
 
 CLIENT g_clients[MAX_USER];
 
@@ -52,6 +80,12 @@ void error_display(char *msg, int err_no)
 	std::cout << L"에러\n" << std::endl;
 	std::cout << lpMsgBuf;
 	LocalFree(lpMsgBuf);
+}
+
+void MovePlayer(int id)
+{
+	Timer_Event event = { id, high_resolution_clock::now() + 10ms, E_MOVE };
+	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 }
 
 void Initialize_Server()
@@ -281,6 +315,92 @@ void Worker_Thread()
 			}
 			delete over;
 		}
+		else if (USER_MOVE == over->event_type)
+		{
+			if (g_clients[ci].connect == false)
+				continue;
+			/*if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
+			{
+				g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
+				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
+				continue;
+			}
+			g_clients[i].vl_lock.lock();
+			if (g_clients[i].xMove == 1) {
+
+			}
+			else if (g_clients[i].xMove == 2)
+				g_clients[i].player.m_d3dxvMoveDir.x -= 0.1f;
+			else  g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
+			if (g_clients[i].zMove == 1)
+				g_clients[i].player.m_d3dxvMoveDir.z += 0.1f;
+			else if (g_clients[i].zMove == 2)
+				g_clients[i].player.m_d3dxvMoveDir.z -= 0.1f;
+			else
+				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
+			g_clients[i].vl_lock.unlock();
+			*/
+			g_clients[ci].vl_lock.lock();
+			g_clients[ci].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
+			g_clients[ci].vl_lock.unlock();
+			if (g_clients[ci].player.m_bIsActive)
+			{
+				//std::cout << "a" << std::endl;
+				float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
+				/*if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
+				&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
+				{
+					if (g_clients[i].player.m_d3dxvVelocity.y <= 0.0f && g_clients[i].player.GetPosition().y > g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y)
+					{
+						//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+							D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+						d3dxvRevision.y = g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y - (g_clients[i].player.GetPosition().y + g_clients[i].player.m_pMesh->m_AABB.m_d3dxvMin.y);
+						g_clients[i].player.Moving(d3dxvRevision);
+						g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						g_clients[i].player.m_d3dxvVelocity.y = 0.0;
+
+						if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
+					}
+					else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
+				}*/
+
+				// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
+				for (int i = 0; i < MAX_USER; i++)
+				{
+					if (i == ci)
+						continue;
+					if (g_clients[i].connect == false)
+						continue;
+					if (g_clients[ci].player.m_bIsActive)
+					{
+						CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[ci].player, &g_clients[i].player);
+					}
+				}
+				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
+				g_clients[ci].vl_lock.lock();
+				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[ci].player, t);
+				g_clients[ci].vl_lock.unlock();
+
+				if (g_clients[ci].player.GetPosition().y < -1.0f)
+				{
+					printf("플레이어가 물에 빠져버렸습니다!");
+					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
+				}
+			}
+			for (int i = 0; i < MAX_USER; ++i)
+			{
+				if (g_clients[i].connect == false)
+					continue;
+				SendPositionPacket(i, ci);
+				//PostQueuedCompletionStatus(g_hiocp, 0, j, reinterpret_cast<LPOVERLAPPED>(&g_clients[j].recv_over.over));
+			}
+			if (g_clients[ci].is_active == true)
+			{
+				MovePlayer(ci);
+			}
+			delete over;
+		}
 		else {
 			std::cout << "Unkown GQCS event!\n";
 			while (true);
@@ -290,104 +410,34 @@ void Worker_Thread()
 
 void Time_Thread()
 {
-	double current_time = 0.0;
-	while (true)
-	{
-		g_RespawnManager.UpdateRespawnManager(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
-		if (current_time > 0.1)
-		{
-			current_time = 0.0;
-			for (int i = 0; i < MAX_USER; ++i)
-			{
-				if (g_clients[i].connect == false)
-					continue;
-				/*if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
-				{
-					g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
-					g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
-					continue;
-				}
-				g_clients[i].vl_lock.lock();
-				if (g_clients[i].xMove == 1) {
-					
-				}
-				else if (g_clients[i].xMove == 2)
-					g_clients[i].player.m_d3dxvMoveDir.x -= 0.1f;
-				else  g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
-				if (g_clients[i].zMove == 1)
-					g_clients[i].player.m_d3dxvMoveDir.z += 0.1f;
-				else if (g_clients[i].zMove == 2)
-					g_clients[i].player.m_d3dxvMoveDir.z -= 0.1f;
-				else
-					g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
-				g_clients[i].vl_lock.unlock();
-				*/
-				g_clients[i].vl_lock.lock();
-				g_clients[i].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
-				g_clients[i].vl_lock.unlock();
-				if (g_clients[i].player.m_bIsActive)
-				{
-					//std::cout << "a" << std::endl;
-					float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
-					/*if (CPhysicalCollision::IsCollided(
-					&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
-					&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
-					{
-					if (g_clients[i].player.m_d3dxvVelocity.y <= 0.0f && g_clients[i].player.GetPosition().y > g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y)
-					{
-					//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
-					D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-					d3dxvRevision.y = g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y - (g_clients[i].player.GetPosition().y + g_clients[i].player.m_pMesh->m_AABB.m_d3dxvMin.y);
-					g_clients[i].player.Moving(d3dxvRevision);
-					g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
-					g_clients[i].player.m_d3dxvVelocity.y = 0.0;
-					
-					if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
-					}
-					else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
-					}*/
+	for (;;) {
+		Sleep(10);
 
-					// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
-					for (int j = 0; j < MAX_USER; j++)
-					{
-						if (i == j)
-							continue;
-						if (g_clients[j].connect == false)
-							continue;
-						if (g_clients[i].player.m_bIsActive)
-						{
-							CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, &g_clients[j].player);
-						}
-					}
-					Sleep(13);
-					// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
-//					g_clients[i].vl_lock.lock();
-					CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[i].player, t);
-//					g_clients[i].vl_lock.unlock();
-					
-					if (g_clients[i].player.GetPosition().y < -1.0f)
-					{
-						printf("플레이어가 물에 빠져버렸습니다!");
-						g_RespawnManager.RegisterRespawnManager(&g_clients[i].player, true);
-					}
-				}
-				for (int j = 0; j < MAX_USER; ++j)
-				{
-					if (g_clients[j].connect == false)
-						continue;
-					SendPositionPacket(j, i);
-					//PostQueuedCompletionStatus(g_hiocp, 0, j, reinterpret_cast<LPOVERLAPPED>(&g_clients[j].recv_over.over));
-				}
+		for (;;) {
+			tq_lock.lock();
+			if (0 == timer_queue.size()) {
+				tq_lock.unlock();  break;
 			}
-
-		}
-		else
-		{
-			current_time += CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
-			if (!(current_time < 0.0)&&!(current_time > 0.0))
-				current_time = 0.0;
+			Timer_Event t = timer_queue.top();
+			if (t.exec_time > high_resolution_clock::now()) {
+				tq_lock.unlock();  break;
+			}
+			timer_queue.pop();
+			tq_lock.unlock();
+			OverlappedEX *over = new OverlappedEX;
+			if (E_MOVE == t.event) {
+				over->event_type = USER_MOVE;
+				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
+			}
+			else if (RESPAWN_TIME == t.event)
+			{
+				g_RespawnManager.UpdateRespawnManager(0.01);
+				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			}
 		}
 	}
+
 }
 
 void Accept_Thread()
