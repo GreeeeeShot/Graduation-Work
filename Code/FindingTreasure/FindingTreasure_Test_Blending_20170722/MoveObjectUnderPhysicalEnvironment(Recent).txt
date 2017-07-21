@@ -1,0 +1,1632 @@
+#1
+void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeElapsed)
+{
+	static D3DXVECTOR3 d3dxvSearchDir[21] =
+	{
+		//D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		//D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		//D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		//D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+		D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+
+		D3DXVECTOR3(1.0f, -1.0f, -1.0f),   D3DXVECTOR3(0.0f, -1.0f, -1.0f),   D3DXVECTOR3(-1.0f, -1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, -1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 1.0f),      D3DXVECTOR3(0.0f, -1.0f, 1.0f),      D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
+
+		D3DXVECTOR3(0.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, -1.0f),      D3DXVECTOR3(0.0f, 1.0f, -1.0f),      D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 1.0f),      D3DXVECTOR3(0.0f, 1.0f, 1.0f),      D3DXVECTOR3(-1.0f, 1.0f, 1.0f)
+	};
+
+	// 세계의 중력을 받는다.
+	D3DXVECTOR3 d3dxvPostV = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	D3DXVECTOR2 d3dxvVelocityXZ = D3DXVECTOR2(0.0f, 0.0f);
+	D3DXVECTOR3 d3dxvG = D3DXVECTOR3(0.0f, GRAVITATIONAL_ACCELERATION, 0.0f);
+	D3DXVECTOR3 d3dxvMovingDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+
+	//printf("Post Velocity : (%f, %f, %f) \n", d3dxvPostV.x, d3dxvPostV.y, d3dxvPostV.z);
+
+	// 복셀 지형맵과의 충돌 체크를 한다.
+	D3DXMATRIX d3dxmtxFromPosToIdx;
+	D3DXVECTOR4 d3dxvColLayerRow;
+
+	D3DXMatrixIdentity(&d3dxmtxFromPosToIdx);
+	D3DXMatrixInverse(&d3dxmtxFromPosToIdx, NULL, &m_pVoxelTerrain->m_d3dxmtxFromIdxToPos);
+	D3DXVECTOR3 d3dxvCollisionPivot; /* = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.05f, pPlayer->GetPosition().z);
+									 D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+									 d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+									 d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+									 d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+
+	CVoxel *pCollidedVoxel;
+	D3DXVECTOR3 d3dxvInspectionIdx;
+	bool bIsSlopeVoxel = false;
+	D3DXVECTOR3 d3dxvSlopeRearNormal;
+	bool bIsSwamp = false;
+	bool bIsFloor = false;
+	bool bIsJumped = false;
+	bool bIsCollidedWithFloor = true;
+
+	CVoxel *pOldVoxel = NULL;
+
+	while (1)
+	{
+		if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+		{
+			break;
+		}
+		bIsCollidedWithFloor = true;
+		/*printf("pPlayer->GetPosition() bottom1 (%f, %f, %f) \n",
+		pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+		D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+		d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+
+		D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+		d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+		d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+		d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+		if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+			if (pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvColLayerRow.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvColLayerRow.x))])
+			{
+				if (CPhysicalCollision::IsCollided(
+					&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+					&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+				{
+					pOldVoxel = pCollidedVoxel;
+					pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+					pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+					float fDistance = 0.0f;
+
+					if (!pCollidedVoxel->m_bIsSlope)
+					{
+						d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+							- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					}
+					else //pCollidedVoxel->m_bIsSlope)
+					{
+						fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+						if (fDistance < -0.0f) break;// i = 13;
+						d3dxvRevision.y = fDistance;
+						bIsCollidedWithFloor = false;
+					}
+
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+				}
+				else bIsCollidedWithFloor = false;
+			}
+			else bIsCollidedWithFloor = false;
+		}
+		else bIsCollidedWithFloor = false;
+
+		if (!bIsCollidedWithFloor)
+		{
+			if (pOldVoxel)
+			{
+				if (!pOldVoxel->m_bIsSlope)
+				{
+					if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+					{
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+					}
+					else
+					{
+						pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+						pPlayer->m_d3dxvVelocity.y *= pOldVoxel->m_fReflection;
+					}
+					if (pOldVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+					{
+						bIsSwamp = true;
+						d3dxvRevision.y += -0.1f;
+					}
+				}
+				else //pCollidedVoxel->m_bIsSlope)
+				{
+					float fDistance = pOldVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					if (fDistance < -0.0f) break;// i = 13;
+					pPlayer->m_d3dxvVelocity.y = 0.0f;
+					d3dxvRevision.y = fDistance;
+					printf("yes s d3dxvRevision.y : %f\n", d3dxvRevision.y);
+					d3dxvSlopeRearNormal = pOldVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+					bIsSlopeVoxel = true;
+				}//printf("ddd\n");
+
+				 //printf("Velocity : %f, %f, %f\n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+				 // 마찰력을 적용한다.
+				d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+				float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+				D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+				float fDeceleration = pOldVoxel->m_fFriction * fTimeElapsed;
+				fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+				if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+				d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+				pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+				pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+
+				//printf("%f \n", fDis*tance);
+				if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pOldVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+				pPlayer->Moving(d3dxvRevision);
+				pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+				/*d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+				D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+				d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+				d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+				d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+				/*printf("<<<<<<<<<<<<<<<<<COLLIDE!!!!>>>>>>>>>>>>>>>>>>>>>\n");*/
+				bIsFloor = true;
+				if (bIsSlopeVoxel) break;
+				//break;
+
+				break;
+			}
+			else break;
+
+		}
+	}
+
+	d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+
+	D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+	d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+	d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+	d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+	for (int i = 0; i < 21; i++)
+	{
+		d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i].x;
+		d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i].y;
+		d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i].z;
+
+		if ((0 <= d3dxvInspectionIdx.x && d3dxvInspectionIdx.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvInspectionIdx.y && d3dxvInspectionIdx.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvInspectionIdx.z && d3dxvInspectionIdx.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+
+			if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvInspectionIdx.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvInspectionIdx.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvInspectionIdx.x))]) != NULL)
+			{
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+				
+				if (CPhysicalCollision::IsCollided(
+					&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+					&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+				{
+					D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+					
+					if (i < 4)
+					{
+						if (bIsSwamp)
+						{
+							i = 3;
+							continue;
+						}
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (i < 2)
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+								pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+									- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+								//d3dxvPostV.z = 0.0f;
+							}
+							else
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+									- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								//d3dxvPostV.x = 0.0f;
+							}
+							/*Moving(d3dxvRevision);
+							m_CameraOperator.MoveCameraOperator(d3dxvRevision);*/
+						}
+						else
+						{
+							if (i < 2)         // 하
+							{
+								/*printf("pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal (%f, %f, %f) \n",
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.x,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.y,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.z);*/
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+									pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+										- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+									//d3dxvPostV.z = 0.0f;
+								}
+							}
+							else                // 좌
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(d3dxvSearchDir[i].x, 0.0f, 0.0f), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+									pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+										- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								}
+							}
+						}
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					}
+					else if (!bIsFloor && i < 12)      // 평범한 복셀에 한해서
+					{
+						if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+						{
+							i = 11;
+							continue;
+						}
+						float fDistance = 0.0f;
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+							{
+								pPlayer->m_d3dxvVelocity.y = 0.0f;
+							}
+							else
+							{
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.y *= pCollidedVoxel->m_fReflection;
+							}
+							//printf("m_d3dxvVelocity.y : %f \n", m_d3dxvVelocity.y);
+							d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+								- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (pCollidedVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+							{
+								bIsSwamp = true;
+								d3dxvRevision.y += -0.1f;
+							}
+						}
+						else //pCollidedVoxel->m_bIsSlope)
+						{
+							fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (fDistance < -0.0f) break;// i = 13;
+							pPlayer->m_d3dxvVelocity.y = 0.0f;
+							d3dxvRevision.y = fDistance;
+							/*if (i == 0 || i == 1)
+							{
+							d3dxvSlopeRearNormal = pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+							bIsSlopeVoxel = true;
+							}*/
+
+						}//printf("ddd\n");
+
+						 //printf("Velocity : %f, %f, %f\n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+						 // 마찰력을 적용한다.
+						d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+						float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+						D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+						float fDeceleration = pCollidedVoxel->m_fFriction * fTimeElapsed;
+						fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+						if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+						d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+						pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+						pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+
+						//printf("%f \n", fDis*tance);
+						if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pCollidedVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						/*d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+						D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+						d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+						d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+						d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+						/*printf("<<<<<<<<<<<<<<<<<COLLIDE!!!!>>>>>>>>>>>>>>>>>>>>>\n");*/
+						bIsFloor = true;
+						i = 11;
+						//break;
+					}
+					else if (i < 21)
+					{
+						if (pPlayer->m_d3dxvVelocity.y <= 0.0f)
+						{
+							break;
+						}
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+						//d3dxvRevision.x = d3dxvRevision.z = 0.0f;
+						d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y - m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+							- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMax.y));
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+						if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+							&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+							&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+						{
+							if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+								(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+									+ d3dxvColLayerRow.z * m_pVoxelTerrain->m_iRowStride
+									+ d3dxvColLayerRow.x)]) != NULL)
+							{
+								if (CPhysicalCollision::IsCollided(
+									&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+									&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+								{
+									if (pCollidedVoxel->m_bIsSlope)
+									{
+										D3DXVECTOR2 d3dxvFrontNormalXZ =
+											D3DXVECTOR2(pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.x,
+												pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.z);
+										D3DXVec2Normalize(&d3dxvFrontNormalXZ, &d3dxvFrontNormalXZ);
+										//d3dxvFrontNormalXZ * 0.1f;
+
+										d3dxvRevision.x = round(d3dxvFrontNormalXZ.x) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.x * 0.5f + pCollidedVoxel->GetPosition().x) - pPlayer->GetPosition().x) * 0.9;
+										d3dxvRevision.y = 0.0f;
+										d3dxvRevision.z = round(d3dxvFrontNormalXZ.y) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.y * 0.5f + pCollidedVoxel->GetPosition().z) - pPlayer->GetPosition().z) * 0.9;
+
+										round(d3dxvFrontNormalXZ.x) != 0.0f ? pPlayer->m_d3dxvVelocity.x = 0.0f : pPlayer->m_d3dxvVelocity.z = 0.0f;
+
+										printf("d3dxvFrontNormalXZ.x y : %f %f\n ", d3dxvFrontNormalXZ.x, d3dxvFrontNormalXZ.y);
+										printf("d3dxvRevision : (%f, %f, %f)\n", d3dxvRevision.x, d3dxvRevision.y, d3dxvRevision.z);
+										pPlayer->Moving(d3dxvRevision);
+										pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+										//if (m_d3dxvMoveDir.y != 0.0f) m_d3dxvVelocity.y = 4.95f;
+
+										bIsSlopeVoxel = true;
+									}
+								}
+							}
+								bIsJumped = false;
+								//break;
+								break;
+						}
+						else break;
+					}
+
+				}
+			}
+		}
+	}
+
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+				&CPhysicalCollision::MoveAABB(m_pShips[i]->m_pMesh->m_AABB, m_pShips[i]->GetPosition())))
+			{
+				//printf("\ndddddddddddddddddsdfsdd\n");
+				if (pPlayer->GetPosition().y > m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y)
+				{
+
+					D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+					d3dxvRevision.y = m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y - (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y);
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+					pPlayer->m_d3dxvVelocity.y = 0.0;
+					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+					float fDeceleration = SHIP_FRICTION * fTimeElapsed;
+					fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+					if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+					d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+					pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+					pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+					if (pPlayer->m_d3dxvMoveDir.y != 0.0f) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+					bIsFloor = true;
+					break;
+				}
+
+			}
+		}
+	}
+	//printf("Player Bottom : %f \n", GetPosition().y + m_pMesh->m_AABB.m_d3dxvMin.y);
+	d3dxvPostV = pPlayer->m_d3dxvVelocity;
+
+	// 외부에서 가해진 이동 속도를 갱신한다
+	D3DXVECTOR3 d3dxvMoveDir = D3DXVECTOR3(pPlayer->m_d3dxvMoveDir.x, 0.0f, pPlayer->m_d3dxvMoveDir.z);
+	D3DXVec3Normalize(&d3dxvMoveDir, &d3dxvMoveDir);
+	d3dxvMovingDir = PLAYER_ACCELERATION_MAGNITUDE * d3dxvMoveDir * fTimeElapsed;// +d3dxvPostV;
+
+																				 // 최대 속도를 제한한다.
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvMovingDir.x, d3dxvMovingDir.z);
+
+	/*if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+	D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+	d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}*/
+	d3dxvPostV.x += d3dxvVelocityXZ.x;
+	d3dxvPostV.z += d3dxvVelocityXZ.y;
+
+	// 속도에 중력가속도를 적용한다.
+	d3dxvPostV += d3dxvG * fTimeElapsed;
+
+	// 최대 속도 제한
+	if (d3dxvPostV.y > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		d3dxvPostV.y = PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	//printf("[bIsFloor : %d] \n", bIsFloor);
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		// 바람 저항을 계산한다.
+		//d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		//d3dxvVelocityXZ *= (AIR_RESISTANCE_COEFFICIENT);
+		d3dxvVelocityXZ = -D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		float fDeceleration = AIR_RESISTANCE_COEFFICIENT * fTimeElapsed;
+		//d3dxvVelocityXZ *= (pCollidedVoxel->m_fDamping * PLAYER_FRICTION);
+		if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+		d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+		d3dxvPostV.x += d3dxvVelocityXZ.x;
+		d3dxvPostV.z += d3dxvVelocityXZ.y;
+		//d3dxvPostV.x = d3dxvVelocityXZ.x;
+		//d3dxvPostV.z = d3dxvVelocityXZ.y;
+	}
+
+
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+
+	if (bIsSlopeVoxel)
+	{
+		if (D3DXVec2Length(&d3dxvVelocityXZ) > D3DXVec3Length(&D3DXVECTOR3(0.0f, d3dxvPostV.y, 0.0f)))
+		{
+			d3dxvPostV.y = -D3DXVec2Length(&d3dxvVelocityXZ);
+		}
+	}
+	if (bIsJumped)
+	{
+		d3dxvPostV.y = pPlayer->m_d3dxvVelocity.y = 4.95;//4.95f;// +d3dxvPostV.y;
+	}
+
+	// 최대 속도 제한
+	if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	// 최종 속도 생성
+	d3dxvPostV.x = d3dxvVelocityXZ.x;
+	d3dxvPostV.z = d3dxvVelocityXZ.y;
+
+	// 이동량 갱신
+	d3dxvMovingDir = ((d3dxvPostV + pPlayer->m_d3dxvVelocity) * fTimeElapsed) / 2.0f;
+
+	// 실제 이동
+	pPlayer->Moving(d3dxvMovingDir);
+	pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvMovingDir);
+
+	// 현재 속도 갱신
+	pPlayer->m_d3dxvVelocity = d3dxvPostV;
+	//printf("Player Bottome : %.6f \n", GetPosition().y - 0.5f);
+	/*printf("pPlayer->GetPosition() bottom2 (%f, %f, %f) \n",
+	pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+	// 이동 방향 초기화
+	pPlayer->m_d3dxvMoveDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	//d3dxvVelocityXZ = D3DXVECTOR2(m_d3dxvVelocity.x, m_d3dxvVelocity.z);
+	//printf("Player Velocity : %f\n", D3DXVec2Length(&d3dxvVelocityXZ));
+	//printf("Velocity : (%.5f, %.5f, %.5f) \n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+	//printf("-----------------------------\n");
+}
+
+#2
+void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeElapsed)
+{
+	static D3DXVECTOR3 d3dxvSearchDir[21] =
+	{
+		//D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		//D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		//D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		//D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+		D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+
+		D3DXVECTOR3(1.0f, -1.0f, -1.0f),   D3DXVECTOR3(0.0f, -1.0f, -1.0f),   D3DXVECTOR3(-1.0f, -1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, -1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 1.0f),      D3DXVECTOR3(0.0f, -1.0f, 1.0f),      D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
+
+		D3DXVECTOR3(0.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, -1.0f),      D3DXVECTOR3(0.0f, 1.0f, -1.0f),      D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 1.0f),      D3DXVECTOR3(0.0f, 1.0f, 1.0f),      D3DXVECTOR3(-1.0f, 1.0f, 1.0f)
+	};
+
+	// 세계의 중력을 받는다.
+	D3DXVECTOR3 d3dxvPostV = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	D3DXVECTOR2 d3dxvVelocityXZ = D3DXVECTOR2(0.0f, 0.0f);
+	D3DXVECTOR3 d3dxvG = D3DXVECTOR3(0.0f, GRAVITATIONAL_ACCELERATION, 0.0f);
+	D3DXVECTOR3 d3dxvMovingDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+
+	//printf("Post Velocity : (%f, %f, %f) \n", d3dxvPostV.x, d3dxvPostV.y, d3dxvPostV.z);
+
+	// 복셀 지형맵과의 충돌 체크를 한다.
+	D3DXMATRIX d3dxmtxFromPosToIdx;
+	D3DXVECTOR4 d3dxvColLayerRow;
+
+	D3DXMatrixIdentity(&d3dxmtxFromPosToIdx);
+	D3DXMatrixInverse(&d3dxmtxFromPosToIdx, NULL, &m_pVoxelTerrain->m_d3dxmtxFromIdxToPos);
+	D3DXVECTOR3 d3dxvCollisionPivot; /* = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.05f, pPlayer->GetPosition().z);
+									 D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+									 d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+									 d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+									 d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+
+	CVoxel *pCollidedVoxel = NULL;
+	D3DXVECTOR3 d3dxvInspectionIdx;
+	bool bIsSlopeVoxel = false;
+	D3DXVECTOR3 d3dxvSlopeRearNormal;
+	bool bIsSwamp = false;
+	bool bIsFloor = false;
+	bool bIsJumped = false;
+	bool bIsCollidedWithFloor = true;
+
+	CVoxel *pLastColliedVoxel = NULL;
+
+	while (1)
+	{
+		if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+		{
+			break;
+		}
+		bIsCollidedWithFloor = true;
+		/*printf("pPlayer->GetPosition() bottom1 (%f, %f, %f) \n",
+		pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+		D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+		d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.01f, pPlayer->GetPosition().z);
+		
+		D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+		d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+		d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+		d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+		if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+			//pLastColliedVoxel = pCollidedVoxel;
+			if (pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvColLayerRow.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvColLayerRow.x))])
+			{
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+				float fDistance = 0.0f;
+
+				if (!pCollidedVoxel->m_bIsSlope)
+				{
+					d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+						- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					pLastColliedVoxel = pCollidedVoxel;
+					bIsFloor = true;
+				}
+				else //pCollidedVoxel->m_bIsSlope)
+				{
+					fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y);
+					if(fDistance >= 0.0f)
+					{
+						d3dxvRevision.y = fDistance;
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						bIsFloor = true;
+					}
+					pLastColliedVoxel = pCollidedVoxel;
+					bIsCollidedWithFloor = false;
+					//bIsCollidedWithFloor = false;
+				}
+			}
+			else bIsCollidedWithFloor = false;
+		}
+		else bIsCollidedWithFloor = false;
+
+
+		if (!bIsCollidedWithFloor)
+		{
+			if (pLastColliedVoxel)
+			{
+				if (!pLastColliedVoxel->m_bIsSlope)
+				{
+					if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+					{
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+					}
+					else
+					{
+						pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+						pPlayer->m_d3dxvVelocity.y *= pLastColliedVoxel->m_fReflection;
+					}
+					if (pLastColliedVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+					{
+						bIsSwamp = true;
+						d3dxvRevision.y = -0.1f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					}
+					bIsFloor = true;
+				}
+				else //pCollidedVoxel->m_bIsSlope)
+				{
+					//float fDistance = pLastColliedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					//if (fDistance < -0.0f) break;// i = 13;
+					//pPlayer->m_d3dxvVelocity.y = 0.0f;
+					//d3dxvRevision.y = fDistance;
+					//printf("yes s d3dxvRevision.y : %f\n", d3dxvRevision.y);
+					if (bIsFloor)
+					{
+						d3dxvSlopeRearNormal = pLastColliedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+						bIsSlopeVoxel = true;
+					}
+				}
+				if (bIsFloor)
+				{
+					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+					float fDeceleration = pLastColliedVoxel->m_fFriction * fTimeElapsed;
+					fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+					if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+					d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+					pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+					pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+					if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pLastColliedVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+				}
+				break;
+			}
+			else break;
+		}
+	}
+
+	d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.01f, pPlayer->GetPosition().z);
+
+	D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+	d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+	d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+	d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+	for (int i = 0; i < 21; i++)
+	{
+		d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i].x;
+		d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i].y;
+		d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i].z;
+
+		if ((0 <= d3dxvInspectionIdx.x && d3dxvInspectionIdx.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvInspectionIdx.y && d3dxvInspectionIdx.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvInspectionIdx.z && d3dxvInspectionIdx.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+
+			if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvInspectionIdx.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvInspectionIdx.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvInspectionIdx.x))]) != NULL)
+			{
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+
+				if (CPhysicalCollision::IsCollided(
+					&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+					&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+				{
+					D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+
+					if (i < 4)
+					{
+						if (bIsSwamp)
+						{
+							i = 3;
+							continue;
+						}
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (i < 2)
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+								pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+									- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+								//d3dxvPostV.z = 0.0f;
+							}
+							else
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+									- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								//d3dxvPostV.x = 0.0f;
+							}
+							/*Moving(d3dxvRevision);
+							m_CameraOperator.MoveCameraOperator(d3dxvRevision);*/
+						}
+						else
+						{
+							if (i < 2)         // 하
+							{
+								/*printf("pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal (%f, %f, %f) \n",
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.x,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.y,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.z);*/
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+									pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+										- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+									//d3dxvPostV.z = 0.0f;
+								}
+							}
+							else                // 좌
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(d3dxvSearchDir[i].x, 0.0f, 0.0f), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+									pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+										- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								}
+							}
+						}
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					}
+					else if (!bIsFloor && i < 12)      // 평범한 복셀에 한해서
+					{
+						if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+						{
+							i = 11;
+							continue;
+						}
+						float fDistance = 0.0f;
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+							{
+								pPlayer->m_d3dxvVelocity.y = 0.0f;
+							}
+							else
+							{
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.y *= pCollidedVoxel->m_fReflection;
+							}
+							//printf("m_d3dxvVelocity.y : %f \n", m_d3dxvVelocity.y);
+							d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+								- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (pCollidedVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+							{
+								bIsSwamp = true;
+								d3dxvRevision.y += -0.1f;
+							}
+						}
+						else //pCollidedVoxel->m_bIsSlope)
+						{
+							fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (fDistance < -0.0f) break;// i = 13;
+							pPlayer->m_d3dxvVelocity.y = 0.0f;
+							d3dxvRevision.y = fDistance;
+							/*if (i == 0 || i == 1)
+							{
+							d3dxvSlopeRearNormal = pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+							bIsSlopeVoxel = true;
+							}*/
+
+						}//printf("ddd\n");
+
+						 //printf("Velocity : %f, %f, %f\n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+						 // 마찰력을 적용한다.
+						d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+						float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+						D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+						float fDeceleration = pCollidedVoxel->m_fFriction * fTimeElapsed;
+						fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+						if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+						d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+						pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+						pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+
+						//printf("%f \n", fDis*tance);
+						if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pCollidedVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						/*d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+						D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+						d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+						d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+						d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+						/*printf("<<<<<<<<<<<<<<<<<COLLIDE!!!!>>>>>>>>>>>>>>>>>>>>>\n");*/
+						bIsFloor = true;
+						i = 11;
+						//break;
+					}
+					else if (i < 21)
+					{
+						if (pPlayer->m_d3dxvVelocity.y <= 0.0f)
+						{
+							break;
+						}
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+						//d3dxvRevision.x = d3dxvRevision.z = 0.0f;
+						d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y - m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+							- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMax.y));
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+						if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+							&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+							&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+						{
+							if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+								(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+									+ d3dxvColLayerRow.z * m_pVoxelTerrain->m_iRowStride
+									+ d3dxvColLayerRow.x)]) != NULL)
+							{
+								if (CPhysicalCollision::IsCollided(
+									&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+									&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+								{
+									if (pCollidedVoxel->m_bIsSlope)
+									{
+										D3DXVECTOR2 d3dxvFrontNormalXZ =
+											D3DXVECTOR2(pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.x,
+												pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.z);
+										D3DXVec2Normalize(&d3dxvFrontNormalXZ, &d3dxvFrontNormalXZ);
+										//d3dxvFrontNormalXZ * 0.1f;
+
+										d3dxvRevision.x = round(d3dxvFrontNormalXZ.x) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.x * 0.5f + pCollidedVoxel->GetPosition().x) - pPlayer->GetPosition().x) * 0.9;
+										d3dxvRevision.y = 0.0f;
+										d3dxvRevision.z = round(d3dxvFrontNormalXZ.y) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.y * 0.5f + pCollidedVoxel->GetPosition().z) - pPlayer->GetPosition().z) * 0.9;
+
+										round(d3dxvFrontNormalXZ.x) != 0.0f ? pPlayer->m_d3dxvVelocity.x = 0.0f : pPlayer->m_d3dxvVelocity.z = 0.0f;
+
+										printf("d3dxvFrontNormalXZ.x y : %f %f\n ", d3dxvFrontNormalXZ.x, d3dxvFrontNormalXZ.y);
+										printf("d3dxvRevision : (%f, %f, %f)\n", d3dxvRevision.x, d3dxvRevision.y, d3dxvRevision.z);
+										pPlayer->Moving(d3dxvRevision);
+										pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+										//if (m_d3dxvMoveDir.y != 0.0f) m_d3dxvVelocity.y = 4.95f;
+
+										bIsSlopeVoxel = true;
+									}
+								}
+							}
+								bIsJumped = false;
+								//break;
+								break;
+						}
+						else break;
+					}
+
+				}
+			}
+		}
+	}
+
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+				&CPhysicalCollision::MoveAABB(m_pShips[i]->m_pMesh->m_AABB, m_pShips[i]->GetPosition())))
+			{
+				//printf("\ndddddddddddddddddsdfsdd\n");
+				if (pPlayer->GetPosition().y > m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y)
+				{
+
+					D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+					d3dxvRevision.y = m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y - (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y);
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+					pPlayer->m_d3dxvVelocity.y = 0.0;
+					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+					float fDeceleration = SHIP_FRICTION * fTimeElapsed;
+					fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+					if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+					d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+					pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+					pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+					if (pPlayer->m_d3dxvMoveDir.y != 0.0f) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+					bIsFloor = true;
+					break;
+				}
+
+			}
+		}
+	}
+	//printf("Player Bottom : %f \n", GetPosition().y + m_pMesh->m_AABB.m_d3dxvMin.y);
+	d3dxvPostV = pPlayer->m_d3dxvVelocity;
+
+	// 외부에서 가해진 이동 속도를 갱신한다
+	D3DXVECTOR3 d3dxvMoveDir = D3DXVECTOR3(pPlayer->m_d3dxvMoveDir.x, 0.0f, pPlayer->m_d3dxvMoveDir.z);
+	D3DXVec3Normalize(&d3dxvMoveDir, &d3dxvMoveDir);
+	d3dxvMovingDir = PLAYER_ACCELERATION_MAGNITUDE * d3dxvMoveDir * fTimeElapsed;// +d3dxvPostV;
+
+																				 // 최대 속도를 제한한다.
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvMovingDir.x, d3dxvMovingDir.z);
+
+	/*if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+	D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+	d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}*/
+	d3dxvPostV.x += d3dxvVelocityXZ.x;
+	d3dxvPostV.z += d3dxvVelocityXZ.y;
+
+	// 속도에 중력가속도를 적용한다.
+	d3dxvPostV += d3dxvG * fTimeElapsed;
+
+	// 최대 속도 제한
+	if (d3dxvPostV.y > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		d3dxvPostV.y = PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	//printf("[bIsFloor : %d] \n", bIsFloor);
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		// 바람 저항을 계산한다.
+		//d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		//d3dxvVelocityXZ *= (AIR_RESISTANCE_COEFFICIENT);
+		d3dxvVelocityXZ = -D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		float fDeceleration = AIR_RESISTANCE_COEFFICIENT * fTimeElapsed;
+		//d3dxvVelocityXZ *= (pCollidedVoxel->m_fDamping * PLAYER_FRICTION);
+		if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+		d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+		d3dxvPostV.x += d3dxvVelocityXZ.x;
+		d3dxvPostV.z += d3dxvVelocityXZ.y;
+		//d3dxvPostV.x = d3dxvVelocityXZ.x;
+		//d3dxvPostV.z = d3dxvVelocityXZ.y;
+	}
+
+
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+
+	if (bIsSlopeVoxel)
+	{
+		if (D3DXVec2Length(&d3dxvVelocityXZ) > D3DXVec3Length(&D3DXVECTOR3(0.0f, d3dxvPostV.y, 0.0f)))
+		{
+			d3dxvPostV.y = -D3DXVec2Length(&d3dxvVelocityXZ);
+		}
+	}
+	if (bIsJumped)
+	{
+		d3dxvPostV.y = pPlayer->m_d3dxvVelocity.y = 4.95;//4.95f;// +d3dxvPostV.y;
+	}
+
+	// 최대 속도 제한
+	if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	// 최종 속도 생성
+	d3dxvPostV.x = d3dxvVelocityXZ.x;
+	d3dxvPostV.z = d3dxvVelocityXZ.y;
+
+	// 이동량 갱신
+	d3dxvMovingDir = ((d3dxvPostV + pPlayer->m_d3dxvVelocity) * fTimeElapsed) / 2.0f;
+
+	// 실제 이동
+	pPlayer->Moving(d3dxvMovingDir);
+	pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvMovingDir);
+
+	// 현재 속도 갱신
+	pPlayer->m_d3dxvVelocity = d3dxvPostV;
+	//printf("Player Bottome : %.6f \n", GetPosition().y - 0.5f);
+	/*printf("pPlayer->GetPosition() bottom2 (%f, %f, %f) \n",
+	pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+	// 이동 방향 초기화
+	pPlayer->m_d3dxvMoveDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	//d3dxvVelocityXZ = D3DXVECTOR2(m_d3dxvVelocity.x, m_d3dxvVelocity.z);
+	//printf("Player Velocity : %f\n", D3DXVec2Length(&d3dxvVelocityXZ));
+	//printf("Velocity : (%.5f, %.5f, %.5f) \n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+	//printf("-----------------------------\n");
+}
+
+#3
+void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeElapsed)
+{
+	static D3DXVECTOR3 d3dxvSearchDir[21] =
+	{
+		//D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		//D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		//D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		//D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+		D3DXVECTOR3(0.0f, 0.0f, 1.0f),               // 상
+		D3DXVECTOR3(0.0f, 0.0f, -1.0f),               // 하
+		D3DXVECTOR3(1.0f, 0.0f, 0.0f),               // 우
+		D3DXVECTOR3(-1.0f, 0.0f, 0.0f),               // 좌
+
+		D3DXVECTOR3(1.0f, -1.0f, -1.0f),   D3DXVECTOR3(0.0f, -1.0f, -1.0f),   D3DXVECTOR3(-1.0f, -1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, -1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, -1.0f, 1.0f),      D3DXVECTOR3(0.0f, -1.0f, 1.0f),      D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
+
+		D3DXVECTOR3(0.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, -1.0f),      D3DXVECTOR3(0.0f, 1.0f, -1.0f),      D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 0.0f),                                 D3DXVECTOR3(-1.0f, 1.0f, 0.0f),
+		D3DXVECTOR3(1.0f, 1.0f, 1.0f),      D3DXVECTOR3(0.0f, 1.0f, 1.0f),      D3DXVECTOR3(-1.0f, 1.0f, 1.0f)
+	};
+
+	// 세계의 중력을 받는다.
+	D3DXVECTOR3 d3dxvPostV = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	D3DXVECTOR2 d3dxvVelocityXZ = D3DXVECTOR2(0.0f, 0.0f);
+	D3DXVECTOR3 d3dxvG = D3DXVECTOR3(0.0f, GRAVITATIONAL_ACCELERATION, 0.0f);
+	D3DXVECTOR3 d3dxvMovingDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+
+	//printf("Post Velocity : (%f, %f, %f) \n", d3dxvPostV.x, d3dxvPostV.y, d3dxvPostV.z);
+
+	// 복셀 지형맵과의 충돌 체크를 한다.
+	D3DXMATRIX d3dxmtxFromPosToIdx;
+	D3DXVECTOR4 d3dxvColLayerRow;
+
+	D3DXMatrixIdentity(&d3dxmtxFromPosToIdx);
+	D3DXMatrixInverse(&d3dxmtxFromPosToIdx, NULL, &m_pVoxelTerrain->m_d3dxmtxFromIdxToPos);
+	D3DXVECTOR3 d3dxvCollisionPivot; /* = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.05f, pPlayer->GetPosition().z);
+									 D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+									 d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+									 d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+									 d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+
+	CVoxel *pCollidedVoxel = NULL;
+	D3DXVECTOR3 d3dxvInspectionIdx;
+	bool bIsSlopeVoxel = false;
+	D3DXVECTOR3 d3dxvSlopeRearNormal;
+	bool bIsSwamp = false;
+	bool bIsFloor = false;
+	bool bIsJumped = false;
+	bool bIsCollidedWithFloor = true;
+
+	CVoxel *pLastColliedVoxel = NULL;
+
+	printf("Player Pos (%f, %f, %f) \n",
+		m_pPlayersMgrInform->GetMyPlayer()->GetPosition().x,
+		m_pPlayersMgrInform->GetMyPlayer()->GetPosition().y,
+		m_pPlayersMgrInform->GetMyPlayer()->GetPosition().z);
+	while (1)
+	{
+		if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+		{
+			break;
+		}
+		bIsCollidedWithFloor = true;
+		/*printf("pPlayer->GetPosition() bottom1 (%f, %f, %f) \n",
+		pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+		D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+		d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.0001f, pPlayer->GetPosition().z);
+
+		D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+		d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+		d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+		d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+		if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+			//pLastColliedVoxel = pCollidedVoxel;
+			if (pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvColLayerRow.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvColLayerRow.x))])
+			{
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+				float fDistance = 0.0f;
+
+				if (!pCollidedVoxel->m_bIsSlope)
+				{
+					d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+						- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					pLastColliedVoxel = pCollidedVoxel;
+					bIsFloor = true;
+				}
+				else //pCollidedVoxel->m_bIsSlope)
+				{
+					fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y);
+					if (fDistance >= 0.0f)
+					{
+						d3dxvRevision.y = fDistance;
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						bIsFloor = true;
+					}
+					pLastColliedVoxel = pCollidedVoxel;
+					bIsCollidedWithFloor = false;
+					//bIsCollidedWithFloor = false;
+				}
+			}
+			else bIsCollidedWithFloor = false;
+		}
+		else bIsCollidedWithFloor = false;
+
+
+		if (!bIsCollidedWithFloor)
+		{
+			if (pLastColliedVoxel)
+			{
+				if (!pLastColliedVoxel->m_bIsSlope)
+				{
+					if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+					{
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+					}
+					else
+					{
+						pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+						pPlayer->m_d3dxvVelocity.y *= pLastColliedVoxel->m_fReflection;
+					}
+					if (pLastColliedVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+					{
+						bIsSwamp = true;
+						d3dxvRevision.y = -0.1f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					}
+					bIsFloor = true;
+				}
+				else //pCollidedVoxel->m_bIsSlope)
+				{
+					//float fDistance = pLastColliedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+					//if (fDistance < -0.0f) break;// i = 13;
+					//pPlayer->m_d3dxvVelocity.y = 0.0f;
+					//d3dxvRevision.y = fDistance;
+					//printf("yes s d3dxvRevision.y : %f\n", d3dxvRevision.y);
+					if (bIsFloor)
+					{
+						d3dxvSlopeRearNormal = pLastColliedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+						bIsSlopeVoxel = true;
+					}
+				}
+				if (bIsFloor)
+				{
+					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+					float fDeceleration = pLastColliedVoxel->m_fFriction * fTimeElapsed;
+					fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+					if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+					d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+					pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+					pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+					if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pLastColliedVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+				}
+				break;
+			}
+			else break;
+		}
+	}
+
+	d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.01f, pPlayer->GetPosition().z);
+
+	D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+	d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+	d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+	d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);
+
+	for (int i = 0; i < 21; i++)
+	{
+		d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i].x;
+		d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i].y;
+		d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i].z;
+
+		if ((0 <= d3dxvInspectionIdx.x && d3dxvInspectionIdx.x < m_pVoxelTerrain->m_iMaxCol)
+			&& (0 <= d3dxvInspectionIdx.y && d3dxvInspectionIdx.y < m_pVoxelTerrain->m_iMaxLayer)
+			&& (0 <= d3dxvInspectionIdx.z && d3dxvInspectionIdx.z < m_pVoxelTerrain->m_iMaxRow))
+		{
+
+			if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+				(int)((d3dxvInspectionIdx.y) * m_pVoxelTerrain->m_iLayerStride
+					+ (d3dxvInspectionIdx.z) * m_pVoxelTerrain->m_iRowStride
+					+ (d3dxvInspectionIdx.x))]) != NULL)
+			{
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->SetPosition(pCollidedVoxel->GetPosition());
+				pCollidedVoxel->m_pMesh->m_AABB.m_pRenderObject->Render(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDeviceContext);
+
+				if (CPhysicalCollision::IsCollided(
+					&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+					&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+				{
+					D3DXVECTOR3 d3dxvRevision(0.0f, 0.0f, 0.0f);
+
+					if (i < 4)
+					{
+						if (bIsSwamp)
+						{
+							i = 3;
+							continue;
+						}
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (i < 2)
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+								pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+									- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+								//d3dxvPostV.z = 0.0f;
+							}
+							else
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+								//d3dxvPostV.y = m_d3dxvVelocity.y;
+								//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+								d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+									- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								//d3dxvPostV.x = 0.0f;
+							}
+							/*Moving(d3dxvRevision);
+							m_CameraOperator.MoveCameraOperator(d3dxvRevision);*/
+						}
+						else
+						{
+							if (i < 2)         // 하
+							{
+								/*printf("pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal (%f, %f, %f) \n",
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.x,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.y,
+								pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal.z);*/
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, d3dxvSearchDir[i].z), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z)) * D3DXVECTOR3(0.0f, 0.0f, -d3dxvSearchDir[i].z));
+									pPlayer->m_d3dxvVelocity.z *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.z = ((pCollidedVoxel->GetPosition().z - d3dxvSearchDir[i].z * m_pVoxelTerrain->m_fCubeDepth / 2.0f)
+										- (pPlayer->GetPosition().z + d3dxvSearchDir[i].z * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.z));
+									//d3dxvPostV.z = 0.0f;
+								}
+							}
+							else                // 좌
+							{
+								if (bIsSlopeVoxel && 0.98 < D3DXVec3Dot(&D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f), &d3dxvSlopeRearNormal)) continue;
+								if (0.98f < D3DXVec3Dot(&D3DXVECTOR3(d3dxvSearchDir[i].x, 0.0f, 0.0f), &pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal))
+								{
+									pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f)) * D3DXVECTOR3(-d3dxvSearchDir[i].x, 0.0f, 0.0f));
+									pPlayer->m_d3dxvVelocity.x *= pCollidedVoxel->m_fReflection;
+									//d3dxvPostV.y = m_d3dxvVelocity.y;
+									//d3dxvPostV.y *= pCollidedVoxel->m_fReflection;
+
+									d3dxvRevision.x = ((pCollidedVoxel->GetPosition().x + d3dxvSearchDir[i].x * m_pVoxelTerrain->m_fCubeWidth / 2.0f)
+										- (pPlayer->GetPosition().x - d3dxvSearchDir[i].x * pPlayer->m_pMesh->m_AABB.m_d3dxvMax.x));
+								}
+							}
+						}
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+					}
+					else if (!bIsFloor && i < 12)      // 평범한 복셀에 한해서
+					{
+						if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+						{
+							i = 11;
+							continue;
+						}
+						float fDistance = 0.0f;
+						if (!pCollidedVoxel->m_bIsSlope)
+						{
+							if (-0.2f < pPlayer->m_d3dxvVelocity.y)
+							{
+								pPlayer->m_d3dxvVelocity.y = 0.0f;
+							}
+							else
+							{
+								pPlayer->m_d3dxvVelocity = pPlayer->m_d3dxvVelocity - 2.0f * (D3DXVec3Dot(&pPlayer->m_d3dxvVelocity, &D3DXVECTOR3(0.0f, 1.0f, 0.0f)) * D3DXVECTOR3(0.0f, 1.0f, 0.0f));
+								pPlayer->m_d3dxvVelocity.y *= pCollidedVoxel->m_fReflection;
+							}
+							//printf("m_d3dxvVelocity.y : %f \n", m_d3dxvVelocity.y);
+							d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y + m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+								- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (pCollidedVoxel->m_eVoxelType == VOXEL_TYPE_SWAMP_0)
+							{
+								bIsSwamp = true;
+								d3dxvRevision.y += -0.1f;
+							}
+						}
+						else //pCollidedVoxel->m_bIsSlope)
+						{
+							fDistance = pCollidedVoxel->GetHeightByPlayerPos(pPlayer->GetPosition()) - (pPlayer->GetPosition().y + (pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y));
+							if (fDistance < -0.0f) break;// i = 13;
+							pPlayer->m_d3dxvVelocity.y = 0.0f;
+							d3dxvRevision.y = fDistance;
+							/*if (i == 0 || i == 1)
+							{
+							d3dxvSlopeRearNormal = pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxRearNormal;
+							bIsSlopeVoxel = true;
+							}*/
+
+						}//printf("ddd\n");
+
+						 //printf("Velocity : %f, %f, %f\n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+						 // 마찰력을 적용한다.
+						d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+						float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+						D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+						float fDeceleration = pCollidedVoxel->m_fFriction * fTimeElapsed;
+						fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+						if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+						d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+						pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+						pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+
+						//printf("%f \n", fDis*tance);
+						if (pPlayer->m_d3dxvMoveDir.y != 0.0f && pCollidedVoxel->m_eVoxelType != VOXEL_TYPE_SWAMP_0) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						/*d3dxvCollisionPivot = D3DXVECTOR3(pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y + 0.02f, pPlayer->GetPosition().z);
+						D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvCollisionPivot, &d3dxmtxFromPosToIdx);
+
+						d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
+						d3dxvColLayerRow.y = round(d3dxvColLayerRow.y);
+						d3dxvColLayerRow.z = round(d3dxvColLayerRow.z);*/
+						/*printf("<<<<<<<<<<<<<<<<<COLLIDE!!!!>>>>>>>>>>>>>>>>>>>>>\n");*/
+						bIsFloor = true;
+						i = 11;
+						//break;
+					}
+					else if (i < 21)
+					{
+						if (pPlayer->m_d3dxvVelocity.y <= 0.1f || pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMax.y > pCollidedVoxel->GetPosition().y + pCollidedVoxel->m_pMesh->m_AABB.m_d3dxvMax.y)
+						{
+							break;
+						}
+						pPlayer->m_d3dxvVelocity.y = 0.0f;
+						//d3dxvRevision.x = d3dxvRevision.z = 0.0f;
+						d3dxvRevision.y = ((pCollidedVoxel->GetPosition().y - m_pVoxelTerrain->m_fCubeHeight / 2.0f)
+							- (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMax.y));
+						pPlayer->Moving(d3dxvRevision);
+						pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+						if ((0 <= d3dxvColLayerRow.x && d3dxvColLayerRow.x < m_pVoxelTerrain->m_iMaxCol)
+							&& (0 <= d3dxvColLayerRow.y && d3dxvColLayerRow.y < m_pVoxelTerrain->m_iMaxLayer)
+							&& (0 <= d3dxvColLayerRow.z && d3dxvColLayerRow.z < m_pVoxelTerrain->m_iMaxRow))
+						{
+							if ((pCollidedVoxel = m_pVoxelTerrain->m_ppVoxelObjectsForCollision[
+								(int)((d3dxvColLayerRow.y) * m_pVoxelTerrain->m_iLayerStride
+									+ d3dxvColLayerRow.z * m_pVoxelTerrain->m_iRowStride
+									+ d3dxvColLayerRow.x)]) != NULL)
+							{
+								if (CPhysicalCollision::IsCollided(
+									&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+									&CPhysicalCollision::MoveAABB(pCollidedVoxel->m_pMesh->m_AABB, pCollidedVoxel->GetPosition())))
+								{
+									if (pCollidedVoxel->m_bIsSlope)
+									{
+										D3DXVECTOR2 d3dxvFrontNormalXZ =
+											D3DXVECTOR2(pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.x,
+												pCollidedVoxel->m_pMesh->m_CubeFaceNormal.m_d3dxFrontNormal.z);
+										D3DXVec2Normalize(&d3dxvFrontNormalXZ, &d3dxvFrontNormalXZ);
+										//d3dxvFrontNormalXZ * 0.1f;
+
+										d3dxvRevision.x = round(d3dxvFrontNormalXZ.x) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.x * 0.5f + pCollidedVoxel->GetPosition().x) - pPlayer->GetPosition().x) * 0.9;
+										d3dxvRevision.y = 0.0f;
+										d3dxvRevision.z = round(d3dxvFrontNormalXZ.y) == 0.0f ? 0.0f : ((d3dxvFrontNormalXZ.y * 0.5f + pCollidedVoxel->GetPosition().z) - pPlayer->GetPosition().z) * 0.9;
+
+										round(d3dxvFrontNormalXZ.x) != 0.0f ? pPlayer->m_d3dxvVelocity.x = 0.0f : pPlayer->m_d3dxvVelocity.z = 0.0f;
+
+										printf("d3dxvFrontNormalXZ.x y : %f %f\n ", d3dxvFrontNormalXZ.x, d3dxvFrontNormalXZ.y);
+										printf("d3dxvRevision : (%f, %f, %f)\n", d3dxvRevision.x, d3dxvRevision.y, d3dxvRevision.z);
+										pPlayer->Moving(d3dxvRevision);
+										pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+										//if (m_d3dxvMoveDir.y != 0.0f) m_d3dxvVelocity.y = 4.95f;
+
+										bIsSlopeVoxel = true;
+									}
+								}
+							}
+								bIsJumped = false;
+								//break;
+								break;
+						}
+						else break;
+					}
+
+				}
+			}
+		}
+	}
+
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(pPlayer->m_pMesh->m_AABB, pPlayer->GetPosition()),
+				&CPhysicalCollision::MoveAABB(m_pShips[i]->m_pMesh->m_AABB, m_pShips[i]->GetPosition())))
+			{
+				//printf("\ndddddddddddddddddsdfsdd\n");
+				if (pPlayer->GetPosition().y > m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y)
+				{
+
+					D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+					d3dxvRevision.y = m_pShips[i]->GetPosition().y + m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y - (pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y);
+					pPlayer->Moving(d3dxvRevision);
+					pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+
+					pPlayer->m_d3dxvVelocity.y = 0.0;
+					d3dxvVelocityXZ = -D3DXVECTOR2(pPlayer->m_d3dxvVelocity.x, pPlayer->m_d3dxvVelocity.z);
+					float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+					D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+					float fDeceleration = SHIP_FRICTION * fTimeElapsed;
+					fDeceleration += PLAYER_FRICTION * fTimeElapsed;
+					if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+					d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+					pPlayer->m_d3dxvVelocity.x += d3dxvVelocityXZ.x;
+					pPlayer->m_d3dxvVelocity.z += d3dxvVelocityXZ.y;
+					if (pPlayer->m_d3dxvMoveDir.y != 0.0f) bIsJumped = true;//m_d3dxvVelocity.y = 4.95f;
+					bIsFloor = true;
+					break;
+				}
+
+			}
+		}
+	}
+	//printf("Player Bottom : %f \n", GetPosition().y + m_pMesh->m_AABB.m_d3dxvMin.y);
+	d3dxvPostV = pPlayer->m_d3dxvVelocity;
+
+	// 외부에서 가해진 이동 속도를 갱신한다
+	D3DXVECTOR3 d3dxvMoveDir = D3DXVECTOR3(pPlayer->m_d3dxvMoveDir.x, 0.0f, pPlayer->m_d3dxvMoveDir.z);
+	D3DXVec3Normalize(&d3dxvMoveDir, &d3dxvMoveDir);
+	d3dxvMovingDir = PLAYER_ACCELERATION_MAGNITUDE * d3dxvMoveDir * fTimeElapsed;// +d3dxvPostV;
+
+																				 // 최대 속도를 제한한다.
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvMovingDir.x, d3dxvMovingDir.z);
+
+	/*if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+	D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+	d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}*/
+	d3dxvPostV.x += d3dxvVelocityXZ.x;
+	d3dxvPostV.z += d3dxvVelocityXZ.y;
+
+	// 속도에 중력가속도를 적용한다.
+	d3dxvPostV += d3dxvG * fTimeElapsed;
+
+	// 최대 속도 제한
+	if (d3dxvPostV.y > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		d3dxvPostV.y = PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	//printf("[bIsFloor : %d] \n", bIsFloor);
+	if (!bIsFloor)         // 복셀과 충돌한 것이 아니라면
+	{
+		// 바람 저항을 계산한다.
+		//d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		//d3dxvVelocityXZ *= (AIR_RESISTANCE_COEFFICIENT);
+		d3dxvVelocityXZ = -D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+		float fLengthVelocityXZ = D3DXVec2Length(&d3dxvVelocityXZ);
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		float fDeceleration = AIR_RESISTANCE_COEFFICIENT * fTimeElapsed;
+		//d3dxvVelocityXZ *= (pCollidedVoxel->m_fDamping * PLAYER_FRICTION);
+		if (fDeceleration > fLengthVelocityXZ) fDeceleration = fLengthVelocityXZ;
+		d3dxvVelocityXZ = d3dxvVelocityXZ * fDeceleration;
+		d3dxvPostV.x += d3dxvVelocityXZ.x;
+		d3dxvPostV.z += d3dxvVelocityXZ.y;
+		//d3dxvPostV.x = d3dxvVelocityXZ.x;
+		//d3dxvPostV.z = d3dxvVelocityXZ.y;
+	}
+
+
+	d3dxvVelocityXZ = D3DXVECTOR2(d3dxvPostV.x, d3dxvPostV.z);
+
+	if (bIsSlopeVoxel)
+	{
+		if (D3DXVec2Length(&d3dxvVelocityXZ) > D3DXVec3Length(&D3DXVECTOR3(0.0f, d3dxvPostV.y, 0.0f)))
+		{
+			d3dxvPostV.y = -D3DXVec2Length(&d3dxvVelocityXZ);
+		}
+	}
+	if (bIsJumped)
+	{
+		d3dxvPostV.y = pPlayer->m_d3dxvVelocity.y = 4.95;//4.95f;// +d3dxvPostV.y;
+	}
+
+	// 최대 속도 제한
+	if (D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE)
+	{
+		D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
+		d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE;
+	}
+
+	// 최종 속도 생성
+	d3dxvPostV.x = d3dxvVelocityXZ.x;
+	d3dxvPostV.z = d3dxvVelocityXZ.y;
+
+	// 이동량 갱신
+	d3dxvMovingDir = ((d3dxvPostV + pPlayer->m_d3dxvVelocity) * fTimeElapsed) / 2.0f;
+
+	// 실제 이동
+	pPlayer->Moving(d3dxvMovingDir);
+	pPlayer->m_CameraOperator.MoveCameraOperator(d3dxvMovingDir);
+
+	// 현재 속도 갱신
+	pPlayer->m_d3dxvVelocity = d3dxvPostV;
+	//printf("Player Bottome : %.6f \n", GetPosition().y - 0.5f);
+	/*printf("pPlayer->GetPosition() bottom2 (%f, %f, %f) \n",
+	pPlayer->GetPosition().x, pPlayer->GetPosition().y + pPlayer->m_pMesh->m_AABB.m_d3dxvMin.y, pPlayer->GetPosition().z);*/
+	// 이동 방향 초기화
+	pPlayer->m_d3dxvMoveDir = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+	//d3dxvVelocityXZ = D3DXVECTOR2(m_d3dxvVelocity.x, m_d3dxvVelocity.z);
+	//printf("Player Velocity : %f\n", D3DXVec2Length(&d3dxvVelocityXZ));
+	//printf("Velocity : (%.5f, %.5f, %.5f) \n", m_d3dxvVelocity.x, m_d3dxvVelocity.y, m_d3dxvVelocity.z);
+	//printf("-----------------------------\n");
+}
