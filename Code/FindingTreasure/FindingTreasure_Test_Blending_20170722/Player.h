@@ -48,7 +48,10 @@ public:
 
 	bool m_bIsPushed;
 	bool m_bIsDigOrInstall;
-	
+
+	int m_MoveX;
+	int m_MoveZ;
+	int m_CameraY;
 	//ACTION m_action;
 
 public:

@@ -143,7 +143,7 @@ void CIntroState::Render(HDC hdc)
 	TransparentBlt(hMemDC, 0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, hBackDC, 0, 0, 128, 72, RGB(0, 0, 0));
 	//TransparentBlt(hMemDC, 325, 182, 630, 355, hCompanyDC, 0, 0, 630, 355, RGB(0, 0, 0));
 
-	printf("m_iAlpha : %d \n", m_iAlpha);
+	//printf("m_iAlpha : %d \n", m_iAlpha);
 	m_BlendFunction.SourceConstantAlpha = m_iAlpha;
 
 	AlphaBlend(hMemDC, (FRAME_BUFFER_WIDTH - 630) / 2, (FRAME_BUFFER_HEIGHT - 355) / 2, 630, 355, hCompanyDC, 0, 0, 630, 355, m_BlendFunction);

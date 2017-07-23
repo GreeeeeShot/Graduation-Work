@@ -901,6 +901,13 @@ void CScene::AnimateObjects(ID3D11DeviceContext*pd3dDeviceContext, float fTimeEl
 	{
 		if (m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
 		{
+			if (i != m_pPlayersMgrInform->m_iMyPlayerID)
+			{
+				m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.x = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveX;
+				m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.z = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveZ;
+				//printf("카메라돌아가냐? %d \n", m_pPlayersMgrInform->m_ppPlayers[0]->m_CameraY);
+				m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC*m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraY, fTimeElapsed);
+			}
 			m_pPlayersMgrInform->m_ppPlayers[i]->RotateMoveDir(fTimeElapsed);
 			m_pPlayersMgrInform->m_ppPlayers[i]->Animate(pd3dDeviceContext, m_fAccumulatedTime * 33);
 

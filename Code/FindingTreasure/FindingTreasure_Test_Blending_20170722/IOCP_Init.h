@@ -52,8 +52,9 @@ struct Client_Data
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
-#define SC_CHAT		4
-#define SC_INIT			 5
+#define SC_CHAT			 4
+#define SC_SETPOS		 5
+#define SC_INIT			 6
 
 #pragma pack (push, 1)
 
@@ -62,8 +63,12 @@ struct cs_packet_up {
 	BYTE type;
 	CHAR Movex;
 	CHAR Movez;
-	CHAR Lookx;
-	CHAR Lookz;
+};
+
+struct cs_packet_camera {
+	BYTE size;
+	BYTE type;
+	CHAR Look;
 };
 
 struct cs_packet_chat {
@@ -84,9 +89,9 @@ struct sc_packet_pos {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	FLOAT x;
-	FLOAT y;
-	FLOAT z;
+	CHAR MoveX;
+	CHAR MoveZ;
+	CHAR CameraY;
 };
 
 struct sc_packet_put_player {
@@ -116,7 +121,6 @@ struct sc_packet_init {
 	WORD id;
 	BYTE team;
 	CHAR x, y, z;
-	//BYTE map;
 };
 
 #pragma pack (pop)

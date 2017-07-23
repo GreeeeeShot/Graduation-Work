@@ -27,6 +27,10 @@ CPlayer::CPlayer()
 	m_bIsPushed = false;
 	m_bIsDigOrInstall = false;
 	move = false;
+
+	m_MoveX = 0;
+	m_MoveZ = 0;
+	m_CameraY = 0;
 }
 
 CPlayer::~CPlayer()

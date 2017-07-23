@@ -198,7 +198,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	::ShowWindow(hMainWnd, nCmdShow);
 	::UpdateWindow(hMainWnd);
-
+	hwnd = hMainWnd;
 	return(TRUE);
 }
 

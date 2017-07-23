@@ -29,7 +29,7 @@ void clienterror()
 void ProcessPacket(char *ptr)
 {
 	static bool first_time = true;
-	int x=0, y=0,z=0,id=-1;
+	int x=0, cameraY=0,z=0,id=-1;
 	float px=0.0, py = 0.0, pz = 0.0;
 	switch (ptr[1])
 	{
@@ -43,15 +43,22 @@ void ProcessPacket(char *ptr)
 	{
 		sc_packet_pos *my_packet = reinterpret_cast<sc_packet_pos *>(ptr);
 		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[my_packet->id]->SetPosition(D3DXVECTOR3(my_packet->x, my_packet->y, my_packet->z));
-		x = my_packet->x;
-		y = my_packet->y;
-		z = my_packet->z;
+		x = my_packet->MoveX;
+		z = my_packet->MoveZ;
+		cameraY = my_packet->CameraY;
 		id = my_packet->id;
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetMove(x, y, z);
-
+		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetMove(x, y, z);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_MoveX = x;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_MoveZ = z;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraY = cameraY;
 		break;
 	}
-
+	case SC_SETPOS:
+	{
+		sc_packet_put_player *my_packet = reinterpret_cast<sc_packet_put_player *>(ptr);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[my_packet->id]->SetPosition(D3DXVECTOR3(my_packet->x, my_packet->y, my_packet->z));
+		break;
+	}
 	case SC_REMOVE_PLAYER:
 	{
 		sc_packet_remove_player *my_packet = reinterpret_cast<sc_packet_remove_player *>(ptr);
@@ -63,6 +70,7 @@ void ProcessPacket(char *ptr)
 		sc_packet_init *my_packet = reinterpret_cast<sc_packet_init *>(ptr);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[my_packet->id]->SetPosition(D3DXVECTOR3(my_packet->x, my_packet->y, my_packet->z));
+		break;
 	}
 	/*
 	case SC_CHAT:
@@ -86,6 +94,7 @@ void ProcessPacket(char *ptr)
 	}*/
 	default:
 		printf("Unknown PACKET type [%d]\n", ptr[1]);
+		break;
 	}
 }
 
@@ -140,22 +149,25 @@ void ClientMain(HWND main_window_handle, const char* serverip)
 	send_wsabuf.len = BUF_SIZE;
 	recv_wsabuf.buf = recv_buffer;
 	recv_wsabuf.len = BUF_SIZE;
+	//ReadPacket(g_mysocket);
 }
 
-void SetPacket(PACKETTYPE type, int x, int z)
+void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 {
-	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(send_buffer);
-	int id = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID;
-	my_packet->size = sizeof(my_packet);
-	send_wsabuf.len = sizeof(my_packet);
 	int ret = 0;
+	int id = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID;
+	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(send_buffer);
+	cs_packet_up *my_packet_jump = reinterpret_cast<cs_packet_up *>(send_buffer);
+	cs_packet_camera *my_packet_camera = reinterpret_cast<cs_packet_camera *>(send_buffer);
 	DWORD iobyte;
 	switch (type)
 	{
 	case POSMOVE:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
 		my_packet->type = CS_POSMOVE;
-		my_packet->Movex = x;
-		my_packet->Movez = z;
+		my_packet->Movex = Posx;
+		my_packet->Movez = Posz;
 		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();
@@ -163,8 +175,22 @@ void SetPacket(PACKETTYPE type, int x, int z)
 		}
 		break;
 	case JUMP:
-		my_packet->type = CS_JUMP;
+		my_packet_jump->size = sizeof(my_packet_jump);
+		send_wsabuf.len = sizeof(my_packet_jump);
+		my_packet_jump->type = CS_JUMP;
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		break;
+	case CAMERAMOVE:
+		my_packet_camera->size = sizeof(my_packet_camera);
+		send_wsabuf.len = sizeof(my_packet_camera);
+		
+		my_packet_camera->type = CS_CAMERAMOVE;
+		my_packet_camera->Look = Look;
+		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+		}
 		break;
 	default:
 		break;

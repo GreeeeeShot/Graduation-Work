@@ -17,6 +17,8 @@ public:
 	int m_PastXMove;
 	int m_PastZMove;
 
+	int m_PastCameraYRotate;
+
 	//float current_time;
 
 	//디바이스 인터페이스에 대한 포인터이다. 주로 리소스를 생성하기 위하여 필요하다.

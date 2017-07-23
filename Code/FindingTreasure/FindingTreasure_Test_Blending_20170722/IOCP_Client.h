@@ -13,4 +13,4 @@ void clienterror();
 void ProcessPacket(char *ptr);
 void ReadPacket(SOCKET sock);
 void ClientMain(HWND main_window_handle, const char* serverip);
-void SetPacket(PACKETTYPE type, int x, int z);
+void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look);

@@ -30,6 +30,7 @@ CGameFramework::CGameFramework()
 	m_pUI = NULL;
 	m_PastXMove = 0;
 	m_PastZMove = 0;
+	m_PastCameraYRotate = 0;
 	//current_time = 0.0f;
 }
 
@@ -88,8 +89,8 @@ bool CGameFramework::CreateRenderTargetDepthStencilView()
 	if (FAILED(hResult = m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, &d3dViewDesc, &m_pd3dDepthStencilView))) return(false);
 
 	m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-	printf("디바이스 초기화\n");
-	printf("m_pd3dRenderTargetView : %x,m_pd3dDepthStencilView : %x \n", m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+	//printf("디바이스 초기화\n");
+	//printf("m_pd3dRenderTargetView : %x,m_pd3dDepthStencilView : %x \n", m_pd3dRenderTargetView, m_pd3dDepthStencilView);
 	return(true);
 }
 
@@ -187,6 +188,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		{
 		case VK_ESCAPE:
 			::PostQuitMessage(0);
+			break;
+		case 'q': case 'Q': case 'e': case'E':
+			SetPacket(CAMERAMOVE, 0, 0, 0);
 			break;
 		default:
 			break;
@@ -324,7 +328,7 @@ void CGameFramework::BuildObjects()
 	m_pUI->BuildUIObjects(m_pd3dDevice);
 	
 	m_pPlayersMgrInform = new CPlayersMgrInform();
-	m_pPlayersMgrInform->m_iMyPlayerID = 4;
+	m_pPlayersMgrInform->m_iMyPlayerID = -1;
 	m_pPlayersMgrInform->m_iPlayersNum = 8;
 	m_pPlayersMgrInform->m_ppPlayers = new CPlayer*[m_pPlayersMgrInform->m_iPlayersNum];
 
@@ -338,13 +342,13 @@ void CGameFramework::BuildObjects()
 		m_pPlayersMgrInform->m_ppPlayers[i]->SetTexture(CTextureResource::pPirateTexture);
 		m_pPlayersMgrInform->m_ppPlayers[i]->SetBelongType(i < 4? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
 	}
-
+/*
 	m_pPlayersMgrInform->GetMyPlayer()->InitCameraOperator();
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GenerateProjectionMatrix(2.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 60.0f);
 	//m_ppPlayers[0]->m_CameraOperator.GenerateViewMatrix();
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
-
+	*/
 	//m_ppPlayers[1]->SetMaterial(CMaterialResource::pStandardMaterial);
 	//m_ppPlayers[1]->SetMesh(CMeshResource::pPirateMesh);
 	//m_ppPlayers[1]->SetShader(CShaderResource::pTexturedLightingShader);
@@ -386,7 +390,7 @@ void CGameFramework::ProcessInput()
 	static UCHAR pKeyBuffer[256];
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	CPlayer *pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
-	if (m_pPlayersMgrInform->m_iMyPlayerID == -1)
+	if (m_pPlayersMgrInform->m_iMyPlayerID == 8)
 		return;
 	if (m_pPlayersMgrInform->GetMyPlayer()->m_bIsActive)
 	{
@@ -411,7 +415,7 @@ void CGameFramework::ProcessInput()
 				pMyPlayer->SetFBXAnimForType(PIRATE_ANIM_TYPE_IDLE);
 				if (pKeyBuffer[VK_SPACE] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.y = 5.0f;
-					SetPacket(JUMP,0,0);
+					SetPacket(JUMP,0,0,0);
 				}
 				if (pKeyBuffer[VK_UP] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.z += 2.0f;
@@ -429,7 +433,7 @@ void CGameFramework::ProcessInput()
 				{
 					m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
 					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
-					SetPacket(POSMOVE,m_PastXMove, m_PastZMove);
+					SetPacket(POSMOVE,m_PastXMove, m_PastZMove,0);
 
 				}
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
@@ -438,9 +442,23 @@ void CGameFramework::ProcessInput()
 			}
 			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['Q'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['E'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+			int currentCameraYRotate = 0;
+			if (pKeyBuffer['Q'] & 0xF0)
+			{
+				pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = -1;
+			}
+			if (pKeyBuffer['E'] & 0xF0)
+			{
+				pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = 1;
+			}
 			if (pKeyBuffer['W'] & 0xF0)			pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			if (currentCameraYRotate != m_PastCameraYRotate)
+			{
+				SetPacket(CAMERAMOVE, 0, 0, currentCameraYRotate);
+				m_PastCameraYRotate = currentCameraYRotate;
+			}
 			pMyPlayer->ProofreadLocalAxis();
 		}
 		pMyPlayer->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);
@@ -457,94 +475,104 @@ void CGameFramework::AnimateObjects()
 
 void CGameFramework::FrameAdvance()
 {
+	static bool cameraset = true;
+	if (m_pPlayersMgrInform->m_iMyPlayerID != -1 && cameraset)
+	{
+		m_pPlayersMgrInform->GetMyPlayer()->InitCameraOperator();
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GenerateProjectionMatrix(2.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 60.0f);
+		//m_ppPlayers[0]->m_CameraOperator.GenerateViewMatrix();
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+		cameraset = false;
+	}
+
 	CPlayer *pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
 
 	//타이머의 시간이 갱신되도록 하고 프레임 레이트를 계산한다. 
 	m_GameTimer.Tick(/*30.0f*/);
 
 	ProcessInput();
-
 	
-
 	float fClearColor[4] = { 0.1f, 0.2f, 0.25f, 1.0f };
 	m_pd3dDeviceContext->ClearRenderTargetView(m_pd3dRenderTargetView, fClearColor);
 	if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	
 	CCamera *pCamera = &(pMyPlayer->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
-	if (m_pShadowRenderer)    // 쉐도우 렌더러가 있다면 그림자 매핑을 수행한다.
-	{
-		// pass0
-		m_pShadowRenderer->BindDSVAndSetNullRenderTarget(m_pd3dDeviceContext);
-		m_pShadowRenderer->UpdateShaderPass0Variables(m_pd3dDeviceContext);
-
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+		if (m_pShadowRenderer)    // 쉐도우 렌더러가 있다면 그림자 매핑을 수행한다.
 		{
-			m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass0Shader);
-		}
-		m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass0Shader);
+			// pass0
+			m_pShadowRenderer->BindDSVAndSetNullRenderTarget(m_pd3dDeviceContext);
+			m_pShadowRenderer->UpdateShaderPass0Variables(m_pd3dDeviceContext);
 
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
 			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass0Shader);
+			}
+			m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass0Shader);
+
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}
+			m_pScene->Render(m_pd3dDeviceContext, NULL);
+
+			// pass1
+			m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+
+			pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
+			m_pShadowRenderer->UpdateShaderPass1Variables(m_pd3dDeviceContext);
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass1Shader);
+			}
+			m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass1Shader);
+
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}
+			m_pScene->Render(m_pd3dDeviceContext, pCamera);
+
+		}
+		else                      // 쉐도우 렌더러가 없다면 일반적인 렌더링을 수행한다.
+		{
+
+			pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
+
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}
+
+			//if (m_ppPlayers[1]) m_ppPlayers[1]->Render(m_pd3dDeviceContext);
+
+			if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, pCamera);
+		}
+
+		AnimateObjects();
+
+
+
+		if (m_pUI)
+		{
+			if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+			m_pUI->BackgroundUIRender(m_pd3dDeviceContext);
+			m_pUI->PlayerHavingVoxelRender(m_pd3dDeviceContext, pMyPlayer);
+
+			if (!pMyPlayer->m_bIsActive)
+			{
+				m_pUI->RespawningRender(m_pd3dDeviceContext, &m_pScene->m_RespawnManager, pMyPlayer);
 			}
 		}
-		m_pScene->Render(m_pd3dDeviceContext, NULL);
-
-		// pass1
-		m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-
-		pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
-		m_pShadowRenderer->UpdateShaderPass1Variables(m_pd3dDeviceContext);
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass1Shader);
-		}
-		m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass1Shader);
-
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
-			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
-			}
-		}
-		m_pScene->Render(m_pd3dDeviceContext, pCamera);
-
-	}
-	else                      // 쉐도우 렌더러가 없다면 일반적인 렌더링을 수행한다.
-	{
-		
-		pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
-
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
-			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
-			}
-		}
-
-		//if (m_ppPlayers[1]) m_ppPlayers[1]->Render(m_pd3dDeviceContext);
-		
-		if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, pCamera);
-	}
-
-	AnimateObjects();
-	
-	if (m_pUI)
-	{
-		if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-		m_pUI->BackgroundUIRender(m_pd3dDeviceContext);
-		m_pUI->PlayerHavingVoxelRender(m_pd3dDeviceContext, pMyPlayer);
-
-		if (!pMyPlayer->m_bIsActive)
-		{
-			m_pUI->RespawningRender(m_pd3dDeviceContext, &m_pScene->m_RespawnManager, pMyPlayer);
-		}
-	}
-	
 
 	m_pDXGISwapChain->Present(0, 0);
 

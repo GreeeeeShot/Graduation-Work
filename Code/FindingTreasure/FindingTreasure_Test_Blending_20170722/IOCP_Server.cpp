@@ -30,6 +30,7 @@ struct CLIENT {
 	bool connect;
 	float xMove;
 	float zMove;
+	int cameraYrotate;
 
 	high_resolution_clock::time_point last_move_time;
 	bool is_active;
@@ -144,7 +145,7 @@ void SendPacket(int cl, void *packet)
 
 void SendInitPacket(int client)
 {
-	sc_packet_pos packet;
+	sc_packet_init packet;
 	packet.id = client;
 	packet.size = sizeof(packet);
 	packet.type = SC_INIT;
@@ -159,7 +160,7 @@ void SendInitPacket(int client)
 
 void SendPutPlayerPacket(int client, int object)
 {
-	sc_packet_pos packet;
+	sc_packet_init packet;
 	packet.id = object;
 	packet.size = sizeof(packet);
 	packet.type = SC_PUT_PLAYER;
@@ -186,10 +187,23 @@ void SendPositionPacket(int client, int object)
 	packet.id = object;
 	packet.size = sizeof(packet);
 	packet.type = SC_POS;
+	packet.MoveX = g_clients[object].xMove;
+	packet.MoveZ = g_clients[object].zMove;
+	packet.CameraY = g_clients[object].cameraYrotate;
+	//std::cout << "Position: " << g_clients[object].player.GetPosition().x << ", " << g_clients[object].player.GetPosition().z << std::endl;
+	SendPacket(client, &packet);
+}
+
+void SendSetPositionPacket(int client, int object)
+{
+	sc_packet_init packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_SETPOS;
 	packet.x = g_clients[object].player.GetPosition().x;
 	packet.y = g_clients[object].player.GetPosition().y;
 	packet.z = g_clients[object].player.GetPosition().z;
-	//std::cout << "Position: " << g_clients[object].player.GetPosition().x << ", " << g_clients[object].player.GetPosition().z << std::endl;
+
 	SendPacket(client, &packet);
 }
 
@@ -207,7 +221,6 @@ void DisconnectClient(int ci)
 
 void ProcessPacket(int ci, unsigned char packet[])
 {
-	std::cout << "xPos: " << g_clients[ci].player.GetPosition().x << "zPos: " << g_clients[ci].player.GetPosition().z << std::endl;
 	switch (packet[1])
 	{
 	case CS_POSMOVE:
@@ -215,7 +228,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].zMove = (int)(CHAR)packet[3];
 		break;
 	case CS_CAMERAMOVE:
-
+		g_clients[ci].cameraYrotate = (int)(CHAR)packet[2];
 		break;
 	case CS_JUMP:
 		g_clients[ci].player.m_d3dxvMoveDir.y = 5.f;
@@ -226,7 +239,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 	}
 	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(packet);
 	//std::cout << "Client x,y,z :" << (float)my_packet->Movex << "," << (int)my_packet->Movey << "," << (int)my_packet->Movez << std::endl;
-	g_clients[ci].vl_lock.lock();
+	
 	//g_clients[ci].player.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.GetLook().y, (float)my_packet->Lookz));
 	//g_clients[ci].player.m_CameraOperator.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.m_CameraOperator.GetLook().y, (float)my_packet->Lookz));
 	/*
@@ -235,7 +248,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 	std::cout << "MoveX" << (int)my_packet->Movex;
 	std::cout << "MoveZ" << (int)my_packet->Movez;
 	*/
-	g_clients[ci].vl_lock.unlock();
+	
 
 	//std::cout <<"x,y,z :" <<(int)my_packet->Movex << "," << (int)my_packet->Movey <<"," << (int)my_packet->Movez << std::endl;
 	//std::cout << "Look : "<<(float)my_packet->Lookx << ", " << (double)my_packet->Lookz << std::endl;
@@ -243,11 +256,15 @@ void ProcessPacket(int ci, unsigned char packet[])
 	//std::cout << ci <<" X Y Z : (" << g_clients[ci].player.GetPosition().x<<", " << g_clients[ci].player.GetPosition().y << ", " <<g_clients[ci].player.GetPosition().z <<")"<< std::endl;
 	
 	
-	/*
+	g_clients[ci].vl_lock.lock();
+	
 	for (int i = 0; i < MAX_USER; ++i) {
 		if (true == g_clients[i].connect)
+		{
 			SendPositionPacket(i, ci);
-	}*/
+		}
+	}
+	g_clients[ci].vl_lock.unlock();
 }
 
 void Worker_Thread()
@@ -319,43 +336,35 @@ void Worker_Thread()
 		}
 		else if (USER_MOVE == over->event_type)
 		{
-			
-			//std::cout << "패킷왔냐?";
+			if (!g_clients[ci].player.m_bIsActive)
+				return;
+			if (!g_clients[ci].is_active)
+			{
+				g_clients[ci].vl_lock.lock();
+				g_clients[ci].is_active = true;
+				g_clients[ci].vl_lock.unlock();
+				for (int i = 0; i < MAX_USER; ++i)
+				{
+					if(g_clients[i].connect)
+						SendSetPositionPacket(i, ci);
+				}
+			}
+			float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
 			if (g_clients[ci].connect == false)
 				continue;
+
+			g_clients[ci].vl_lock.lock();
 			g_clients[ci].player.m_d3dxvMoveDir.x += (float)g_clients[ci].xMove;
 			g_clients[ci].player.m_d3dxvMoveDir.z += (float)g_clients[ci].zMove;
+			g_clients[ci].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
 
+			g_clients[ci].player.m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC * g_clients[ci].cameraYrotate, t);
+
+			g_clients[ci].vl_lock.unlock();
 			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
 			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
-			/*if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
-			{
-				g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
-				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
-				continue;
-			}
-			g_clients[i].vl_lock.lock();
-			if (g_clients[i].xMove == 1) {
-
-			}
-			else if (g_clients[i].xMove == 2)
-				g_clients[i].player.m_d3dxvMoveDir.x -= 0.1f;
-			else  g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
-			if (g_clients[i].zMove == 1)
-				g_clients[i].player.m_d3dxvMoveDir.z += 0.1f;
-			else if (g_clients[i].zMove == 2)
-				g_clients[i].player.m_d3dxvMoveDir.z -= 0.1f;
-			else
-				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
-			g_clients[i].vl_lock.unlock();
-			*/
-			g_clients[ci].vl_lock.lock();
-			g_clients[ci].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
-			g_clients[ci].vl_lock.unlock();
 			if (g_clients[ci].player.m_bIsActive)
 			{
-				//std::cout << "a" << std::endl;
-				float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
 				/*if (CPhysicalCollision::IsCollided(
 				&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
 				&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
@@ -394,16 +403,18 @@ void Worker_Thread()
 				if (g_clients[ci].player.GetPosition().y < -1.0f)
 				{
 					printf("플레이어가 물에 빠져버렸습니다!");
+					g_clients[ci].is_active = false;
 					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
 				}
 			}
+			/*
 			for (int i = 0; i < MAX_USER; ++i)
 			{
 				if (g_clients[i].connect == false)
 					continue;
 				SendPositionPacket(i, ci);
 				//PostQueuedCompletionStatus(g_hiocp, 0, j, reinterpret_cast<LPOVERLAPPED>(&g_clients[j].recv_over.over));
-			}
+			}*/
 
 			MovePlayer(ci);
 			delete over;
@@ -497,11 +508,14 @@ void Accept_Thread()
 		WSARecv(new_client, &g_clients[new_id].recv_over.wsabuf, 1, NULL, &recv_flag, &g_clients[new_id].recv_over.over, NULL);
 		
 		SendInitPacket(new_id);
-		SendPutPlayerPacket(new_id, new_id);
+		//SendPutPlayerPacket(new_id, new_id);
 		
 		float fx = 0.2f, fy = 0.45f, fz = 0.2f;
 		g_clients[new_id].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
 		g_clients[new_id].player.InitCameraOperator();
+		g_clients[new_id].xMove = 0;
+		g_clients[new_id].zMove = 0;
+		g_clients[new_id].cameraYrotate = 0;
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
