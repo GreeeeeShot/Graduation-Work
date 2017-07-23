@@ -207,7 +207,7 @@ void DisconnectClient(int ci)
 
 void ProcessPacket(int ci, unsigned char packet[])
 {
-	
+	std::cout << "xPos: " << g_clients[ci].player.GetPosition().x << "zPos: " << g_clients[ci].player.GetPosition().z << std::endl;
 	switch (packet[1])
 	{
 	case CS_POSMOVE:
@@ -319,6 +319,7 @@ void Worker_Thread()
 		}
 		else if (USER_MOVE == over->event_type)
 		{
+			
 			//std::cout << "패킷왔냐?";
 			if (g_clients[ci].connect == false)
 				continue;
@@ -438,7 +439,7 @@ void Time_Thread()
 			}
 			else if (RESPAWN_TIME == t.event)
 			{
-				g_RespawnManager.UpdateRespawnManager(0.01);
+				g_RespawnManager.UpdateRespawnManager(0.01f);
 				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			}
@@ -510,6 +511,7 @@ void Accept_Thread()
 				}
 		}
 		MovePlayer(new_id);
+		std::cout << "new client accept: " << new_id << std::endl;
 	}
 }
 
