@@ -13,6 +13,9 @@ public:
 
 	int m_nWndClientWidth;
 	int m_nWndClientHeight;
+	
+	int m_PastXMove;
+	int m_PastZMove;
 
 	//float current_time;
 

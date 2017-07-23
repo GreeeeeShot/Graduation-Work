@@ -1,14 +1,22 @@
 #include "stdafx.h"
+
+#include <mutex>
+#include <unordered_set>
+#include <chrono>
+#include <queue>
+
 #include "IOCP_Init.h"
 #include "IOCP_Server.h"
 #include "RespawnManager.h"
+
+using namespace std::chrono;
 
 HANDLE g_hiocp;
 SOCKET g_ssocket;
 CPlayer* g_box=NULL;
 CRespawnManager g_RespawnManager;
 
-enum OPTYPE { OP_SEND, OP_RECV };
+enum OPTYPE { OP_SEND, OP_RECV , USER_MOVE};
 
 struct OverlappedEX {
 	WSAOVERLAPPED over;
@@ -20,6 +28,11 @@ struct OverlappedEX {
 struct CLIENT {
 	bool team;
 	bool connect;
+	float xMove;
+	float zMove;
+
+	high_resolution_clock::time_point last_move_time;
+	bool is_active;
 
 	CPlayer player;
 
@@ -28,7 +41,29 @@ struct CLIENT {
 	unsigned char packet_buf[MAX_PACKET_SIZE];
 	int prev_packat_data;
 	int curr_packat_size;
+	std::mutex vl_lock;
 };
+
+enum Event_Type { E_MOVE , RESPAWN_TIME };
+
+struct Timer_Event {
+	int object_id;
+	high_resolution_clock::time_point exec_time;
+	Event_Type event;
+};
+
+class mycomp {
+	bool reverse;
+public:
+	mycomp() {}
+	bool operator() (const Timer_Event lhs, const Timer_Event rhs) const
+	{
+		return (lhs.exec_time > rhs.exec_time);
+	}
+};
+
+std::priority_queue <Timer_Event, std::vector <Timer_Event>, mycomp> timer_queue;
+std::mutex tq_lock;
 
 CLIENT g_clients[MAX_USER];
 
@@ -45,6 +80,12 @@ void error_display(char *msg, int err_no)
 	std::cout << L"에러\n" << std::endl;
 	std::cout << lpMsgBuf;
 	LocalFree(lpMsgBuf);
+}
+
+void MovePlayer(int id)
+{
+	Timer_Event event = { id, high_resolution_clock::now() + 10ms, E_MOVE };
+	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 }
 
 void Initialize_Server()
@@ -75,6 +116,8 @@ void Initialize_Server()
 		g_clients[i].player.SetBelongType(i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
 	}
 	g_RespawnManager.InitRespawnManager();
+	Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 }
 
 void SendPacket(int cl, void *packet)
@@ -123,7 +166,7 @@ void SendPutPlayerPacket(int client, int object)
 	packet.x = g_clients[object].player.GetPosition().x;
 	packet.y = g_clients[object].player.GetPosition().y;
 	packet.z = g_clients[object].player.GetPosition().z;
-
+	
 	SendPacket(client, &packet);
 }
 
@@ -146,7 +189,7 @@ void SendPositionPacket(int client, int object)
 	packet.x = g_clients[object].player.GetPosition().x;
 	packet.y = g_clients[object].player.GetPosition().y;
 	packet.z = g_clients[object].player.GetPosition().z;
-
+	//std::cout << "Position: " << g_clients[object].player.GetPosition().x << ", " << g_clients[object].player.GetPosition().z << std::endl;
 	SendPacket(client, &packet);
 }
 
@@ -164,77 +207,47 @@ void DisconnectClient(int ci)
 
 void ProcessPacket(int ci, unsigned char packet[])
 {
+	
 	switch (packet[1])
 	{
-	case CS_UP:
-		g_clients[ci].player.m_d3dxvMoveDir.z += 2.0;
+	case CS_POSMOVE:
+		g_clients[ci].xMove = (int)(CHAR)packet[2];
+		g_clients[ci].zMove = (int)(CHAR)packet[3];
 		break;
-	case CS_DOWN:
-		g_clients[ci].player.m_d3dxvMoveDir.z += -2.0;
-		break;
-	case CS_LEFT:
-		g_clients[ci].player.m_d3dxvMoveDir.x += -2.0;
-		break;
-	case CS_RIGHT:
-		g_clients[ci].player.m_d3dxvMoveDir.x += 2.0;
+	case CS_CAMERAMOVE:
+
 		break;
 	case CS_JUMP:
-		g_clients[ci].player.m_d3dxvMoveDir.y += 5.f;
+		g_clients[ci].player.m_d3dxvMoveDir.y = 5.f;
 		break;
 	default:
 		std::cout << "Unknown Packet Type from Client" << ci << std::endl;
 		while (true);
 	}
+	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(packet);
+	//std::cout << "Client x,y,z :" << (float)my_packet->Movex << "," << (int)my_packet->Movey << "," << (int)my_packet->Movez << std::endl;
+	g_clients[ci].vl_lock.lock();
+	//g_clients[ci].player.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.GetLook().y, (float)my_packet->Lookz));
+	//g_clients[ci].player.m_CameraOperator.SetLook(D3DXVECTOR3((float)my_packet->Lookx, g_clients[ci].player.m_CameraOperator.GetLook().y, (float)my_packet->Lookz));
+	/*
+	std::cout << "LookX" <<(int)my_packet->Lookx;
+	std::cout << "LookZ" <<(int)my_packet->Lookz;
+	std::cout << "MoveX" << (int)my_packet->Movex;
+	std::cout << "MoveZ" << (int)my_packet->Movez;
+	*/
+	g_clients[ci].vl_lock.unlock();
+
+	//std::cout <<"x,y,z :" <<(int)my_packet->Movex << "," << (int)my_packet->Movey <<"," << (int)my_packet->Movez << std::endl;
+	//std::cout << "Look : "<<(float)my_packet->Lookx << ", " << (double)my_packet->Lookz << std::endl;
+
 	//std::cout << ci <<" X Y Z : (" << g_clients[ci].player.GetPosition().x<<", " << g_clients[ci].player.GetPosition().y << ", " <<g_clients[ci].player.GetPosition().z <<")"<< std::endl;
 	
-	if (g_clients[ci].player.m_bIsActive)
-	{
-		float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
-		g_clients[ci].player.RotateMoveDir(t);
-		/*
-		if (CPhysicalCollision::IsCollided(
-		&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
-		&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
-		{
-		if (g_clients[i].player.m_d3dxvVelocity.y <= 0.0f && g_clients[i].player.GetPosition().y > g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y)
-		{
-		//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
-		D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-		d3dxvRevision.y = g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y - (g_clients[i].player.GetPosition().y + g_clients[i].player.m_pMesh->m_AABB.m_d3dxvMin.y);
-		g_clients[i].player.Moving(d3dxvRevision);
-		g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
-		g_clients[i].player.m_d3dxvVelocity.y = 0.0;
-		if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
-		}
-		else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
-		}*/
-
-		// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
-		for (int j = 0; j < MAX_USER; j++)
-		{
-			if (ci == j)
-				continue;
-			if (g_clients[ci].player.m_bIsActive)
-			{
-				CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[ci].player, &g_clients[j].player);
-			}
-		}
-
-		// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
-		CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[ci].player, t);
-
-		if (g_clients[ci].player.GetPosition().y < -1.0f)
-		{
-			//printf("플레이어가 물에 빠져버렸습니다!");
-			g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
-		}
-
-	}
-
+	
+	/*
 	for (int i = 0; i < MAX_USER; ++i) {
 		if (true == g_clients[i].connect)
 			SendPositionPacket(i, ci);
-	}
+	}*/
 }
 
 void Worker_Thread()
@@ -304,6 +317,96 @@ void Worker_Thread()
 			}
 			delete over;
 		}
+		else if (USER_MOVE == over->event_type)
+		{
+			//std::cout << "패킷왔냐?";
+			if (g_clients[ci].connect == false)
+				continue;
+			g_clients[ci].player.m_d3dxvMoveDir.x += (float)g_clients[ci].xMove;
+			g_clients[ci].player.m_d3dxvMoveDir.z += (float)g_clients[ci].zMove;
+
+			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
+			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
+			/*if (g_clients[i].xMove == 0 && g_clients[i].zMove == 0)
+			{
+				g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
+				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
+				continue;
+			}
+			g_clients[i].vl_lock.lock();
+			if (g_clients[i].xMove == 1) {
+
+			}
+			else if (g_clients[i].xMove == 2)
+				g_clients[i].player.m_d3dxvMoveDir.x -= 0.1f;
+			else  g_clients[i].player.m_d3dxvMoveDir.x = 0.0;
+			if (g_clients[i].zMove == 1)
+				g_clients[i].player.m_d3dxvMoveDir.z += 0.1f;
+			else if (g_clients[i].zMove == 2)
+				g_clients[i].player.m_d3dxvMoveDir.z -= 0.1f;
+			else
+				g_clients[i].player.m_d3dxvMoveDir.z = 0.0;
+			g_clients[i].vl_lock.unlock();
+			*/
+			g_clients[ci].vl_lock.lock();
+			g_clients[ci].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
+			g_clients[ci].vl_lock.unlock();
+			if (g_clients[ci].player.m_bIsActive)
+			{
+				//std::cout << "a" << std::endl;
+				float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
+				/*if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
+				&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
+				{
+					if (g_clients[i].player.m_d3dxvVelocity.y <= 0.0f && g_clients[i].player.GetPosition().y > g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y)
+					{
+						//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
+							D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+						d3dxvRevision.y = g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y - (g_clients[i].player.GetPosition().y + g_clients[i].player.m_pMesh->m_AABB.m_d3dxvMin.y);
+						g_clients[i].player.Moving(d3dxvRevision);
+						g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+						g_clients[i].player.m_d3dxvVelocity.y = 0.0;
+
+						if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
+					}
+					else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
+				}*/
+
+				// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
+				for (int i = 0; i < MAX_USER; i++)
+				{
+					if (i == ci)
+						continue;
+					if (g_clients[i].connect == false)
+						continue;
+					if (g_clients[ci].player.m_bIsActive)
+					{
+						CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[ci].player, &g_clients[i].player);
+					}
+				}
+				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
+				g_clients[ci].vl_lock.lock();
+				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[ci].player, t);
+				g_clients[ci].vl_lock.unlock();
+
+				if (g_clients[ci].player.GetPosition().y < -1.0f)
+				{
+					printf("플레이어가 물에 빠져버렸습니다!");
+					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
+				}
+			}
+			for (int i = 0; i < MAX_USER; ++i)
+			{
+				if (g_clients[i].connect == false)
+					continue;
+				SendPositionPacket(i, ci);
+				//PostQueuedCompletionStatus(g_hiocp, 0, j, reinterpret_cast<LPOVERLAPPED>(&g_clients[j].recv_over.over));
+			}
+
+			MovePlayer(ci);
+			delete over;
+		}
 		else {
 			std::cout << "Unkown GQCS event!\n";
 			while (true);
@@ -311,8 +414,37 @@ void Worker_Thread()
 	}
 }
 
-void Create_Workker_Thread()
+void Time_Thread()
 {
+	for (;;) {
+		Sleep(10);
+
+		for (;;) {
+			//std::cout << "타임스레드들어오냐?" << std::endl;
+			tq_lock.lock();
+			if (0 == timer_queue.size()) {
+				tq_lock.unlock();  break;
+			}
+			Timer_Event t = timer_queue.top();
+			if (t.exec_time > high_resolution_clock::now()) {
+				tq_lock.unlock();  break;
+			}
+			timer_queue.pop();
+			tq_lock.unlock();
+			OverlappedEX *over = new OverlappedEX;
+			if (E_MOVE == t.event) {
+				over->event_type = USER_MOVE;
+				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
+			}
+			else if (RESPAWN_TIME == t.event)
+			{
+				g_RespawnManager.UpdateRespawnManager(0.01);
+				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			}
+		}
+	}
+
 }
 
 void Accept_Thread()
@@ -355,6 +487,7 @@ void Accept_Thread()
 		g_clients[new_id].recv_over.wsabuf.buf = reinterpret_cast<CHAR*>(g_clients[new_id].recv_over.IOCP_buf);
 		g_clients[new_id].recv_over.wsabuf.len = sizeof(g_clients[new_id].recv_over.IOCP_buf);
 		g_clients[new_id].team = new_id % 2;
+		
 		g_RespawnManager.RegisterRespawnManager(&g_clients[new_id].player, false);
 
 		DWORD recv_flag = 0;
@@ -363,9 +496,11 @@ void Accept_Thread()
 		WSARecv(new_client, &g_clients[new_id].recv_over.wsabuf, 1, NULL, &recv_flag, &g_clients[new_id].recv_over.over, NULL);
 		
 		SendInitPacket(new_id);
-		//SendPutPlayerPacket(new_id, new_id);
+		SendPutPlayerPacket(new_id, new_id);
 		
-
+		float fx = 0.2f, fy = 0.45f, fz = 0.2f;
+		g_clients[new_id].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
+		g_clients[new_id].player.InitCameraOperator();
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
@@ -374,6 +509,7 @@ void Accept_Thread()
 					SendPutPlayerPacket(i, new_id);
 				}
 		}
+		MovePlayer(new_id);
 	}
 }
 
@@ -384,13 +520,6 @@ void ShutDown_Server()
 	WSACleanup();
 }
 
-void Process_Thread()
-{
-	while (1)
-	{
-		g_RespawnManager.UpdateRespawnManager(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
-	}
-}
 
 void ServerMain()
 {

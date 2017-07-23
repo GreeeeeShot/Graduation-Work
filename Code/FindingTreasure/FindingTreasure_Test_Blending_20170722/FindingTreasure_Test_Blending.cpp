@@ -90,19 +90,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (state == play)
 			break;
 	} // end while
-
+	std::thread* timer_thread = NULL;
 	std::thread* accept_thread = NULL;
-	std::thread* process_thread = NULL;
 	std::vector<std::thread *> worker_threads;
 	if (host)
 	{
 		Initialize_Server();
 		for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
 		accept_thread = new std::thread(Accept_Thread);
-		accept_thread = new std::thread(Process_Thread);
+		timer_thread = new std::thread(Time_Thread);
+		strcpy_s(server_ip,"127.0.0.1");
+		ClientMain(hwnd, server_ip);
 	}
-
-	ClientMain(hwnd);
+	else
+		ClientMain(hwnd, server_ip);
 
 	// 기본 메시지 루프입니다.
 	while (1)
@@ -128,7 +129,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	delete CGameManager::GetInstance();
 
 	accept_thread->join();
-	process_thread->join();
+	timer_thread->join();
 	//Create_Accept_Thread();
 	for (auto pth : worker_threads) {
 		pth->join();
@@ -251,6 +252,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				strn--;
 			}
+			else if (wParam == VK_OEM_PERIOD)
+			{
+				server_ip[strn++] = '.';
+				server_ip[strn] = '\0';
+			}
 			else {
 				server_ip[strn++] = wParam;
 				server_ip[strn] = '\0';
@@ -262,7 +268,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (!wParam) break;
 			if (wParam == VK_RETURN) {
-				state = server_input;
+				if (host)
+					state = play;
+				else
+					state = server_input;
 			}
 			else if (wParam == VK_UP) {
 				host = true;

@@ -28,7 +28,8 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszBuffer, _T("TreasureHunter ("));
 	m_pPlayersMgrInform = NULL;
 	m_pUI = NULL;
-
+	m_PastXMove = 0;
+	m_PastZMove = 0;
 	//current_time = 0.0f;
 }
 
@@ -410,6 +411,7 @@ void CGameFramework::ProcessInput()
 				pMyPlayer->SetFBXAnimForType(PIRATE_ANIM_TYPE_IDLE);
 				if (pKeyBuffer[VK_SPACE] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.y = 5.0f;
+					SetPacket(JUMP,0,0);
 				}
 				if (pKeyBuffer[VK_UP] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.z += 2.0f;
@@ -422,6 +424,13 @@ void CGameFramework::ProcessInput()
 				}
 				if (pKeyBuffer[VK_RIGHT] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.x += 2.0f;
+				}
+				if (m_PastXMove != (int)pMyPlayer->m_d3dxvMoveDir.x || m_PastZMove != (int)pMyPlayer->m_d3dxvMoveDir.z)
+				{
+					m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
+					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
+					SetPacket(POSMOVE,m_PastXMove, m_PastZMove);
+
 				}
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);

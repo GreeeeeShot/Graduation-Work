@@ -119,7 +119,7 @@ void ReadPacket(SOCKET sock)
 	}
 }
 
-void ClientMain(HWND main_window_handle)
+void ClientMain(HWND main_window_handle, const char* serverip)
 {
 	WSADATA	wsadata;
 	WSAStartup(MAKEWORD(2, 2), &wsadata);
@@ -130,7 +130,7 @@ void ClientMain(HWND main_window_handle)
 	ZeroMemory(&ServerAddr, sizeof(SOCKADDR_IN));
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_port = htons(MY_SERVER_PORT);
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ServerAddr.sin_addr.s_addr = inet_addr(serverip);
 
 	int Result = WSAConnect(g_mysocket, (sockaddr *)&ServerAddr, sizeof(ServerAddr), NULL, NULL, NULL, NULL);
 
@@ -142,50 +142,31 @@ void ClientMain(HWND main_window_handle)
 	recv_wsabuf.len = BUF_SIZE;
 }
 
-void SetPacket()
+void SetPacket(PACKETTYPE type, int x, int z)
 {
 	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(send_buffer);
 	int id = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID;
 	my_packet->size = sizeof(my_packet);
 	send_wsabuf.len = sizeof(my_packet);
+	int ret = 0;
 	DWORD iobyte;
-	if (0.0 < (int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.x)
+	switch (type)
 	{
-		my_packet->type = CS_RIGHT;
-		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+	case POSMOVE:
+		my_packet->type = CS_POSMOVE;
+		my_packet->Movex = x;
+		my_packet->Movez = z;
+		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();
 			printf("Error while sending packet [%d]", error_code);
 		}
-	}
-	else if (0.0 > (int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.x)
-	{
-		my_packet->type = CS_LEFT;
-		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-		if (ret) {
-			int error_code = WSAGetLastError();
-			printf("Error while sending packet [%d]", error_code);
-		}
-	}
-	if (0.0 < (int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.z)
-	{
-		my_packet->type = CS_UP;
-		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-		if (ret) {
-			int error_code = WSAGetLastError();
-			printf("Error while sending packet [%d]", error_code);
-		}
-	} else if (0.0 > (int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.z)
-	{
-		my_packet->type = CS_DOWN;
-		int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-		if (ret) {
-			int error_code = WSAGetLastError();
-			printf("Error while sending packet [%d]", error_code);
-		}
-	}
-	if (0 != (int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.y) {
+		break;
+	case JUMP:
 		my_packet->type = CS_JUMP;
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		break;
+	default:
+		break;
 	}
 }
