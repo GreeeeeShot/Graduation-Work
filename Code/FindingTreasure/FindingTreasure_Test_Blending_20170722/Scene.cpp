@@ -933,7 +933,7 @@ void CScene::AnimateObjects(ID3D11DeviceContext*pd3dDeviceContext, float fTimeEl
 						m_pLights->m_pLights[5].m_bEnable = 1.0f;
 						m_pLights->m_pLights[5].m_d3dxvPosition = m_pPlayersMgrInform->m_ppPlayers[j]->GetPosition() + (m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition() - m_pPlayersMgrInform->m_ppPlayers[j]->GetPosition()) / 2.0f;
 						m_pLights->m_pLights[5].m_d3dxvPosition.y += 0.4f;
-						printf("%f %f %f \n", m_pLights->m_pLights[5].m_d3dxvPosition.x, m_pLights->m_pLights[5].m_d3dxvPosition.y, m_pLights->m_pLights[5].m_d3dxvPosition.z);
+						//printf("%f %f %f \n", m_pLights->m_pLights[5].m_d3dxvPosition.x, m_pLights->m_pLights[5].m_d3dxvPosition.y, m_pLights->m_pLights[5].m_d3dxvPosition.z);
 					}
 					CPhysicalCollision::ImpurseBasedCollisionResolution(m_pPlayersMgrInform->m_ppPlayers[i], m_pPlayersMgrInform->m_ppPlayers[j]);
 					//printf("m_fRange : %f \n", m_pLights->m_pLights[5].m_fRange);

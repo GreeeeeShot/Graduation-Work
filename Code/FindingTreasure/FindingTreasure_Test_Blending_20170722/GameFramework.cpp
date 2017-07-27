@@ -329,10 +329,10 @@ void CGameFramework::BuildObjects()
 	
 	m_pPlayersMgrInform = new CPlayersMgrInform();
 	m_pPlayersMgrInform->m_iMyPlayerID = -1;
-	m_pPlayersMgrInform->m_iPlayersNum = 8;
-	m_pPlayersMgrInform->m_ppPlayers = new CPlayer*[m_pPlayersMgrInform->m_iPlayersNum];
+	m_pPlayersMgrInform->m_iPlayersNum = 0;
+	m_pPlayersMgrInform->m_ppPlayers = new CPlayer*[8];
 
-	for (int i = 0; i <m_pPlayersMgrInform->m_iPlayersNum; i++)
+	for (int i = 0; i <8; i++)
 	{
 		m_pPlayersMgrInform->m_ppPlayers[i] = new CPlayer();
 
@@ -390,7 +390,7 @@ void CGameFramework::ProcessInput()
 	static UCHAR pKeyBuffer[256];
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	CPlayer *pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
-	if (m_pPlayersMgrInform->m_iMyPlayerID == 8)
+	if (m_pPlayersMgrInform->m_iMyPlayerID == -1)
 		return;
 	if (m_pPlayersMgrInform->GetMyPlayer()->m_bIsActive)
 	{
@@ -498,6 +498,8 @@ void CGameFramework::FrameAdvance()
 	if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	
 	CCamera *pCamera = &(pMyPlayer->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
+	if (m_pPlayersMgrInform->m_iMyPlayerID != -1)
+	{
 		if (m_pShadowRenderer)    // 쉐도우 렌더러가 있다면 그림자 매핑을 수행한다.
 		{
 			// pass0
@@ -573,7 +575,7 @@ void CGameFramework::FrameAdvance()
 				m_pUI->RespawningRender(m_pd3dDeviceContext, &m_pScene->m_RespawnManager, pMyPlayer);
 			}
 		}
-
+	}
 	m_pDXGISwapChain->Present(0, 0);
 
 	m_GameTimer.GetFrameRate(m_pszBuffer + 16, 37);

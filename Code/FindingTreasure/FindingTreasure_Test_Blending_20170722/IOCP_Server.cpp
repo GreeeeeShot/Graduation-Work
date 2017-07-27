@@ -85,7 +85,7 @@ void error_display(char *msg, int err_no)
 
 void MovePlayer(int id)
 {
-	Timer_Event event = { id, high_resolution_clock::now() + 10ms, E_MOVE };
+	Timer_Event event = { id, high_resolution_clock::now() + 17ms, E_MOVE };
 	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 }
 
@@ -353,9 +353,15 @@ void Worker_Thread()
 		}
 		else if (USER_MOVE == over->event_type)
 		{
-			if (!g_clients[ci].player.m_bIsActive)
-				return;
-			if (!g_clients[ci].is_active)
+			if (!g_clients[ci].player.m_bIsActive) {
+				g_clients[ci].vl_lock.lock();
+				g_clients[ci].last_move_time = high_resolution_clock::now();
+				g_clients[ci].vl_lock.unlock();
+				MovePlayer(ci);
+				delete over;
+				continue;
+			}
+			if (!g_clients[ci].is_active && g_clients[ci].player.m_bIsActive)
 			{
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].is_active = true;
@@ -366,6 +372,16 @@ void Worker_Thread()
 						SendSetPositionPacket(i, ci);
 				}
 			}
+			else if (!g_clients[ci].is_active && !g_clients[ci].player.m_bIsActive)
+			{
+				g_clients[ci].vl_lock.lock();
+				g_clients[ci].last_move_time = high_resolution_clock::now();
+				g_clients[ci].vl_lock.unlock();
+				MovePlayer(ci);
+				delete over;
+				continue;
+			}
+
 			duration<float> sec = high_resolution_clock::now() - g_clients[ci].last_move_time;
 			
 			float t = sec.count();
@@ -425,7 +441,7 @@ void Worker_Thread()
 
 				if (g_clients[ci].player.GetPosition().y < -1.0f)
 				{
-					printf("플레이어가 물에 빠져버렸습니다!");
+					printf("서버에서 플레이어가 물에 빠져버렸습니다!");
 					g_clients[ci].is_active = false;
 					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
 				}
@@ -444,6 +460,13 @@ void Worker_Thread()
 		}
 		else if (SEND_SYNC == over->event_type)
 		{
+			if (!g_clients[ci].player.m_bIsActive)
+			{
+				Timer_Event event = { ci, high_resolution_clock::now() + 1s, SYNC_TIME };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+				delete over;
+				continue;
+			}
 			for (int i = 0; i < MAX_USER; ++i)
 			{
 				if (!g_clients[i].connect)
@@ -485,8 +508,8 @@ void Time_Thread()
 			}
 			else if (RESPAWN_TIME == t.event)
 			{
-				g_RespawnManager.UpdateRespawnManager(0.1f);
-				Timer_Event event = { -1, high_resolution_clock::now() + 100ms, RESPAWN_TIME };
+				g_RespawnManager.UpdateRespawnManager(0.01f);
+				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				//printf("스폰시간지나간다.");
 			}
@@ -546,8 +569,7 @@ void Accept_Thread()
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(new_client), g_hiocp, new_id, 0);
 		WSARecv(new_client, &g_clients[new_id].recv_over.wsabuf, 1, NULL, &recv_flag, &g_clients[new_id].recv_over.over, NULL);
 		
-		SendInitPacket(new_id);
-		//SendPutPlayerPacket(new_id, new_id);
+		
 		
 		float fx = 0.2f, fy = 0.45f, fz = 0.2f;
 		g_clients[new_id].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
@@ -564,6 +586,9 @@ void Accept_Thread()
 					SendPutPlayerPacket(i, new_id);
 				}
 		}
+
+		SendInitPacket(new_id);
+		//SendPutPlayerPacket(new_id, new_id);
 
 		MovePlayer(new_id);
 
