@@ -16,7 +16,7 @@ SOCKET g_ssocket;
 CPlayer* g_box=NULL;
 CRespawnManager g_RespawnManager;
 
-enum OPTYPE { OP_SEND, OP_RECV , USER_MOVE};
+enum OPTYPE { OP_SEND, OP_RECV , USER_MOVE , SEND_SYNC };
 
 struct OverlappedEX {
 	WSAOVERLAPPED over;
@@ -45,7 +45,7 @@ struct CLIENT {
 	std::mutex vl_lock;
 };
 
-enum Event_Type { E_MOVE , RESPAWN_TIME };
+enum Event_Type { E_MOVE , RESPAWN_TIME , SYNC_TIME};
 
 struct Timer_Event {
 	int object_id;
@@ -207,6 +207,23 @@ void SendSetPositionPacket(int client, int object)
 	SendPacket(client, &packet);
 }
 
+void SendSyncPacket(int client, int object)
+{
+	sc_packet_sync packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_SYNC;
+	packet.Posx = g_clients[object].player.GetPosition().x;
+	packet.Posy = g_clients[object].player.GetPosition().y;
+	packet.Posz = g_clients[object].player.GetPosition().z;
+
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	SendPacket(client, &packet);
+}
+
 
 void DisconnectClient(int ci)
 {
@@ -349,16 +366,21 @@ void Worker_Thread()
 						SendSetPositionPacket(i, ci);
 				}
 			}
-			float t = CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed();
+			duration<float> sec = high_resolution_clock::now() - g_clients[ci].last_move_time;
+			
+			float t = sec.count();
 			if (g_clients[ci].connect == false)
 				continue;
 
 			g_clients[ci].vl_lock.lock();
 			g_clients[ci].player.m_d3dxvMoveDir.x += (float)g_clients[ci].xMove;
 			g_clients[ci].player.m_d3dxvMoveDir.z += (float)g_clients[ci].zMove;
-			g_clients[ci].player.RotateMoveDir(CGameManager::GetInstance()->m_pGameFramework->m_GameTimer.GetTimeElapsed());
 
 			g_clients[ci].player.m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC * g_clients[ci].cameraYrotate, t);
+			
+			g_clients[ci].player.RotateMoveDir(t);
+
+			
 
 			g_clients[ci].vl_lock.unlock();
 			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
@@ -398,6 +420,7 @@ void Worker_Thread()
 				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
 				g_clients[ci].vl_lock.lock();
 				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[ci].player, t);
+				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
 
 				if (g_clients[ci].player.GetPosition().y < -1.0f)
@@ -417,6 +440,18 @@ void Worker_Thread()
 			}*/
 
 			MovePlayer(ci);
+			delete over;
+		}
+		else if (SEND_SYNC == over->event_type)
+		{
+			for (int i = 0; i < MAX_USER; ++i)
+			{
+				if (!g_clients[i].connect)
+					continue;
+				SendSyncPacket(i, ci);
+			}
+			Timer_Event event = { ci, high_resolution_clock::now() + 1s, SYNC_TIME };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
 		else {
@@ -450,13 +485,17 @@ void Time_Thread()
 			}
 			else if (RESPAWN_TIME == t.event)
 			{
-				g_RespawnManager.UpdateRespawnManager(0.01f);
-				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+				g_RespawnManager.UpdateRespawnManager(0.1f);
+				Timer_Event event = { -1, high_resolution_clock::now() + 100ms, RESPAWN_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+				//printf("스폰시간지나간다.");
+			}
+			else if (SYNC_TIME == t.event) {
+				over->event_type = SEND_SYNC;
+				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
 			}
 		}
 	}
-
 }
 
 void Accept_Thread()
@@ -516,6 +555,7 @@ void Accept_Thread()
 		g_clients[new_id].xMove = 0;
 		g_clients[new_id].zMove = 0;
 		g_clients[new_id].cameraYrotate = 0;
+		g_clients[new_id].last_move_time = high_resolution_clock::now();
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
@@ -524,7 +564,12 @@ void Accept_Thread()
 					SendPutPlayerPacket(i, new_id);
 				}
 		}
+
 		MovePlayer(new_id);
+
+		Timer_Event event = { new_id, high_resolution_clock::now() + 1s, SYNC_TIME };
+		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
 		std::cout << "new client accept: " << new_id << std::endl;
 	}
 }

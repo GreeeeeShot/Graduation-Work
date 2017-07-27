@@ -942,7 +942,7 @@ void CScene::AnimateObjects(ID3D11DeviceContext*pd3dDeviceContext, float fTimeEl
 
 			// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
 			MoveObjectUnderPhysicalEnvironment(m_pPlayersMgrInform->m_ppPlayers[i], fTimeElapsed);
-
+			
 			if (m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y < -1.0f)
 			{
 				printf("플레이어가 물에 빠져버렸습니다!");

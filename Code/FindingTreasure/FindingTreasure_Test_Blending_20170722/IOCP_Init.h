@@ -55,6 +55,7 @@ struct Client_Data
 #define SC_CHAT			 4
 #define SC_SETPOS		 5
 #define SC_INIT			 6
+#define SC_SYNC			 7
 
 #pragma pack (push, 1)
 
@@ -121,6 +122,14 @@ struct sc_packet_init {
 	WORD id;
 	BYTE team;
 	CHAR x, y, z;
+};
+
+struct sc_packet_sync {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy ,Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 
 #pragma pack (pop)
