@@ -434,7 +434,6 @@ void CGameFramework::ProcessInput()
 					m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
 					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
 					SetPacket(POSMOVE,m_PastXMove, m_PastZMove,0);
-
 				}
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);

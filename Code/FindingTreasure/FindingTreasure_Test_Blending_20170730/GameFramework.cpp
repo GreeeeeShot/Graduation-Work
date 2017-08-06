@@ -29,7 +29,11 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszBuffer, _T("TreasureHunter ("));
 	m_pPlayersMgrInform = NULL;
 	m_pUI = NULL;
-
+	
+	m_PastXMove = 0;
+	m_PastZMove = 0;
+	m_PastCameraYRotate = 0;
+	
 	//current_time = 0.0f;
 }
 
@@ -183,8 +187,8 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-	/*switch (nMessageID)
+	//m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+	switch (nMessageID)
 	{
 	case WM_KEYUP:
 		switch (wParam)
@@ -192,23 +196,25 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_ESCAPE:
 			::PostQuitMessage(0);
 			break;
-		case 'a': case 'A':
-			
+		case 'q': case 'Q': case 'e': case'E':
+			SetPacket(CAMERAMOVE, 0, 0, 0);
+			break;
 		default:
 			break;
 		}
+		m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed = false;
 		break;
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
 		case 'a': case 'A':
-		case '1': case '2': case '3': case '4' : case '5':
+		case '1': case '2': case '3': case '4': case '5':
 			m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			break;
 		}
 	default:
 		break;
-	}*/
+	}
 }
 
 LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -340,8 +346,15 @@ void CGameFramework::BuildObjects()
 	m_pUI->SetCamera(pUI_Camera);
 	m_pUI->BuildUIObjects(m_pd3dDevice);
 	
-	SWaitingRoomInformDesc sWaitingRoomInformDesc;						// 원래는 대기방에 초기화되는 정보임.
+	m_pPlayersMgrInform = new CPlayersMgrInform();
+	m_pPlayersMgrInform->m_iMyPlayerID = -1;
+	m_pPlayersMgrInform->m_iPlayersNum = 0;
+	m_pPlayersMgrInform->m_ppPlayers = new CPlayer*[8];
+	
 
+
+	SWaitingRoomInformDesc sWaitingRoomInformDesc;						// 원래는 대기방에 초기화되는 정보임.
+	
 	// 대기방에서 다음과 같은 정보들이 초기화되었다고 가정해보자.
 	sWaitingRoomInformDesc.m_iMyPlayerID = 4;					// 자신이 컨트롤 할 케릭터는 색인 4에 있는 슬롯의 케릭터이다.
 
@@ -356,22 +369,27 @@ void CGameFramework::BuildObjects()
 	m_pPlayersMgrInform->InitPlayersMgrInform(m_pd3dDevice, sWaitingRoomInformDesc);		// 게임 프레임워크는 대기방에서 얻은 정보로 게임 정보를 세팅한다.
 	m_pPlayersMgrInform->SetMaterial(CMaterialResource::pStandardMaterial);
 	m_pPlayersMgrInform->SetShader(CShaderResource::pTexturedLightingShader);
+	
 
-	/*for (int i = 0; i <m_pPlayersMgrInform->m_iPlayersNum; i++)
-	{
-		m_pPlayersMgrInform->m_ppPlayers[i] = new CPlayer();
-
-		m_pPlayersMgrInform->m_ppPlayers[i]->SetMaterial(CMaterialResource::pStandardMaterial);
-		m_pPlayersMgrInform->m_ppPlayers[i]->SetMesh(new CTexturedLightingPirateMesh(m_pd3dDevice));
-		m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pTexturedLightingShader);
-		m_pPlayersMgrInform->m_ppPlayers[i]->SetTexture(CTextureResource::pPirateTexture);
-		m_pPlayersMgrInform->m_ppPlayers[i]->SetBelongType(i < 4? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
-	}*/
-
+	
+	/*
 	m_pPlayersMgrInform->GetMyPlayer()->InitCameraOperator();
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GenerateProjectionMatrix(2.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 60.0f);
 	m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+	*/
+
+	/*
+	for (int i = 0; i <m_pPlayersMgrInform->m_iPlayersNum; i++)
+	{
+	m_pPlayersMgrInform->m_ppPlayers[i] = new CPlayer();
+
+	m_pPlayersMgrInform->m_ppPlayers[i]->SetMaterial(CMaterialResource::pStandardMaterial);
+	m_pPlayersMgrInform->m_ppPlayers[i]->SetMesh(new CTexturedLightingPirateMesh(m_pd3dDevice));
+	m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pTexturedLightingShader);
+	m_pPlayersMgrInform->m_ppPlayers[i]->SetTexture(CTextureResource::pPirateTexture);
+	m_pPlayersMgrInform->m_ppPlayers[i]->SetBelongType(i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
+	}*/
 
 	if (m_pScene)
 	{
@@ -462,15 +480,35 @@ void CGameFramework::ProcessInput()
 				if (pKeyBuffer[VK_RIGHT] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.x += 2.0f;
 				}
+				if (m_PastXMove != (int)pMyPlayer->m_d3dxvMoveDir.x || m_PastZMove != (int)pMyPlayer->m_d3dxvMoveDir.z)
+				{
+					m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
+					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
+					SetPacket(POSMOVE, m_PastXMove, m_PastZMove, 0);
+				}
 				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
 				pMyPlayer->m_bIsDigOrInstall = false;
 			}
 			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['Q'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['E'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+			
+			int currentCameraYRotate = 0;
+
+			if (pKeyBuffer['Q'] & 0xF0) {
+				pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = -1;
+			}
+			if (pKeyBuffer['E'] & 0xF0) {
+				pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = 1;
+			}
 			if (pKeyBuffer['W'] & 0xF0)			pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			if (currentCameraYRotate != m_PastCameraYRotate)
+			{
+				SetPacket(CAMERAMOVE, 0, 0, currentCameraYRotate);
+				m_PastCameraYRotate = currentCameraYRotate;
+			}
 			pMyPlayer->ProofreadLocalAxis();
 		}
 		pMyPlayer->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);
@@ -487,7 +525,17 @@ void CGameFramework::AnimateObjects()
 
 void CGameFramework::FrameAdvance()
 {
-	
+	static bool cameraset = true;
+	if (m_pPlayersMgrInform->m_iMyPlayerID != -1 && cameraset)
+	{
+		m_pPlayersMgrInform->GetMyPlayer()->InitCameraOperator();
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.SetViewport(m_pd3dDeviceContext, 0, 0, m_nWndClientWidth, m_nWndClientHeight, 0.0f, 1.0f);
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.GenerateProjectionMatrix(2.0f, 500.0f, float(m_nWndClientWidth) / float(m_nWndClientHeight), 60.0f);
+		//m_ppPlayers[0]->m_CameraOperator.GenerateViewMatrix();
+		m_pPlayersMgrInform->GetMyPlayer()->m_CameraOperator.CreateShaderVariables(m_pd3dDevice);
+		cameraset = false;
+	}
+
 	 CPlayer *pMyPlayer = NULL;
 	if (m_pPlayersMgrInform) pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
 	//타이머의 시간이 갱신되도록 하고 프레임 레이트를 계산한다. 
@@ -502,139 +550,141 @@ void CGameFramework::FrameAdvance()
 	if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	
 	CCamera *pCamera = &(pMyPlayer->m_CameraOperator.m_Camera);//(m_pPlayer) ? m_pPlayer->GetCamera() : NULL;
-
-	//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-	if (m_pShadowRenderer)    // 쉐도우 렌더러가 있다면 그림자 매핑을 수행한다.
+	if (m_pPlayersMgrInform->m_iMyPlayerID != -1)
 	{
-		// pass0
-		m_pShadowRenderer->BindDSVAndSetNullRenderTarget(m_pd3dDeviceContext);
-		m_pShadowRenderer->UpdateShaderPass0Variables(m_pd3dDeviceContext);
-
-		/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass0Shader);
-		}*/
-
-		m_pPlayersMgrInform->SetShader(CShaderResource::pShadowMappingPass0Shader);
-		m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass0Shader);
-		/*
-		for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
-			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
-			}
-		}*/
-		m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
-		m_pScene->Render(m_pd3dDeviceContext, &m_pShadowRenderer->m_pLightSource->m_CameraForCulling);
-
-		// pass1
-		pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
-		if (m_pLightShaftRenderer)
-		{
-			// pass 0 : m_pLightMapRTV에 렌더 타겟을 그린다.
-			//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightMapRTV, m_pd3dDepthStencilView);
-			//float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			//m_pd3dDeviceContext->OMSetBlendState(0, NULL, NULL);
-			//m_pLightShaftRenderer->UpdateLightShaftPass1Variables(m_pd3dDeviceContext);
-			float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			m_pd3dDeviceContext->OMSetBlendState(0, 0, 0xffffffff);
-			float fLightMapBackColor[4] = { 0.4f, 0.1f, 0.1f, 1.0f };
-			m_pd3dDeviceContext->ClearRenderTargetView(m_pLightShaftRenderer->m_pLightMapRTV, fLightMapBackColor);			// 라이트맵에 배경색상을 그린다.
-			m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-			m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightMapRTV, 0);
-			m_pLightShaftRenderer->m_pLightSource->Render(m_pd3dDeviceContext);												// 라이트맵에 광원을 그린다.
-
-			ID3D11RenderTargetView *rendertargets[2] = { m_pd3dRenderTargetView , m_pLightShaftRenderer->m_pLightMapRTV  };
-			m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-			m_pd3dDeviceContext->OMSetRenderTargets(2, rendertargets, m_pd3dDepthStencilView);								// 멀티 렌더 타겟을 수행한다.
-		}
-		else // 라이트 셰프트 기능이 수행되지 않는다면.
-		{
-			m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-			
-			m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);		
-		}
-		
-		
 		//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-
-		m_pShadowRenderer->UpdateShaderPass1Variables(m_pd3dDeviceContext);
-		/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+		if (m_pShadowRenderer)    // 쉐도우 렌더러가 있다면 그림자 매핑을 수행한다.
 		{
-			m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass1Shader);		
-		}*/
-		m_pPlayersMgrInform->SetShader(CShaderResource::pShadowMappingPass1Shader);
-		m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass1Shader);
+			// pass0
+			m_pShadowRenderer->BindDSVAndSetNullRenderTarget(m_pd3dDeviceContext);
+			m_pShadowRenderer->UpdateShaderPass0Variables(m_pd3dDeviceContext);
 
-		/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
-		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+			/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
 			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass0Shader);
+			}*/
+
+			m_pPlayersMgrInform->SetShader(CShaderResource::pShadowMappingPass0Shader);
+			m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass0Shader);
+			/*
+			for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}*/
+			m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
+			m_pScene->Render(m_pd3dDeviceContext, &m_pShadowRenderer->m_pLightSource->m_CameraForCulling);
+
+			// pass1
+			pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);
+			if (m_pLightShaftRenderer)
+			{
+				// pass 0 : m_pLightMapRTV에 렌더 타겟을 그린다.
+				//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightMapRTV, m_pd3dDepthStencilView);
+				//float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				//m_pd3dDeviceContext->OMSetBlendState(0, NULL, NULL);
+				//m_pLightShaftRenderer->UpdateLightShaftPass1Variables(m_pd3dDeviceContext);
+				float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				m_pd3dDeviceContext->OMSetBlendState(0, 0, 0xffffffff);
+				float fLightMapBackColor[4] = { 0.4f, 0.1f, 0.1f, 1.0f };
+				m_pd3dDeviceContext->ClearRenderTargetView(m_pLightShaftRenderer->m_pLightMapRTV, fLightMapBackColor);			// 라이트맵에 배경색상을 그린다.
+				m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+				m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightMapRTV, 0);
+				m_pLightShaftRenderer->m_pLightSource->Render(m_pd3dDeviceContext);												// 라이트맵에 광원을 그린다.
+
+				ID3D11RenderTargetView *rendertargets[2] = { m_pd3dRenderTargetView , m_pLightShaftRenderer->m_pLightMapRTV };
+				m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+				m_pd3dDeviceContext->OMSetRenderTargets(2, rendertargets, m_pd3dDepthStencilView);								// 멀티 렌더 타겟을 수행한다.
 			}
-		}*/
-		
-		//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-		m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
-		m_pScene->Render(m_pd3dDeviceContext, pCamera);					// 렌더링 텍스쳐 => 후면 버퍼.
-		// 쉐도우 매핑을 수행함과 동시에  m_pLightShaftRenderer->m_pLightMapRTV에 검은색 오브젝트를 그려넣는다. (원래 의도였지만 안되는 중.)
-		
-		
+			else // 라이트 셰프트 기능이 수행되지 않는다면.
+			{
+				m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
 
-		if (m_pLightShaftRenderer)
+				m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+			}
+
+
+			//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+
+			m_pShadowRenderer->UpdateShaderPass1Variables(m_pd3dDeviceContext);
+			/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				m_pPlayersMgrInform->m_ppPlayers[i]->SetShader(CShaderResource::pShadowMappingPass1Shader);
+			}*/
+			m_pPlayersMgrInform->SetShader(CShaderResource::pShadowMappingPass1Shader);
+			m_pScene->m_pVoxelTerrain->SetShader(CShaderResource::pShadowMappingPass1Shader);
+
+			/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}*/
+
+			//m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+			m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
+			m_pScene->Render(m_pd3dDeviceContext, pCamera);					// 렌더링 텍스쳐 => 후면 버퍼.
+			// 쉐도우 매핑을 수행함과 동시에  m_pLightShaftRenderer->m_pLightMapRTV에 검은색 오브젝트를 그려넣는다. (원래 의도였지만 안되는 중.)
+
+
+
+			if (m_pLightShaftRenderer)
+			{
+				// 라이트 셰프트 pass1 : 라이트맵을 라이트셰프트맵으로 바꾼다. (일종의 필터링)
+
+				m_pLightShaftRenderer->UpdateLightShaftPass1Variables(m_pd3dDeviceContext);
+				m_pLightShaftRenderer->SetLightShaftPassShader(CShaderResource::pLightShaftPass1Shader);
+				m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+				m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightShaftMapRTV, 0);
+				m_pLightShaftRenderer->Render(m_pd3dDeviceContext);
+
+				// 라이트 셰프트 pass2 : 라이트셰프트맵을 가산 혼합 상태를 이용하여 후면버퍼에 덧씌운다.
+				// 라이트 셰프트 맵을 기존 후면 버퍼에 그리기 위하여 가산 혼합 상태를 사용한다.
+
+				float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+				m_pd3dDeviceContext->OMSetBlendState(CBlendingResource::pAddBlending, blendFactors, 0xffffffff);
+				m_pLightShaftRenderer->UpdateLightShaftPass2Variables(m_pd3dDeviceContext);
+
+				m_pLightShaftRenderer->SetLightShaftPassShader(CShaderResource::pLightShaftPass2Shader);
+				m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
+				m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
+				m_pLightShaftRenderer->Render(m_pd3dDeviceContext);
+				m_pd3dDeviceContext->OMSetBlendState(CBlendingResource::pTransparentBlending, blendFactors, 0xffffffff);
+			}
+
+		}
+		else                      // 쉐도우 렌더러가 없다면 일반적인 렌더링을 수행한다.
 		{
-			// 라이트 셰프트 pass1 : 라이트맵을 라이트셰프트맵으로 바꾼다. (일종의 필터링)
-			
-			m_pLightShaftRenderer->UpdateLightShaftPass1Variables(m_pd3dDeviceContext);
-			m_pLightShaftRenderer->SetLightShaftPassShader(CShaderResource::pLightShaftPass1Shader);
-			m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-			m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pLightShaftRenderer->m_pLightShaftMapRTV, 0);
-			m_pLightShaftRenderer->Render(m_pd3dDeviceContext);
 
-			// 라이트 셰프트 pass2 : 라이트셰프트맵을 가산 혼합 상태를 이용하여 후면버퍼에 덧씌운다.
-			// 라이트 셰프트 맵을 기존 후면 버퍼에 그리기 위하여 가산 혼합 상태를 사용한다.
-			
-			float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			m_pd3dDeviceContext->OMSetBlendState(CBlendingResource::pAddBlending, blendFactors, 0xffffffff);
-			m_pLightShaftRenderer->UpdateLightShaftPass2Variables(m_pd3dDeviceContext);
-			
-			m_pLightShaftRenderer->SetLightShaftPassShader(CShaderResource::pLightShaftPass2Shader);
-			m_pd3dDeviceContext->OMSetRenderTargets(0, NULL, NULL);
-			m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
-			m_pLightShaftRenderer->Render(m_pd3dDeviceContext);
-			m_pd3dDeviceContext->OMSetBlendState(CBlendingResource::pTransparentBlending, blendFactors, 0xffffffff);
+			pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);				// 카메라 세팅
+
+			/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+			{
+				if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				}
+			}
+			*/
+			m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
+			if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, pCamera);
 		}
 
-	}
-	else                      // 쉐도우 렌더러가 없다면 일반적인 렌더링을 수행한다.
-	{
-		
-		pMyPlayer->UpdateShaderVariables(m_pd3dDeviceContext);				// 카메라 세팅
+		AnimateObjects();
 
-		/*for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+		if (m_pUI)
 		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i] && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+			if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+			m_pUI->BackgroundUIRender(m_pd3dDeviceContext);
+			m_pUI->PlayerHavingVoxelRender(m_pd3dDeviceContext, pMyPlayer);
+			m_pUI->StaminaRender(m_pd3dDeviceContext, pMyPlayer);
+			if (!pMyPlayer->m_bIsActive)
 			{
-				m_pPlayersMgrInform->m_ppPlayers[i]->Render(m_pd3dDeviceContext);
+				m_pUI->RespawningRender(m_pd3dDeviceContext, &m_pScene->m_RespawnManager, pMyPlayer);
 			}
-		}
-		*/
-		m_pPlayersMgrInform->Render(m_pd3dDeviceContext);
-		if (m_pScene) m_pScene->Render(m_pd3dDeviceContext, pCamera);
-	}
-
-	AnimateObjects();
-	
-	if (m_pUI)
-	{
-		if (m_pd3dDepthStencilView) m_pd3dDeviceContext->ClearDepthStencilView(m_pd3dDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-		m_pUI->BackgroundUIRender(m_pd3dDeviceContext);
-		m_pUI->PlayerHavingVoxelRender(m_pd3dDeviceContext, pMyPlayer);
-		m_pUI->StaminaRender(m_pd3dDeviceContext, pMyPlayer);
-		if (!pMyPlayer->m_bIsActive)
-		{
-			m_pUI->RespawningRender(m_pd3dDeviceContext, &m_pScene->m_RespawnManager, pMyPlayer);
 		}
 	}
 	/**/

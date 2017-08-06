@@ -1115,9 +1115,9 @@ void FBXExporter::AnimationToVertex(D3DXVECTOR3** vec,int Frame_t)
 			MoveMatrix._44 = TranslationOfVectex.mData[3].mData[3];
 			D3DXVECTOR4 result;
 			D3DXVec3Transform(&result, &VertexPos, &MoveMatrix);
-			result = result;
+			//result = result;
 
-			(*vec)[i * 3 + k] = D3DXVECTOR3(result.x*0.5, result.y*0.5, result.z*0.5);
+			(*vec)[i * 3 + k] = D3DXVECTOR3(result.x*0.5f, result.y*0.5f, result.z*0.5f);
 		}
 	}
 }

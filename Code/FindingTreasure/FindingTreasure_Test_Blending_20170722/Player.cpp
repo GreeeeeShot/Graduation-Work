@@ -31,6 +31,7 @@ CPlayer::CPlayer()
 	m_MoveX = 0;
 	m_MoveZ = 0;
 	m_CameraY = 0;
+	m_SyncPosition = D3DXVECTOR3(0.f,0.f,0.f);
 }
 
 CPlayer::~CPlayer()

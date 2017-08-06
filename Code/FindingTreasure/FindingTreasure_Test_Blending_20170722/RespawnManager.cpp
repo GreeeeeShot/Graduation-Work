@@ -54,15 +54,14 @@ void CRespawnManager::UpdateRespawnManager(float fTimeElapsed)
 	for (int i = 0; i < RESPAWN_SLOT_NUM; i++)
 	{
 		bIsRespawnCpl = false;
-
-		if (m_RespawnSlot[i].bIsDelayed)
-		{
 			//printf("%.4f \n", m_RespawnSlot[i].iRespawnTime);
-			if (m_RespawnSlot[i].pRegisteredPlayer && (m_RespawnSlot[i].iRespawnTime += fTimeElapsed) >= RESPAWN_COMPLETE_TIME)
+			if (!m_RespawnSlot[i].isserver)
 			{
-				bIsRespawnCpl = true;
+				if (m_RespawnSlot[i].pRegisteredPlayer && (m_RespawnSlot[i].iRespawnTime += fTimeElapsed) >= RESPAWN_COMPLETE_TIME)
+				{
+					bIsRespawnCpl = true;
+				}
 			}
-		}
 		else
 		{
 			bIsRespawnCpl = true;

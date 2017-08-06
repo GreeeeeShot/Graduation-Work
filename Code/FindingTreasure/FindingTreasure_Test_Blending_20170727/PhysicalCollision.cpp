@@ -15,6 +15,7 @@ CPhysicalCollision::~CPhysicalCollision()
 
 AABB CPhysicalCollision::UpdateAABB(AABB aabb, D3DXMATRIX *pd3dxmtxToWorld)
 {
+	return aabb;
 }
 
 AABB CPhysicalCollision::MoveAABB(AABB aabb, D3DXVECTOR3 d3dxvShift)

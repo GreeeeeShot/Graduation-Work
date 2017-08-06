@@ -52,6 +52,7 @@ public:
 	int m_MoveX;
 	int m_MoveZ;
 	int m_CameraY;
+	D3DXVECTOR3 m_SyncPosition;
 	//ACTION m_action;
 
 public:

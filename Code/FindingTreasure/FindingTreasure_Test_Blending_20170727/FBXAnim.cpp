@@ -23,27 +23,27 @@ CPirateFBXAnim::CPirateFBXAnim()
 {
 	m_pFBXAnimIdle = new FBXExporter();
 	m_pFBXAnimIdle->Initialize();
-	m_pFBXAnimIdle->LoadScene("P_standing.FBX");
+	m_pFBXAnimIdle->LoadScene("s_walk.FBX");
 	m_pFBXAnimIdle->ImportFBX();
 
 	m_pFBXAnimWalk = new FBXExporter();
 	m_pFBXAnimWalk->Initialize();
-	m_pFBXAnimWalk->LoadScene("P_Walk.FBX");
+	m_pFBXAnimWalk->LoadScene("s_walk.FBX");
 	m_pFBXAnimWalk->ImportFBX();
 
 	m_pFBXAnimAttack = new FBXExporter();
 	m_pFBXAnimAttack->Initialize();
-	m_pFBXAnimAttack->LoadScene("P_standing.FBX");
+	m_pFBXAnimAttack->LoadScene("s_walk.FBX");
 	m_pFBXAnimAttack->ImportFBX();
 
 	m_pFBXAnimDig = new FBXExporter();
 	m_pFBXAnimDig->Initialize();
-	m_pFBXAnimDig->LoadScene("P_standing.FBX");
+	m_pFBXAnimDig->LoadScene("s_walk.FBX");
 	m_pFBXAnimDig->ImportFBX();
 
 	m_pFBXAnimHit = new FBXExporter();
 	m_pFBXAnimHit->Initialize();
-	m_pFBXAnimHit->LoadScene("P_standing.FBX");
+	m_pFBXAnimHit->LoadScene("s_walk.FBX");
 	m_pFBXAnimHit->ImportFBX();
 
 	m_pSetFBXAnim = m_pFBXAnimIdle;

@@ -35,24 +35,41 @@ struct Client_Data
 
 #define MAX_STR_SIZE  100
 
+#define CS_POSMOVE 1
+#define CS_CAMERAMOVE 2
+#define CS_JUMP 3
+/*
 #define CS_JUMP  1
 #define CS_UP    2
 #define CS_DOWN  3
 #define CS_LEFT  4
 #define CS_RIGHT 5
-#define CS_CHAT	 6
+#define CS_XSTOP 6
+#define CS_ZSTOP 7
+#define CS_CHAT	 8
+*/
 
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
-#define SC_CHAT		4
-#define SC_INIT			 5
+#define SC_CHAT			 4
+#define SC_SETPOS		 5
+#define SC_INIT			 6
+#define SC_SYNC			 7
 
 #pragma pack (push, 1)
 
 struct cs_packet_up {
 	BYTE size;
 	BYTE type;
+	CHAR Movex;
+	CHAR Movez;
+};
+
+struct cs_packet_camera {
+	BYTE size;
+	BYTE type;
+	CHAR Look;
 };
 
 struct cs_packet_chat {
@@ -73,18 +90,18 @@ struct sc_packet_pos {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	CHAR x;
-	CHAR y;
-	CHAR z;
+	CHAR MoveX;
+	CHAR MoveZ;
+	CHAR CameraY;
 };
 
 struct sc_packet_put_player {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	CHAR x;
-	CHAR y;
-	CHAR z;
+	FLOAT x;
+	FLOAT y;
+	FLOAT z;
 };
 struct sc_packet_remove_player {
 	BYTE size;
@@ -104,8 +121,15 @@ struct sc_packet_init {
 	BYTE type;
 	WORD id;
 	BYTE team;
-	CHAR x,y,z;
-	//BYTE map;
+	CHAR x, y, z;
+};
+
+struct sc_packet_sync {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 
 #pragma pack (pop)

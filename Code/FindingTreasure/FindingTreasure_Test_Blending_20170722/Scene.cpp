@@ -96,7 +96,7 @@ void CScene::InitScene(void)
 	m_pTreasureChest->SetPosition(0.0f, 10.f, 0.0f);
 	for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
 	{
-		m_RespawnManager.RegisterRespawnManager(m_pPlayersMgrInform->m_ppPlayers[i], false);
+		//m_RespawnManager.RegisterRespawnManager(m_pPlayersMgrInform->m_ppPlayers[i], false);
 	}
 	//m_pPlayersMgrInform->m_ppPlayers[m_pPlayersMgrInform->m_iMyPlayerID]->InitPlayer(D3DXVECTOR3(-7.0f, 40.0f, 7.0f));
 
@@ -901,6 +901,15 @@ void CScene::AnimateObjects(ID3D11DeviceContext*pd3dDeviceContext, float fTimeEl
 	{
 		if (m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
 		{
+			float mx = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.x - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().x;
+			float my = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.y - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y;
+			float mz = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.z - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().z;
+
+			m_pPlayersMgrInform->m_ppPlayers[i]->SetPosition(
+				D3DXVECTOR3(m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().x + (mx*fTimeElapsed),
+					m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y + (my*fTimeElapsed),
+					m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().z + (mz*fTimeElapsed)));
+
 			if (i != m_pPlayersMgrInform->m_iMyPlayerID)
 			{
 				m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.x = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveX;
@@ -942,12 +951,12 @@ void CScene::AnimateObjects(ID3D11DeviceContext*pd3dDeviceContext, float fTimeEl
 
 			// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
 			MoveObjectUnderPhysicalEnvironment(m_pPlayersMgrInform->m_ppPlayers[i], fTimeElapsed);
-			
+			/*
 			if (m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y < -1.0f)
 			{
 				printf("플레이어가 물에 빠져버렸습니다!");
-				m_RespawnManager.RegisterRespawnManager(m_pPlayersMgrInform->m_ppPlayers[i], true);
-			}
+				m_RespawnManager.RegisterRespawnManager(m_pPlayersMgrInform->m_ppPlayers[i], true,false);
+			}*/
 		}
 		else continue;
 	}

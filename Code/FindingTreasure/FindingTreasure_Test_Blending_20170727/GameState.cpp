@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GameState.h"
 #include "GameManager.h"
+#pragma comment(lib, "Msimg32.lib")
 
 HBITMAP CGameState::m_hMemBitmap = NULL;
 HBITMAP CGameState::m_hIntroBackBitmap = NULL;

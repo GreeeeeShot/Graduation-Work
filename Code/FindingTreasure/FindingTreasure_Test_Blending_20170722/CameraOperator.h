@@ -55,6 +55,16 @@ public:
 	D3DXVECTOR3 GetRight(void) { return m_d3dxvRight; }
 
 	void SetLook(D3DXVECTOR3 lookVec) { m_d3dxvLook = lookVec; }
+	void SetCameraVector(D3DXVECTOR3 cameraPos) {
+		/*
+		m_d3dxvPosition.x = CharPos.x - cameraPos.x;
+		m_d3dxvPosition.y = CharPos.y - cameraPos.y;
+		m_d3dxvPosition.z = CharPos.z - cameraPos.z;
+		*/
+		m_d3dxvPosition = cameraPos;
+	}
+
+	void SetCameraPos(D3DXVECTOR3 Pos) { m_d3dxvCameraPos = Pos; }
 	void MoveCameraOperator(const D3DXVECTOR3& d3dxvShift);						// 카메라 조작기를 현 위치에서 d3dxvShift만큼 이동시킨다.
 	void RotateLocalY(float fRotationDegreePerSec, float fTimeElapsed);							// m_d3dxvCameraDir을 로컬 Y축에 대하여 회전한다. ; 좌표계 전체도 움직인다.
 	void RotateLocalX(float fRotationDegreePerSec, float fTimeElapsed);							// m_d3dxvCameraDir을 로컬 Z축에 대하여 회전한다.

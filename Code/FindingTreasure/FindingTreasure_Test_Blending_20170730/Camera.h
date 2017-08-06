@@ -44,6 +44,8 @@ public:
 	D3DXVECTOR3 GetPosition() const { return m_d3dxvEyePosition; }
 	D3DXVECTOR3 GetLook() { return D3DXVECTOR3(m_d3dxmtxView._13, m_d3dxmtxView._23, m_d3dxmtxView._33); }
 
+	void SetLook(float x, float y, float z) { m_d3dxmtxView._13 = x; m_d3dxmtxView._23 = y; m_d3dxmtxView._33=z; }
+
 	//카메라 변환 행렬과 투영 변환 행렬을 생성하는 멤버 함수를 선언한다.
 	void GenerateViewMatrix(D3DXVECTOR3 d3dxvEyePosition, D3DXVECTOR3 d3dxvLookAt, D3DXVECTOR3 d3dxvUp);
 	void GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle);

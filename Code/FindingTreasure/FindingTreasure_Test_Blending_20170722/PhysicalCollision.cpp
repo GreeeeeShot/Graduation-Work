@@ -78,8 +78,8 @@ void CPhysicalCollision::ImpurseBasedCollisionResolution(CPlayer *pPlayerA, CPla
 
 	// 노멀 속도를 구한다.
 	D3DXVECTOR2 d3dxvRevisionVelocity;
-	printf("pPlayerA %f %f %f \n", pPlayerA->m_d3dxvVelocity.x, pPlayerA->m_d3dxvVelocity.y, pPlayerA->m_d3dxvVelocity.z);
-	printf("pPlayerB %f %f %f \n", pPlayerB->m_d3dxvVelocity.x, pPlayerB->m_d3dxvVelocity.y, pPlayerB->m_d3dxvVelocity.z);
+	//printf("pPlayerA %f %f %f \n", pPlayerA->m_d3dxvVelocity.x, pPlayerA->m_d3dxvVelocity.y, pPlayerA->m_d3dxvVelocity.z);
+	//printf("pPlayerB %f %f %f \n", pPlayerB->m_d3dxvVelocity.x, pPlayerB->m_d3dxvVelocity.y, pPlayerB->m_d3dxvVelocity.z);
 	if (fabs(pPlayerA->m_d3dxvVelocity.x) <= 0.1f && fabs(pPlayerA->m_d3dxvVelocity.z) <= 0.1f)
 	{
 		d3dxvRevisionVelocity = D3DXVECTOR2(pPlayerB->GetPosition().x - pPlayerA->GetPosition().x, pPlayerB->GetPosition().z - pPlayerA->GetPosition().z);
@@ -87,7 +87,7 @@ void CPhysicalCollision::ImpurseBasedCollisionResolution(CPlayer *pPlayerA, CPla
 		pPlayerA->m_d3dxvVelocity.x = 3.0f * (d3dxvRevisionVelocity.x);
 		pPlayerA->m_d3dxvVelocity.z = 3.0f * (d3dxvRevisionVelocity.y);
 
-		printf("pPlayerA V: %f %f \n", pPlayerA->m_d3dxvVelocity.x, pPlayerA->m_d3dxvVelocity.z);
+		//printf("pPlayerA V: %f %f \n", pPlayerA->m_d3dxvVelocity.x, pPlayerA->m_d3dxvVelocity.z);
 	}
 
 	if (fabs(pPlayerB->m_d3dxvVelocity.x) <= 0.1f && fabs(pPlayerB->m_d3dxvVelocity.z) <= 0.1f)
@@ -96,7 +96,7 @@ void CPhysicalCollision::ImpurseBasedCollisionResolution(CPlayer *pPlayerA, CPla
 		D3DXVec2Normalize(&d3dxvRevisionVelocity, &d3dxvRevisionVelocity);
 		pPlayerB->m_d3dxvVelocity.x = 3.0f * (d3dxvRevisionVelocity.x);
 		pPlayerB->m_d3dxvVelocity.z = 3.0f * (d3dxvRevisionVelocity.y);
-		printf("pPlayerB V: %f %f \n", pPlayerB->m_d3dxvVelocity.x, pPlayerB->m_d3dxvVelocity.z);
+		//printf("pPlayerB V: %f %f \n", pPlayerB->m_d3dxvVelocity.x, pPlayerB->m_d3dxvVelocity.z);
 		
 	}
 

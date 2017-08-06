@@ -15,4 +15,5 @@ void Worker_Thread();
 void Accept_Thread();
 void ShutDown_Server();
 void ServerMain();
+void Time_Thread();
 void Process_Thread();

@@ -160,7 +160,6 @@ void CCameraOperator::GenerateViewMatrix(float fTimeElapsed, bool bSoftMoving)
 {
 	D3DXVECTOR3 d3dxvEyePosition;
 	D3DXVECTOR3 d3dxvLookAt;
-
 	/*printf("dot : xy, xz, zx : (%f, %f, %f)\n",
 		D3DXVec3Dot(&m_d3dxvUp, &m_d3dxvRight),
 		D3DXVec3Dot(&m_d3dxvUp, &m_d3dxvLook),

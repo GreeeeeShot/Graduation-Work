@@ -2,12 +2,14 @@
 
 #define RESPAWN_SLOT_NUM		9			// 최대 접속자 수 + 보물 상자
 #define RESPAWN_COMPLETE_TIME	3.0f		// 
+#define RESPAWN_SERVER_TIME		2.9f
 
 struct RESPAWN_SLOT
 {
 	CPlayer *pRegisteredPlayer;
 	float iRespawnTime;		
 	bool bIsDelayed;
+	bool isserver;
 };
 
 struct RESPAWN_POINT

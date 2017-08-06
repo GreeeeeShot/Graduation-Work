@@ -56,6 +56,8 @@ struct Client_Data
 #define SC_SETPOS		 5
 #define SC_INIT			 6
 #define SC_SYNC			 7
+#define SC_DEAD			 8
+#define SC_RESPAWN		 9
 
 #pragma pack (push, 1)
 
@@ -86,6 +88,20 @@ struct sc_packet_deletevox {
 
 };
 
+struct sc_packet_respawn {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
+};
+
+struct sc_packet_dead {
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
 struct sc_packet_pos {
 	BYTE size;
 	BYTE type;
@@ -99,9 +115,8 @@ struct sc_packet_put_player {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	FLOAT x;
-	FLOAT y;
-	FLOAT z;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 struct sc_packet_remove_player {
 	BYTE size;
@@ -121,7 +136,8 @@ struct sc_packet_init {
 	BYTE type;
 	WORD id;
 	BYTE team;
-	CHAR x, y, z;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 
 struct sc_packet_sync {
