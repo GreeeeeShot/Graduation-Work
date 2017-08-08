@@ -32,6 +32,7 @@ struct CLIENT {
 	float xMove;
 	float zMove;
 	int cameraYrotate;
+	bool VoxDelOrIns;
 
 	high_resolution_clock::time_point last_move_time;
 	bool is_active;
@@ -183,6 +184,54 @@ void SendPutPlayerPacket(int client, int object)
 	SendPacket(client, &packet);
 }
 
+void SendInstallVoxel(int client, int object, int pocket)
+{
+	sc_packet_vox packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_INSVOX;
+	packet.id = object;
+	packet.pocket = pocket;
+
+	packet.Posx = g_clients[object].player.GetPosition().x;
+	packet.Posy = g_clients[object].player.GetPosition().y;
+	packet.Posz = g_clients[object].player.GetPosition().z;
+
+	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+
+	SendPacket(client, &packet);
+}
+
+void SendDeleteVoxel(int client, int object, int pocket)
+{
+	sc_packet_vox packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_DELVOX;
+	packet.id = object;
+	packet.pocket = pocket;
+
+	packet.Posx = g_clients[object].player.GetPosition().x;
+	packet.Posy = g_clients[object].player.GetPosition().y;
+	packet.Posz = g_clients[object].player.GetPosition().z;
+
+	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+
+	SendPacket(client, &packet);
+}
+
+void SendCancleVoxel(int client, int object)
+{
+	sc_packet_voxcancle packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_CANCLEVOX;
+	packet.id = object;
+
+	SendPacket(client, &packet);
+}
+
 void SendRemovePlayerPacket(int client, int object)
 {
 	sc_packet_pos packet;
@@ -288,14 +337,47 @@ void ProcessPacket(int ci, unsigned char packet[])
 	switch (packet[1])
 	{
 	case CS_POSMOVE:
+		g_clients[ci].vl_lock.lock();
 		g_clients[ci].xMove = (int)(CHAR)packet[2];
 		g_clients[ci].zMove = (int)(CHAR)packet[3];
+		g_clients[ci].vl_lock.unlock();
 		break;
 	case CS_CAMERAMOVE:
+		g_clients[ci].vl_lock.lock();
 		g_clients[ci].cameraYrotate = (int)(CHAR)packet[2];
+		g_clients[ci].vl_lock.unlock();
 		break;
 	case CS_JUMP:
+		g_clients[ci].vl_lock.lock();
 		g_clients[ci].player.m_d3dxvMoveDir.y = 5.f;
+		g_clients[ci].vl_lock.unlock();
+		break;
+	case CS_INSVOX:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendInstallVoxel(i, ci, packet[2]);
+		}
+		break;
+	case CS_DELVOX:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if(i!=ci)
+				SendDeleteVoxel(i, ci, packet[2]);
+		}
+		break;
+	case CS_CANCLEVOX:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendCancleVoxel(i, ci);
+		}
 		break;
 	default:
 		std::cout << "Unknown Packet Type from Client" << ci << std::endl;

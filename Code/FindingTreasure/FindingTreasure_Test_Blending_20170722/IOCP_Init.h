@@ -38,6 +38,9 @@ struct Client_Data
 #define CS_POSMOVE 1
 #define CS_CAMERAMOVE 2
 #define CS_JUMP 3
+#define CS_INSVOX 4
+#define CS_DELVOX 5
+#define CS_CANCLEVOX 6
 /*
 #define CS_JUMP  1
 #define CS_UP    2
@@ -58,6 +61,9 @@ struct Client_Data
 #define SC_SYNC			 7
 #define SC_DEAD			 8
 #define SC_RESPAWN		 9
+#define SC_DELVOX		 10
+#define SC_INSVOX		 11
+#define SC_CANCLEVOX	 12
 
 #pragma pack (push, 1)
 
@@ -80,12 +86,25 @@ struct cs_packet_chat {
 	WCHAR message[MAX_STR_SIZE];
 };
 
-struct sc_packet_insertvox {
-
+struct cs_packet_vox {
+	BYTE size;
+	BYTE type;
+	WORD pocket;
 };
 
-struct sc_packet_deletevox {
+struct sc_packet_voxcancle{
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
 
+struct sc_packet_vox {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	WORD pocket;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 
 struct sc_packet_respawn {

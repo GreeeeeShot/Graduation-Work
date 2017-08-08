@@ -53,6 +53,8 @@ public:
 	int m_MoveZ;
 	int m_CameraY;
 	D3DXVECTOR3 m_SyncPosition;
+	bool m_Delvoxel;
+	bool m_Insvoxel;
 	//ACTION m_action;
 
 public:
@@ -69,8 +71,8 @@ public:
 	void MovingByCamera(D3DXVECTOR3 d3dxvDirSum, float fTimeElapsed);*/
 	void SetActive(bool bIsActive) { m_bIsActive = bIsActive; }
 	void SetBelongType(BELONG_TYPE eBelongType) { m_BelongType = eBelongType; }
-	void DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed);
-	void InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed);
+	void DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed, int id);
+	void InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed, int id);
 	void ChangeVoxelPocketSlotIdx(int iIdx);
 	void PushPlayer(CPlayer *pPlayer);
 	void PushPlayers(CPlayer **ppPlayers, int nConnectedPlayersNum);

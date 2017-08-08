@@ -7,7 +7,7 @@
 #define	BUF_SIZE				1024
 #define	WM_SOCKET				WM_USER + 1
 
-enum PACKETTYPE { POSMOVE,CAMERAMOVE,JUMP };
+enum PACKETTYPE { POSMOVE,CAMERAMOVE,JUMP , VOXELDEL, VOXELINS , VOXELCANCLE};
 
 void clienterror();
 void ProcessPacket(char *ptr);

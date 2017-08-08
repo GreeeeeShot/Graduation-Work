@@ -392,22 +392,33 @@ void CGameFramework::ProcessInput()
 	CPlayer *pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
 	if (m_pPlayersMgrInform->m_iMyPlayerID == -1)
 		return;
+	static bool voxing = false;
 	if (m_pPlayersMgrInform->GetMyPlayer()->m_bIsActive)
 	{
 		if (GetKeyboardState(pKeyBuffer))
 		{
 			if (pKeyBuffer['S'] & 0xF0 && !pMyPlayer->m_VoxelPocket[pMyPlayer->m_iVoxelPocketSlotIdx].m_bIsActive) {
 				pMyPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
-				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, fTimeElapsed);
+				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
 				pMyPlayer->m_bIsDigOrInstall = true;
 				pMyPlayer->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+				if (!voxing)
+				{
+					voxing = true;
+					SetPacket(VOXELDEL, 0, 0, 0);
+				}
 			}
 			else if (pKeyBuffer['D'] & 0xF0 && pMyPlayer->m_VoxelPocket[pMyPlayer->m_iVoxelPocketSlotIdx].m_bIsActive)
 			{
 				pMyPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
-				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, true, fTimeElapsed);
+				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, true, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
 				pMyPlayer->m_bIsDigOrInstall = true;
 				pMyPlayer->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+				if (!voxing)
+				{
+					voxing = true;
+					SetPacket(VOXELINS, 0, 0, 0);
+				}
 			}
 			// 'S'나 'D'버튼을 떼는 순간에 아래 else문이 작동한다는 것을 감안할 것.
 			else
@@ -435,9 +446,14 @@ void CGameFramework::ProcessInput()
 					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
 					SetPacket(POSMOVE,m_PastXMove, m_PastZMove,0);
 				}
-				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
-				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
+				pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
+				pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
 				pMyPlayer->m_bIsDigOrInstall = false;
+				if (voxing && (!(pKeyBuffer['S'] & 0xF0) && !(pKeyBuffer['D'] & 0xF0)))
+				{
+					voxing = false;
+					SetPacket(VOXELCANCLE, 0, 0, 0);
+				}
 			}
 			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
@@ -491,6 +507,32 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.Tick(/*30.0f*/);
 
 	ProcessInput();
+	
+	for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; ++i)
+	{
+		if (i == m_pPlayersMgrInform->m_iMyPlayerID)
+			continue;
+		if (m_pPlayersMgrInform->m_ppPlayers[i]->m_Insvoxel)
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			m_pPlayersMgrInform->m_ppPlayers[i]->InstallVoxel(m_pScene->m_pVoxelTerrain, true, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = true;
+			m_pPlayersMgrInform->m_ppPlayers[i]->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+		}
+		else if (m_pPlayersMgrInform->m_ppPlayers[i]->m_Delvoxel)
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			m_pPlayersMgrInform->m_ppPlayers[i]->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = true;
+			m_pPlayersMgrInform->m_ppPlayers[i]->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+		}
+		else
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(),i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->InstallVoxel(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(),i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = false;
+		}
+	}
 	
 	float fClearColor[4] = { 0.1f, 0.2f, 0.25f, 1.0f };
 	m_pd3dDeviceContext->ClearRenderTargetView(m_pd3dRenderTargetView, fClearColor);

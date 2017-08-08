@@ -41,7 +41,6 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz)); 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
-
 		break;
 	}
 	case SC_POS:
@@ -143,6 +142,36 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_RespawnManager.RegisterRespawnManager(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id], true);
 		break;
 	}
+	case SC_INSVOX:
+	{
+		sc_packet_vox *my_packet = reinterpret_cast<sc_packet_vox *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = true;
+		break;
+	}
+	case SC_DELVOX:
+	{
+		sc_packet_vox *my_packet = reinterpret_cast<sc_packet_vox *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Delvoxel = true;
+		break;
+	}
+	case SC_CANCLEVOX:
+	{
+		sc_packet_voxcancle *my_packet = reinterpret_cast<sc_packet_voxcancle *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = false;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Delvoxel = false;
+		break;
+	}
 	/*
 	case SC_CHAT:
 	{
@@ -230,6 +259,7 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 	cs_packet_up *my_packet = reinterpret_cast<cs_packet_up *>(send_buffer);
 	cs_packet_up *my_packet_jump = reinterpret_cast<cs_packet_up *>(send_buffer);
 	cs_packet_camera *my_packet_camera = reinterpret_cast<cs_packet_camera *>(send_buffer);
+	cs_packet_vox *my_packet_voxel = reinterpret_cast<cs_packet_vox *>(send_buffer);
 	DWORD iobyte;
 	switch (type)
 	{
@@ -261,6 +291,42 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 		if (ret) {
 			int error_code = WSAGetLastError();
 			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case VOXELDEL:
+		my_packet_voxel->size = sizeof(my_packet_voxel);
+		send_wsabuf.len = sizeof(my_packet_voxel);
+		my_packet_voxel->type = CS_DELVOX;
+		my_packet_voxel->pocket = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_iVoxelPocketSlotIdx;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case VOXELINS:
+		my_packet_voxel->size = sizeof(my_packet_voxel);
+		send_wsabuf.len = sizeof(my_packet_voxel);
+		my_packet_voxel->type = CS_INSVOX;
+		my_packet_voxel->pocket = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_iVoxelPocketSlotIdx;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case VOXELCANCLE:
+		my_packet_voxel->size = sizeof(my_packet_voxel);
+		send_wsabuf.len = sizeof(my_packet_voxel);
+		my_packet_voxel->type = CS_CANCLEVOX;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
 		}
 		break;
 	default:
