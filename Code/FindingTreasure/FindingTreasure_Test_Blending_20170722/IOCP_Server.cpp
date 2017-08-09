@@ -166,6 +166,15 @@ void SendInitPacket(int client)
 	SendPacket(client, &packet);
 }
 
+void SendJumpPacket(int client, int object)
+{
+	sc_packet_jump packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_JUMP;
+
+	SendPacket(client, &packet);
+}
 
 void SendPutPlayerPacket(int client, int object)
 {
@@ -340,17 +349,36 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].xMove = (int)(CHAR)packet[2];
 		g_clients[ci].zMove = (int)(CHAR)packet[3];
+		for (int i = 0; i < MAX_USER; ++i) {
+			if (true == g_clients[i].connect)
+			{
+				SendPositionPacket(i, ci);
+			}
+		}
 		g_clients[ci].vl_lock.unlock();
 		break;
 	case CS_CAMERAMOVE:
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].cameraYrotate = (int)(CHAR)packet[2];
+		for (int i = 0; i < MAX_USER; ++i) {
+			if (true == g_clients[i].connect)
+			{
+				SendPositionPacket(i, ci);
+			}
+		}
 		g_clients[ci].vl_lock.unlock();
 		break;
 	case CS_JUMP:
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].player.m_d3dxvMoveDir.y = 5.f;
 		g_clients[ci].vl_lock.unlock();
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendJumpPacket(i, ci);
+		}
 		break;
 	case CS_INSVOX:
 		for (int i = 0; i < MAX_USER; ++i)
@@ -402,15 +430,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 	//std::cout << ci <<" X Y Z : (" << g_clients[ci].player.GetPosition().x<<", " << g_clients[ci].player.GetPosition().y << ", " <<g_clients[ci].player.GetPosition().z <<")"<< std::endl;
 	
 	
-	g_clients[ci].vl_lock.lock();
 	
-	for (int i = 0; i < MAX_USER; ++i) {
-		if (true == g_clients[i].connect)
-		{
-			SendPositionPacket(i, ci);
-		}
-	}
-	g_clients[ci].vl_lock.unlock();
 }
 
 void Worker_Thread()
@@ -491,36 +511,48 @@ void Worker_Thread()
 				continue;
 			}
 
-			if (!g_clients[ci].is_active && g_clients[ci].player.m_bIsActive)
+			if (g_clients[ci].connect == false)
+				continue;
+			CPlayer currentclient;
+			float x, z;
+			int cameraY;
+			
+			g_clients[ci].vl_lock.lock();
+			currentclient = g_clients[ci].player;
+			x = (float)g_clients[ci].xMove;
+			z = (float)g_clients[ci].zMove;
+			cameraY = g_clients[ci].cameraYrotate;
+			g_clients[ci].vl_lock.unlock();
+
+			if (!g_clients[ci].is_active && currentclient.m_bIsActive)
 			{
 				for(int i =0;i<MAX_USER;++i)
-					if(g_clients[i].connect)
+					if (g_clients[i].connect)
+					{
+						g_clients[ci].vl_lock.lock();
 						SendRespawnPacket(i, ci);
+						g_clients[ci].vl_lock.unlock();
+					}
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].is_active = true;
 				g_clients[ci].vl_lock.unlock();
 			}
-
-			duration<float> sec = high_resolution_clock::now() - g_clients[ci].last_move_time;
-			
-			float t = sec.count();
-			if (g_clients[ci].connect == false)
-				continue;
-
 			g_clients[ci].vl_lock.lock();
-			g_clients[ci].player.m_d3dxvMoveDir.x += (float)g_clients[ci].xMove;
-			g_clients[ci].player.m_d3dxvMoveDir.z += (float)g_clients[ci].zMove;
-
-			g_clients[ci].player.m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC * g_clients[ci].cameraYrotate, t);
-			
-			g_clients[ci].player.RotateMoveDir(t);
-
-			
-
+			duration<float> sec = high_resolution_clock::now() - g_clients[ci].last_move_time;
 			g_clients[ci].vl_lock.unlock();
+
+			float t = sec.count();
+			
+
+			currentclient.m_d3dxvMoveDir.x += x;
+			currentclient.m_d3dxvMoveDir.z += z;
+
+			currentclient.m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC * cameraY, t);
+			
+			currentclient.RotateMoveDir(t);
 			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
 			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
-			if (g_clients[ci].player.m_bIsActive)
+			if (currentclient.m_bIsActive)
 			{
 				/*if (CPhysicalCollision::IsCollided(
 				&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
@@ -547,31 +579,29 @@ void Worker_Thread()
 						continue;
 					if (g_clients[i].connect == false)
 						continue;
-					if (g_clients[ci].player.m_bIsActive)
+					if (currentclient.m_bIsActive)
 					{
-						CPlayer PlayerA, PlayerB;
+						CPlayer PlayerA;
 						g_clients[ci].vl_lock.lock(); 
-						PlayerA = g_clients[ci].player;
+						PlayerA = g_clients[i].player;
 						g_clients[ci].vl_lock.unlock();
+
+						CPhysicalCollision::ImpurseBasedCollisionResolution(&currentclient, &PlayerA);
+
 						g_clients[i].vl_lock.lock();
-						PlayerB = g_clients[i].player;
-						g_clients[i].vl_lock.unlock();
-						CPhysicalCollision::ImpurseBasedCollisionResolution(&PlayerA, &PlayerB);
-						g_clients[ci].vl_lock.lock();
-						g_clients[ci].player = PlayerA;
-						g_clients[ci].vl_lock.unlock();
-						g_clients[i].vl_lock.lock();
-						g_clients[i].player = PlayerB;
+						g_clients[i].player = PlayerA;
 						g_clients[i].vl_lock.unlock();
 					}
 				}
 				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
+				
+				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&currentclient, t);
 				g_clients[ci].vl_lock.lock();
-				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_clients[ci].player, t);
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
 
-				if (g_clients[ci].player.GetPosition().y < -1.0f)
+
+				if (currentclient.GetPosition().y < -1.0f)
 				{
 					printf("서버에서 플레이어가 물에 빠져버렸습니다!");
 					g_clients[ci].vl_lock.lock();
@@ -595,6 +625,9 @@ void Worker_Thread()
 				SendPositionPacket(i, ci);
 				//PostQueuedCompletionStatus(g_hiocp, 0, j, reinterpret_cast<LPOVERLAPPED>(&g_clients[j].recv_over.over));
 			}*/
+			g_clients[ci].vl_lock.lock();
+			g_clients[ci].player = currentclient;
+			g_clients[ci].vl_lock.unlock();
 
 			MovePlayer(ci);
 			delete over;
@@ -612,7 +645,9 @@ void Worker_Thread()
 			{
 				if (!g_clients[i].connect)
 					continue;
+				g_clients[ci].vl_lock.lock();
 				SendSyncPacket(i, ci);
+				g_clients[ci].vl_lock.unlock();
 			}
 			Timer_Event event = { ci, high_resolution_clock::now() + 500ms, SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();

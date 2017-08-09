@@ -1013,6 +1013,109 @@ void CTexturedLightingPirateMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 	CLightingMesh::Render(pd3dDeviceContext);
 }
 
+CTexturedLightingCowgirlMesh::CTexturedLightingCowgirlMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
+{
+	float fx = 0.2f, fy = 0.45f, fz = 0.2f;
+	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
+	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
+	m_AABB.m_pRenderObject = new CGameObject();
+	m_AABB.m_pRenderObject->SetShader(CShaderResource::pDiffusedShader);
+	CMesh* pAABBMesh = new CDiffusedCubeMesh(pd3dDevice, 0.4f, 0.9f, 0.4f, D3DXCOLOR(1.0f, 0.0f, 1.0f, 1.0f));
+	m_AABB.m_pRenderObject->SetMesh(pAABBMesh);
+
+	m_pFBXAnim = CFBXAnimResource::m_pCowgirlFBXAnim;//new CPirateFBXAnim();
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+
+	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	vec = m_pFBXAnim->m_pd3dxvVertexList;
+	nor = m_pFBXAnim->m_pd3dxvNormalList;
+	uv = m_pFBXAnim->m_pd3dxvUVList;
+
+	m_nVertices = m_pFBXAnim->m_iVertexNum;
+
+	m_pFBXAnim->SetFBXAnimForType(COWGIRL_ANIM_TYPE_IDLE);
+
+	CTexturedLightingVertex* pVertices = new CTexturedLightingVertex[m_nVertices];
+
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		pVertices[i] = CTexturedLightingVertex(D3DXVECTOR3(vec[i].x*0.01, vec[i].y*0.01, vec[i].z*0.01 - 0.2f), nor[i], uv[i]);
+	}
+
+	m_nBuffers = 1;
+	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
+	m_pnVertexStrides = new UINT[1];
+	m_pnVertexOffsets = new UINT[1];
+
+	D3D11_BUFFER_DESC d3dBufferDesc;
+	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	d3dBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	d3dBufferDesc.ByteWidth = sizeof(CTexturedLightingVertex) * m_nVertices;
+	d3dBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	d3dBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_SUBRESOURCE_DATA d3dBufferData;
+	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3dBufferData.pSysMem = pVertices;
+	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_ppd3dVertexBuffers[0]);
+
+	m_pnVertexStrides[0] = sizeof(CTexturedLightingVertex);
+	m_pnVertexOffsets[0] = 0;
+
+	SetRasterizerState(pd3dDevice);
+}
+
+CTexturedLightingCowgirlMesh::~CTexturedLightingCowgirlMesh()
+{
+}
+
+void CTexturedLightingCowgirlMesh::Animate(ID3D11DeviceContext *pd3dDeviceContext, float t)
+{
+	//정점 버퍼를 매핑하여 정점 버퍼 포인터를 가져온다.
+	D3D11_MAPPED_SUBRESOURCE d3dMappedResource;
+	pd3dDeviceContext->Map(m_ppd3dVertexBuffers[0], 0, D3D11_MAP_WRITE_DISCARD, 0, &d3dMappedResource);
+	CTexturedLightingVertex* Vertices = (CTexturedLightingVertex *)d3dMappedResource.pData;
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+
+	nor = m_pFBXAnim->m_pd3dxvNormalList;
+	uv = m_pFBXAnim->m_pd3dxvUVList;
+	m_pFBXAnim->m_pSetFBXAnim->AnimationToVertex(&vec, (int)t);
+
+
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		Vertices[i] = CTexturedLightingVertex(D3DXVECTOR3(vec[i].x*0.01, vec[i].y*0.01, vec[i].z*0.01 - 0.2f), nor[i], uv[i]);
+	}
+
+	delete[] vec;
+
+	pd3dDeviceContext->Unmap(m_ppd3dVertexBuffers[0], 0);
+}
+
+void CTexturedLightingCowgirlMesh::SetFBXAnimForType(int eAnimType)
+{
+	if (m_pFBXAnim) m_pFBXAnim->SetFBXAnimForType((COWGIRL_ANIM_TYPE)eAnimType);
+}
+
+void CTexturedLightingCowgirlMesh::SetRasterizerState(ID3D11Device *pd3dDevice)
+{
+	D3D11_RASTERIZER_DESC d3dRasterizerDesc;
+	ZeroMemory(&d3dRasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	d3dRasterizerDesc.CullMode = D3D11_CULL_BACK;
+	d3dRasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	pd3dDevice->CreateRasterizerState(&d3dRasterizerDesc, &m_pd3dRasterizerState);
+}
+
+void CTexturedLightingCowgirlMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
+{
+	CLightingMesh::Render(pd3dDeviceContext);
+}
 
 SkydomMesh::SkydomMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
 {
@@ -1094,12 +1197,189 @@ void SkydomMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 	CLightingMesh::Render(pd3dDeviceContext);
 }
 
+ShipMesh::ShipMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
+{
+	float fx = 1.8f, fy = 1.8f, fz = 4.0f;
+	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
+	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
+	m_AABB.m_pRenderObject = new CGameObject();
+	m_AABB.m_pRenderObject->SetShader(CShaderResource::pDiffusedShader);
+	CMesh* pAABBMesh = new CDiffusedCubeMesh(pd3dDevice, 1.8f, 1.f, 2.0f, D3DXCOLOR(1.0f, 0.0f, 1.0f, 1.0f));
+	m_AABB.m_pRenderObject->SetMesh(pAABBMesh);
+
+	Ship = new FBXExporter();
+	Ship->Initialize();
+	Ship->LoadScene("boatfbx.FBX");
+	Ship->ImportFBX();
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+
+	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	vec = Ship->CopyMeshVertex(&m_nVertices);
+	nor = Ship->CopyNormalVertex();
+	uv = Ship->CopyUVVertex();
+
+	CTexturedVertex* pVertices = new CTexturedVertex[m_nVertices];
+
+	D3DXVECTOR3 d3dxVertex;
+	D3DXMATRIX mtxRotate;
+
+	printf("m_nVertices : %d", m_nVertices);
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		d3dxVertex = D3DXVECTOR3(vec[i].x*0.075f, vec[i].y*0.075f, vec[i].z*0.075f);
+		D3DXMatrixRotationX(&mtxRotate, D3DXToRadian(-90.0f));
+		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
+		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);
+	}
+
+	m_nBuffers = 1;
+	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
+	m_pnVertexStrides = new UINT[1];
+	m_pnVertexOffsets = new UINT[1];
+
+	D3D11_BUFFER_DESC d3dBufferDesc;
+	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	d3dBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	d3dBufferDesc.ByteWidth = sizeof(CTexturedVertex) * m_nVertices;
+	d3dBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	d3dBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_SUBRESOURCE_DATA d3dBufferData;
+	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3dBufferData.pSysMem = pVertices;
+	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_ppd3dVertexBuffers[0]);
+
+	m_pnVertexStrides[0] = sizeof(CTexturedVertex);
+	m_pnVertexOffsets[0] = 0;
+
+	delete[] vec;
+	delete[] nor;
+	delete[] uv;
+
+	SetRasterizerState(pd3dDevice);
+}
+
+ShipMesh::~ShipMesh()
+{
+}
+
+void ShipMesh::Animate(ID3D11DeviceContext *pd3dDeviceContext, float t)
+{
+
+}
+
+void ShipMesh::SetRasterizerState(ID3D11Device *pd3dDevice)
+{
+	D3D11_RASTERIZER_DESC d3dRasterizerDesc;
+	ZeroMemory(&d3dRasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	d3dRasterizerDesc.CullMode = D3D11_CULL_BACK;
+	d3dRasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	pd3dDevice->CreateRasterizerState(&d3dRasterizerDesc, &m_pd3dRasterizerState);
+}
+
+void ShipMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
+{
+	CLightingMesh::Render(pd3dDeviceContext);
+}
+
+TreasureChestMesh::TreasureChestMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
+{
+	float fx = 1.f, fy = 1.f, fz = 1.f;
+	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
+	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
+	m_AABB.m_pRenderObject = new CGameObject();
+	m_AABB.m_pRenderObject->SetShader(CShaderResource::pDiffusedShader);
+	CMesh* pAABBMesh = new CDiffusedCubeMesh(pd3dDevice, 1.f, 1.f, 1.f, D3DXCOLOR(1.0f, 0.0f, 1.0f, 1.0f));
+	m_AABB.m_pRenderObject->SetMesh(pAABBMesh);
+
+	TreasureChest = new FBXExporter();
+	TreasureChest->Initialize();
+	TreasureChest->LoadScene("treasureboxfbx.FBX");
+	TreasureChest->ImportFBX();
+
+	D3DXVECTOR3* vec = NULL;
+	D3DXVECTOR3* nor = NULL;
+	D3DXVECTOR2* uv = NULL;
+
+	m_d3dPrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	vec = TreasureChest->CopyMeshVertex(&m_nVertices);
+	nor = TreasureChest->CopyNormalVertex();
+	uv = TreasureChest->CopyUVVertex();
+
+	CTexturedVertex* pVertices = new CTexturedVertex[m_nVertices];
+
+	D3DXVECTOR3 d3dxVertex;
+	D3DXMATRIX mtxRotate;
+
+	printf("m_nVertices : %d", m_nVertices);
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		d3dxVertex = D3DXVECTOR3(vec[i].x*0.1, vec[i].y*0.1, vec[i].z*0.1);
+		D3DXMatrixRotationX(&mtxRotate, D3DXToRadian(0.0f));
+		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
+		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);
+	}
+
+	m_nBuffers = 1;
+	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
+	m_pnVertexStrides = new UINT[1];
+	m_pnVertexOffsets = new UINT[1];
+
+	D3D11_BUFFER_DESC d3dBufferDesc;
+	ZeroMemory(&d3dBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	d3dBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	d3dBufferDesc.ByteWidth = sizeof(CTexturedVertex) * m_nVertices;
+	d3dBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	d3dBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	D3D11_SUBRESOURCE_DATA d3dBufferData;
+	ZeroMemory(&d3dBufferData, sizeof(D3D11_SUBRESOURCE_DATA));
+	d3dBufferData.pSysMem = pVertices;
+	pd3dDevice->CreateBuffer(&d3dBufferDesc, &d3dBufferData, &m_ppd3dVertexBuffers[0]);
+
+	m_pnVertexStrides[0] = sizeof(CTexturedVertex);
+	m_pnVertexOffsets[0] = 0;
+
+	delete[] vec;
+	delete[] nor;
+	delete[] uv;
+
+	SetRasterizerState(pd3dDevice);
+}
+
+TreasureChestMesh::~TreasureChestMesh()
+{
+}
+
+void TreasureChestMesh::Animate(ID3D11DeviceContext *pd3dDeviceContext, float t)
+{
+
+}
+
+void TreasureChestMesh::SetRasterizerState(ID3D11Device *pd3dDevice)
+{
+	D3D11_RASTERIZER_DESC d3dRasterizerDesc;
+	ZeroMemory(&d3dRasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	d3dRasterizerDesc.CullMode = D3D11_CULL_BACK;
+	d3dRasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	pd3dDevice->CreateRasterizerState(&d3dRasterizerDesc, &m_pd3dRasterizerState);
+}
+
+void TreasureChestMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
+{
+	CLightingMesh::Render(pd3dDeviceContext);
+}
+
 CMesh* CMeshResource::pSkyMesh = NULL;
 CMesh* CMeshResource::pAABBMesh = NULL;
 CMesh* CMeshResource::pShipMesh = NULL;
 CMesh* CMeshResource::pTreasureChestMesh = NULL;
 CMesh* CMeshResource::pWaveMesh = NULL;
 CMesh* CMeshResource::pPirateMesh = NULL;
+CMesh* CMeshResource::pCowgirlMesh = NULL;
 CMesh* CMeshResource::pSnowWomanMesh = NULL;
 CMesh** CMeshResource::ppRegisteredVoxelMesh = NULL;
 CMesh* CMeshResource::pStandardVoxelMesh = NULL;
@@ -1126,10 +1406,11 @@ CMeshResource::~CMeshResource()
 void CMeshResource::CreateMeshResource(ID3D11Device *pd3dDevice)
 {
 	pSkyMesh = new SkydomMesh(pd3dDevice);
-	pAABBMesh = new CDiffusedCubeMesh(pd3dDevice, 1.05f, 1.05f, 1.05f, D3DXCOLOR(1.0f, 0.0f, 0.0f, 1.0f));
-	pShipMesh = new CTexturedLightingCubeMesh(pd3dDevice, 4.0f, 3.0f, 6.0f);
-	pTreasureChestMesh = new CTexturedLightingCubeMesh(pd3dDevice, 0.8f, 0.86f, 0.8f);
+	pAABBMesh = new CTexturedLightingCubeMesh(pd3dDevice, 0.8f, 0.86f, 0.8f);
+	pShipMesh = new ShipMesh(pd3dDevice);
+	pTreasureChestMesh = new TreasureChestMesh(pd3dDevice);
 	pPirateMesh = new CTexturedLightingPirateMesh(pd3dDevice);
+	pCowgirlMesh = new CTexturedLightingCowgirlMesh(pd3dDevice);
 	pWaveMesh = new CTexturedLightingGridMesh(pd3dDevice, -200.0f, 200.0f, 8.0f, 8.0f, 50, 50);
 
 	pStandardVoxelMesh = new CTexturedLightingCubeMesh(pd3dDevice, 1.0f, 1.0f, 1.0f);

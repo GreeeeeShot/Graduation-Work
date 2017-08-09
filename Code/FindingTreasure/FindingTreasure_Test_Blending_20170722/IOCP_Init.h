@@ -64,6 +64,7 @@ struct Client_Data
 #define SC_DELVOX		 10
 #define SC_INSVOX		 11
 #define SC_CANCLEVOX	 12
+#define SC_JUMP			 13
 
 #pragma pack (push, 1)
 
@@ -93,6 +94,12 @@ struct cs_packet_vox {
 };
 
 struct sc_packet_voxcancle{
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
+struct sc_packet_jump {
 	BYTE size;
 	BYTE type;
 	WORD id;

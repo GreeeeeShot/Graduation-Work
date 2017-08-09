@@ -57,6 +57,13 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraY = cameraY;
 		break;
 	}
+	case SC_JUMP:
+	{
+		sc_packet_jump *my_packet = reinterpret_cast<sc_packet_jump *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_d3dxvMoveDir.y = 5.0f;
+		break;
+	}
 	case SC_SETPOS:
 	{
 		sc_packet_put_player *my_packet = reinterpret_cast<sc_packet_put_player *>(ptr);
@@ -90,19 +97,7 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 
 		
-		if ((int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().x == 0 &&
-			(int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().z == 0 &&
-			(int)my_packet->Posx != 0  && (int)my_packet->Posz != 0
-			)
-		{
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-			//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInformtl->m_ppPlayers[id]->m_CameraOperator.SetCameraVector(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
-		}
-		else if ((int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y < 0)
+		if ((int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y < -1)
 		{
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
