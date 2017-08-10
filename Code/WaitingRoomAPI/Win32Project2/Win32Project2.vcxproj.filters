@@ -60,19 +60,19 @@
     <Image Include="character3.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="ready.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="waiting_room_arrow.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
     <Image Include="waiting_room_base.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
     <Image Include="waiting_room_blueteam.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="waiting_room_character_select.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
     <Image Include="waiting_room_redteam.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="KakaoTalk_20170806_130842169.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>

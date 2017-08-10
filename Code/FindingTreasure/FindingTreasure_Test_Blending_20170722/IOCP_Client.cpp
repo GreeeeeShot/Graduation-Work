@@ -2,6 +2,7 @@
 #include "IOCP_Init.h"
 #include "IOCP_Client.h"
 #include "GameManager.h"
+#include "FindingTreasure_Test_Blending.h"
 
 //CPlayer player;
 
@@ -36,11 +37,24 @@ void ProcessPacket(char *ptr)
 	case SC_PUT_PLAYER:
 	{
 		sc_packet_put_player *my_packet = reinterpret_cast<sc_packet_put_player *>(ptr);
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iPlayersNum++;
-		id = my_packet->id;
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz)); 
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
+		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iPlayersNum++;
+
+		for (int i = 0; i < 7; ++i)
+		{
+			if (!waitingplayer[i].connect)
+			{
+				id = i;
+				break;
+			}
+		}
+
+		waitingplayer[id].connect = true;
+		
+		waitingplayer[id].ready = false;
+		waitingplayer[id].team = (BELONG_TYPE)my_packet->team;
+		waitingplayer[id].id = my_packet->id;
+
+		printf("¹Ù²å´Ù! %d %d\n", id, &waitingplayer[id].connect);
 		break;
 	}
 	case SC_POS:

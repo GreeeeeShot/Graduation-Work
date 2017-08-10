@@ -92,6 +92,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -105,6 +106,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -166,11 +168,11 @@
     <Image Include="character1.bmp" />
     <Image Include="character2.bmp" />
     <Image Include="character3.bmp" />
-    <Image Include="KakaoTalk_20170806_130842169.bmp" />
+    <Image Include="ready.bmp" />
     <Image Include="small.ico" />
+    <Image Include="waiting_room_arrow.bmp" />
     <Image Include="waiting_room_base.bmp" />
     <Image Include="waiting_room_blueteam.bmp" />
-    <Image Include="waiting_room_character_select.bmp" />
     <Image Include="waiting_room_redteam.bmp" />
     <Image Include="Win32Project2.ico" />
   </ItemGroup>

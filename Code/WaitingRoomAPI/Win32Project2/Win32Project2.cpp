@@ -10,11 +10,34 @@ enum State { host_select, server_input, play, waitingroom };
 State state = host_select;
 bool host = false;
 int strn = 0;
-bool ready = false;
+
+static int u = 0;
 
 char	server_ip[20] = "";
 char server_msg[20] = "Join";
 #define	WM_SOCKET				WM_USER + 1
+
+bool ready = false;
+int redteam=0, blueteam=0, team = 0, charac=0;
+
+struct WaitingPlayer {
+	enum TEAM {blue, red,custom};
+	enum CHARACTER {pirate, cowgirl};
+
+	bool connect;
+	int id;
+	TEAM team;
+	CHARACTER charac;
+	bool ready;
+};
+
+WaitingPlayer waitingplayer[8];
+void d() {
+	u = 1;
+}
+void s() {
+	d();
+}
 
 // 전역 변수:
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
@@ -137,8 +160,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HDC hdc, memdc1, memdc2;
 	PAINTSTRUCT ps;
-	static HBITMAP hBit1,hipInput, hwaiting,oldBit1, oldBit2;
-	static HBITMAP chara[3], charaSelect, blueSelect, redSelect;
+	static HBITMAP hBit1, hipInputbmp, hwaitingbmp,oldBit1, oldBit2;
+	static HBITMAP charabmp[2], SelectTeambmp[3],charaSelectbmp, readybmp;
 	static RECT rectView;
 	static int yPos;
 
@@ -150,14 +173,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
 	case WM_CREATE:
 	{
-		hipInput = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP8));
-		hwaiting = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP4));
-		chara[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
-		chara[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
-		chara[2] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
-		charaSelect = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP6));
-		blueSelect = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
-		redSelect = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP7));
+		hipInputbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP12));
+		hwaitingbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP15));
+		charabmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+		charabmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
+		charaSelectbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP14));
+		SelectTeambmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP16));
+		SelectTeambmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP17));
+		readybmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP13));
 		break;
 	}
 	case WM_TIMER:
@@ -186,7 +209,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		my = HIWORD(lParam);
 		if (waitingroom == state)
 		{
-			if (mx > 0 && mx < 10 && my>0 && my < 10)
+			if (mx > 10 && mx < 90 && my>240 && my < 280)
+			{
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 290 && mx < 370 && my>240 && my < 280)
+			{
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 50 && mx < 330 && my>40 && my < 458)
+			{
+				team = (team + 1) % 2;
+			}
+			else if (mx > 357 && mx < 904 && my>514 && my < 661)
 			{
 				ready = (ready + 1) % 2;
 			}
@@ -197,17 +232,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_RBUTTONDOWN:
 	case WM_RBUTTONUP:
 	case WM_MOUSEMOVE:
-		mx = LOWORD(lParam);
-		my = HIWORD(lParam);
-		if (waitingroom == state)
-		{
-			if (mx > 0 && mx < 10 && my>0 && my < 10)
-			{
-				ready = (ready + 1) % 2;
-			}
-		}
-		InvalidateRgn(hWnd, NULL, false);
-		break;
     case WM_PAINT:
         {
 			hdc  = GetDC(hWnd);
@@ -225,8 +249,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다.
 		if (state == server_input) {
 
-			oldBit2 = (HBITMAP)SelectObject(memdc2, hipInput);
+			oldBit2 = (HBITMAP)SelectObject(memdc2, hipInputbmp);
 			BitBlt(memdc1, 0, 0, 1280, 760, memdc2, 0, 0, SRCCOPY);
+
 			SelectObject(memdc2, oldBit2);
 
 			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
@@ -241,17 +266,99 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		else if (state == waitingroom)
 		{
-			oldBit2 = (HBITMAP)SelectObject(memdc2, hwaiting);
+			oldBit2 = (HBITMAP)SelectObject(memdc2, hwaitingbmp);
 
 			BitBlt(memdc1, 0, 0, 1280, 760, memdc2, 0, 0, SRCCOPY);
 			SelectObject(memdc2, oldBit2);
+
+			/////////////////자신의 팀컬러 및 캐릭터, 화살표, 레디//////////////
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[team]);
+			GdiTransparentBlt(memdc1, 10, 40, 374, 418, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[charac]);
+			GdiTransparentBlt(memdc1, 55, 195, 258, 193, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charaSelectbmp);
+			GdiTransparentBlt(memdc1, 10, 200, 360, 120, memdc2, 0, 0, 411, 142, RGB(255, 255, 255));
+
+			if (ready) {
+				oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+				GdiTransparentBlt(memdc1, 80, 270, 227, 142, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+			/////////////////팀컬러////////////////////////////////
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 380, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 550, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 720, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 340, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 480, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 620, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[0]);
+			GdiTransparentBlt(memdc1, 760, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			//////////////////////캐릭터//////////////////////////
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 399, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 569, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 739, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 359, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 499, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 639, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[0]);
+			GdiTransparentBlt(memdc1, 779, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			///////////////////레디//////////////////////////////
+			if (u == 1)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+				GdiTransparentBlt(memdc1, 405, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 575, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 745, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 365, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 505, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 645, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+			GdiTransparentBlt(memdc1, 785, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
 
 			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
 			SelectObject(memdc1, oldBit1);			
 		}
 		//else CGameManager::GetInstance()->m_pGameState->Render(hdc);
-
-		
+		s();
 
 		DeleteDC(memdc2);
 		DeleteDC(memdc1);
@@ -260,10 +367,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
     case WM_DESTROY:
 		if (hBit1) DeleteObject(hBit1);
-		DeleteObject(hwaiting);
-		DeleteObject(hipInput);
+		DeleteObject(hwaitingbmp);
+		DeleteObject(hipInputbmp);
 		for(int i =0; i<3;++i)
-			DeleteObject(chara[i]);
+			DeleteObject(charabmp[i]);
 		DeleteDC(memdc1);
         PostQuitMessage(0);
         break;

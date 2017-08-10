@@ -15,7 +15,9 @@ HANDLE g_hiocp;
 SOCKET g_ssocket;
 CPlayer* g_box=NULL;
 CRespawnManager g_RespawnManager;
+bool GameStart = false;
 std::mutex g_Respawnlock;
+int red,blue;
 
 enum OPTYPE { OP_SEND, OP_RECV , USER_MOVE , SEND_SYNC };
 
@@ -116,9 +118,11 @@ void Initialize_Server()
 	for (int i = 0; i < MAX_USER; ++i)
 	{
 		g_clients[i].connect = false;
-		g_clients[i].player.SetMesh(CMeshResource::pPirateMesh);
-		g_clients[i].player.SetBelongType(i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
+		//g_clients[i].player.SetMesh(CMeshResource::pPirateMesh);
+		//g_clients[i].player.SetBelongType(red < blue ? BELONG_TYPE_BLUE : BELONG_TYPE_RED);
 	}
+	blue = 0;
+	red = 0;
 	g_Respawnlock.lock();
 	g_RespawnManager.InitRespawnManager();
 	g_Respawnlock.unlock();
@@ -178,18 +182,12 @@ void SendJumpPacket(int client, int object)
 
 void SendPutPlayerPacket(int client, int object)
 {
-	sc_packet_init packet;
+	sc_packet_put_player packet;
 	packet.id = object;
 	packet.size = sizeof(packet);
 	packet.type = SC_PUT_PLAYER;
-	packet.Posx = g_clients[object].player.GetPosition().x;
-	packet.Posy = g_clients[object].player.GetPosition().y;
-	packet.Posz = g_clients[object].player.GetPosition().z;
+	packet.team = g_clients[object].player.m_BelongType;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
-	
 	SendPacket(client, &packet);
 }
 
@@ -755,29 +753,32 @@ void Accept_Thread()
 		g_clients[new_id].cameraYrotate = 0;
 		g_clients[new_id].is_active = true;
 		g_clients[new_id].last_move_time = high_resolution_clock::now();
+		g_clients[new_id].player.SetBelongType(red < blue ?  BELONG_TYPE_RED : BELONG_TYPE_BLUE);
+		g_clients[new_id].player.m_BelongType == BELONG_TYPE_RED ? red++ : blue++;
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
 				if (i != new_id) {
 					SendPutPlayerPacket(new_id, i);
 					SendPutPlayerPacket(i, new_id);
+					printf("누구 들어오냐?: %d -> %d \n", i, new_id);
 				}
 		}
 
-		SendInitPacket(new_id);
+		//SendInitPacket(new_id);
 		//SendPutPlayerPacket(new_id, new_id);
 
-		MovePlayer(new_id);
+		//MovePlayer(new_id);
 
-		Timer_Event event = { new_id, high_resolution_clock::now() + 500ms, SYNC_TIME };
-		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-
+		//Timer_Event event = { new_id, high_resolution_clock::now() + 500ms, SYNC_TIME };
+		//tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+		/*
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
 			SendRespawnPacket(i, new_id);
 				
-		}
+		}*/
 
 		std::cout << "new client accept: " << new_id << std::endl;
 	}

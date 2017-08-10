@@ -41,6 +41,10 @@ struct Client_Data
 #define CS_INSVOX 4
 #define CS_DELVOX 5
 #define CS_CANCLEVOX 6
+#define CS_CHARAC_CHANGE 7
+#define CS_READY 8
+#define CS_EXIT 9
+#define CS_TEAM_CHANGE 10
 /*
 #define CS_JUMP  1
 #define CS_UP    2
@@ -65,6 +69,10 @@ struct Client_Data
 #define SC_INSVOX		 11
 #define SC_CANCLEVOX	 12
 #define SC_JUMP			 13
+#define CS_CHARAC_CHANGE 14
+#define CS_READY		 15
+#define CS_EXIT			 16
+#define CS_TEAM_CHANGE	 17
 
 #pragma pack (push, 1)
 
@@ -141,8 +149,7 @@ struct sc_packet_put_player {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	FLOAT Posx, Posy, Posz;
-	FLOAT Lookx, Looky, Lookz;
+	BYTE team;
 };
 struct sc_packet_remove_player {
 	BYTE size;
