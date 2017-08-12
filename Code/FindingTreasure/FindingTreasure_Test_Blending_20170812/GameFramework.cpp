@@ -8,6 +8,9 @@
 #include "FBXAnim.h"
 #include "GameFramework.h"
 #include "IOCP_Client.h"
+#include "FindingTreasure_Test_Blending.h"
+
+int charac;
 
 //static bool bIsPushed = false;
 //static bool bIsDigOrInstall = false;
@@ -35,6 +38,9 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszBuffer, _T("TreasureHunter ("));
 	m_pPlayersMgrInform = NULL;
 	m_pUI = NULL;
+	m_PastXMove = 0;
+	m_PastZMove = 0;
+	m_PastCameraYRotate = 0;
 
 	//current_time = 0.0f;
 }
@@ -212,6 +218,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case VK_ESCAPE:
 			::PostQuitMessage(0);
 			break;
+		case 'q': case 'Q': case 'e': case'E':
+			SetPacket(CAMERAMOVE, 0, 0, 0);
+			break;
 		default:
 			break;
 		}
@@ -369,7 +378,22 @@ void CGameFramework::BuildObjects()
 	m_pLightShaftRenderer->SetLightSource(m_pLightSource);
 	m_pLightShaftRenderer->SetLightShaftProjMesh(CMeshResource::pTexturedRectMesh);
 	//플레이어 객체를 생성한다.
+	/*
+	m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;
 
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
+
+	for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; ++i)
+	{
+		if (waitingplayer[i].connect)
+		{
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_bIsSlotActive=true;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = waitingplayer[i].team;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_PlayerType = (PLAYER_TYPE)waitingplayer[i].charac;
+		}
+	}*/
 	m_pUI = new CGameUI();
 	m_pUI->BuildUIObjects(m_pd3dDevice);
 	
@@ -393,6 +417,7 @@ void CGameFramework::BuildObjects()
 		m_pScene->SetPlayersMgrInform(m_pPlayersMgrInform);
 		m_pScene->BuildObjects(m_pd3dDevice);
 	}
+	WaitingPacket(GAMESET);
 }
 
 //void CGameFramework::SetPlayersToScene(CScene *pScene, CPlayer **ppPlayers)
@@ -420,6 +445,7 @@ void CGameFramework::ProcessInput()
 	CPlayer *pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
 	if (m_pPlayersMgrInform->m_iMyPlayerID == -1)
 		return;
+	static bool voxing = false;
 	if (m_pPlayersMgrInform->GetMyPlayer()->m_bIsActive)
 	{
 		if (GetKeyboardState(pKeyBuffer))
@@ -443,12 +469,18 @@ void CGameFramework::ProcessInput()
 				if (pKeyBuffer[VK_RIGHT] & 0xF0) {
 					pMyPlayer->m_d3dxvMoveDir.x += 2.0f;
 				}
+				if (m_PastXMove != (int)pMyPlayer->m_d3dxvMoveDir.x || m_PastZMove != (int)pMyPlayer->m_d3dxvMoveDir.z)
+				{
+					m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
+					m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
+					SetPacket(POSMOVE, m_PastXMove, m_PastZMove, 0);
+				}
 			}
 			else
 			{
 				if (pKeyBuffer['S'] & 0xF0 /*&& !m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed*/ && !pMyPlayer->m_VoxelPocket[pMyPlayer->m_iVoxelPocketSlotIdx].m_bIsActive) {
 					pMyPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
-					pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, fTimeElapsed);
+					pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
 					pMyPlayer->m_bIsDigOrInstall = true;
 					switch (m_pPlayersMgrInform->GetMyPlayer()->m_PlayerType)
 					{
@@ -458,11 +490,16 @@ void CGameFramework::ProcessInput()
 					default:
 						break;
 					}
+					if (!voxing)
+					{
+						voxing = true;
+						SetPacket(VOXELDEL, 0, 0, 0);
+					}
 				}
 				else if (pKeyBuffer['D'] & 0xF0 /*&& !m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed*/ && pMyPlayer->m_VoxelPocket[pMyPlayer->m_iVoxelPocketSlotIdx].m_bIsActive)
 				{
 					pMyPlayer->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
-					pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, true, fTimeElapsed);
+					pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, true, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
 					pMyPlayer->m_bIsDigOrInstall = true;
 					switch (m_pPlayersMgrInform->GetMyPlayer()->m_PlayerType)
 					{
@@ -471,6 +508,11 @@ void CGameFramework::ProcessInput()
 						break;
 					default:
 						break;
+					}
+					if (!voxing)
+					{
+						voxing = true;
+						SetPacket(VOXELINS, 0, 0, 0);
 					}
 				}
 				else
@@ -485,6 +527,7 @@ void CGameFramework::ProcessInput()
 					}
 					if (pKeyBuffer[VK_SPACE] & 0xF0) {
 						pMyPlayer->m_d3dxvMoveDir.y = 5.0f;
+						SetPacket(JUMP, 0, 0, 0);
 					}
 					if (pKeyBuffer[VK_UP] & 0xF0) {
 						pMyPlayer->m_d3dxvMoveDir.z += 2.0f;
@@ -498,9 +541,22 @@ void CGameFramework::ProcessInput()
 					if (pKeyBuffer[VK_RIGHT] & 0xF0) {
 						pMyPlayer->m_d3dxvMoveDir.x += 2.0f;
 					}
-					pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
-					pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed);
+					if (m_PastXMove != (int)pMyPlayer->m_d3dxvMoveDir.x || m_PastZMove != (int)pMyPlayer->m_d3dxvMoveDir.z)
+					{
+						m_PastXMove = (int)pMyPlayer->m_d3dxvMoveDir.x;
+						m_PastZMove = (int)pMyPlayer->m_d3dxvMoveDir.z;
+						SetPacket(POSMOVE, m_PastXMove, m_PastZMove, 0);
+					}
+
+					pMyPlayer->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID);
+					pMyPlayer->InstallVoxel(m_pScene->m_pVoxelTerrain, false, fTimeElapsed, m_pPlayersMgrInform->m_iMyPlayerID); 
 					pMyPlayer->m_bIsDigOrInstall = false;
+					
+					if (voxing && (!(pKeyBuffer['S'] & 0xF0) && !(pKeyBuffer['D'] & 0xF0)))
+					{
+						voxing = false;
+						SetPacket(VOXELCANCLE, 0, 0, 0);
+					}
 				}
 			}
 			
@@ -508,10 +564,23 @@ void CGameFramework::ProcessInput()
 			
 			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['Q'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['E'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+			int currentCameraYRotate = 0;
+			if (pKeyBuffer['Q'] & 0xF0) {
+				pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = -1;
+			}
+			if (pKeyBuffer['E'] & 0xF0) {
+				pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraYRotate = 1;
+			}
 			if (pKeyBuffer['W'] & 0xF0)			pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
 			pMyPlayer->ProofreadLocalAxis();
+
+			if (currentCameraYRotate != m_PastCameraYRotate)
+			{
+				SetPacket(CAMERAMOVE, 0, 0, currentCameraYRotate);
+				m_PastCameraYRotate = currentCameraYRotate;
+			}
 		}
 		pMyPlayer->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);
 		pMyPlayer->m_CameraOperator.OriginalZoomState();
@@ -535,7 +604,35 @@ void CGameFramework::FrameAdvance()
 
 	ProcessInput();
 
-	
+	for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; ++i)
+	{
+		if (i == m_pPlayersMgrInform->m_iMyPlayerID)
+			continue;
+		if (!m_pPlayersMgrInform->m_ppPlayers[i])
+			continue;
+		if (!m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
+			continue;
+		if (m_pPlayersMgrInform->m_ppPlayers[i]->m_Insvoxel)
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			m_pPlayersMgrInform->m_ppPlayers[i]->InstallVoxel(m_pScene->m_pVoxelTerrain, true, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = true;
+			m_pPlayersMgrInform->m_ppPlayers[i]->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+		}
+		else if (m_pPlayersMgrInform->m_ppPlayers[i]->m_Delvoxel)
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.ZoomInAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			m_pPlayersMgrInform->m_ppPlayers[i]->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, true, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = true;
+			m_pPlayersMgrInform->m_ppPlayers[i]->SetFBXAnimForType(PIRATE_ANIM_TYPE_DIG);
+		}
+		else
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->InstallVoxel(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(), i);
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = false;
+		}
+	}
 
 	float fClearColor[4] = { 0.1f, 0.2f, 0.25f, 1.0f };
 	m_pd3dDeviceContext->ClearRenderTargetView(m_pd3dRenderTargetView, fClearColor);

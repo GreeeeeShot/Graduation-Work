@@ -872,6 +872,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 		{
 			D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
 			d3dxvVelocityXZ *= pPlayer->m_fMaxRunVelM;
+			
 		}
 
 		if (bIsSwamp && D3DXVec2Length(&d3dxvVelocityXZ) > PLAYER_MAX_VELOCITY_MAGNITUDE_IN_SWAMP)
@@ -879,11 +880,10 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 			D3DXVec2Normalize(&d3dxvVelocityXZ, &d3dxvVelocityXZ);
 			d3dxvVelocityXZ *= PLAYER_MAX_VELOCITY_MAGNITUDE_IN_SWAMP;
 		}
-
+		
 		// 최종 속도 생성
 		d3dxvPostV.x = d3dxvVelocityXZ.x;
 		d3dxvPostV.z = d3dxvVelocityXZ.y;
-
 		// 이동량 갱신
 		d3dxvMovingDir = ((d3dxvPostV + pPlayer->m_d3dxvVelocity) * fTimeElapsed) / 2.0f;
 
@@ -932,8 +932,27 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 	{
 		if (m_pPlayersMgrInform->m_ppPlayers[i])
 		{
+			
+
 			if (m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
 			{
+				float mx = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.x - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().x;
+				float my = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.y - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y;
+				float mz = m_pPlayersMgrInform->m_ppPlayers[i]->m_SyncPosition.z - m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().z;
+
+				m_pPlayersMgrInform->m_ppPlayers[i]->SetPosition(
+					D3DXVECTOR3(m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().x + (mx*fTimeElapsed),
+						m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y + (my*fTimeElapsed),
+						m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().z + (mz*fTimeElapsed)));
+				
+				if (i != m_pPlayersMgrInform->m_iMyPlayerID)
+				{
+					m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.x = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveX;
+					m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.z = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveZ;
+					//printf("카메라돌아가냐? %d \n", m_pPlayersMgrInform->m_ppPlayers[0]->m_CameraY);
+					m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC*m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraY, fTimeElapsed);
+				}
+
 				m_pPlayersMgrInform->m_ppPlayers[i]->RotateMoveDir(fTimeElapsed);
 				m_pPlayersMgrInform->m_ppPlayers[i]->Animate(pd3dDeviceContext, m_fAccumulatedTime * 33);
 
@@ -961,7 +980,6 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 								m_pLights->m_pLights[5].m_bEnable = 1.0f;
 								m_pLights->m_pLights[5].m_d3dxvPosition = m_pPlayersMgrInform->m_ppPlayers[j]->GetPosition() + (m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition() - m_pPlayersMgrInform->m_ppPlayers[j]->GetPosition()) / 2.0f;
 								m_pLights->m_pLights[5].m_d3dxvPosition.y += 0.4f;
-								printf("%f %f %f \n", m_pLights->m_pLights[5].m_d3dxvPosition.x, m_pLights->m_pLights[5].m_d3dxvPosition.y, m_pLights->m_pLights[5].m_d3dxvPosition.z);
 							}
 							CPhysicalCollision::ImpurseBasedCollisionResolution(m_pPlayersMgrInform->m_ppPlayers[i], m_pPlayersMgrInform->m_ppPlayers[j]);
 							//printf("m_fRange : %f \n", m_pLights->m_pLights[5].m_fRange);
@@ -970,14 +988,14 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 				}
 
 				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
-				MoveObjectUnderPhysicalEnvironment(m_pPlayersMgrInform->m_ppPlayers[i], fTimeElapsed);
-
+		MoveObjectUnderPhysicalEnvironment(m_pPlayersMgrInform->m_ppPlayers[i], fTimeElapsed);
+				/*
 				if (m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition().y < -1.0f)
 				{
 					printf("플레이어가 물에 빠져버렸습니다!");
 					m_pPlayersMgrInform->m_ppPlayers[i]->MissPlayer();
 					m_RespawnManager.RegisterRespawnManager(m_pPlayersMgrInform->m_ppPlayers[i], true);
-				}
+				}*/
 			}
 			else continue;
 		}

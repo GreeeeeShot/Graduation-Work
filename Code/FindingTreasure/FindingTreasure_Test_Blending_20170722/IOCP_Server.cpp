@@ -35,6 +35,7 @@ struct CLIENT {
 	float zMove;
 	int cameraYrotate;
 	bool VoxDelOrIns;
+	bool ready;
 
 	high_resolution_clock::time_point last_move_time;
 	bool is_active;
@@ -327,6 +328,65 @@ void SendDeadPacket(int client, int object)
 	SendPacket(client, &packet);
 }
 
+void SendTeamPacket(int client, int team)
+{
+	sc_packet_initteam packet;
+	packet.team = team;
+	packet.size = sizeof(packet);
+	packet.type = SC_INIT_TEAM;
+
+	SendPacket(client, &packet);
+}
+
+void SendCharaChangePacket(int client, int object)
+{
+	sc_packet_waiting packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_CHARAC_CHANGE;
+
+	SendPacket(client, &packet);
+}
+
+void SendTeamChangePacket(int client, int object)
+{
+	sc_packet_waiting packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_TEAM_CHANGE;
+
+	SendPacket(client, &packet);
+}
+
+void SendReadyPacket(int client, int object)
+{
+	sc_packet_waiting packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_READY;
+
+	SendPacket(client, &packet);
+}
+
+void SendExitPacket(int client, int object)
+{
+	sc_packet_waiting packet;
+	packet.id = object;
+	packet.size = sizeof(packet);
+	packet.type = SC_EXIT;
+
+	SendPacket(client, &packet);
+}
+
+void SendStartPacket(int client)
+{
+	sc_packet_waiting packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_GAME_START;
+
+	SendPacket(client, &packet);
+}
+
 
 void DisconnectClient(int ci)
 {
@@ -403,6 +463,43 @@ void ProcessPacket(int ci, unsigned char packet[])
 				continue;
 			if (i != ci)
 				SendCancleVoxel(i, ci);
+		}
+		break;
+	case CS_CHARAC_CHANGE:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendCharaChangePacket(i, ci);
+		}
+		break;
+	case CS_TEAM_CHANGE:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendTeamChangePacket(i, ci);
+		}
+		break;
+	case CS_READY:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendReadyPacket(i, ci);
+		}
+		g_clients[ci].ready = (g_clients[ci].ready + 1) % 2;
+		break;
+	case CS_EXIT:
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendExitPacket(i, ci);
 		}
 		break;
 	default:
@@ -691,6 +788,38 @@ void Time_Thread()
 				over->event_type = SEND_SYNC;
 				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
 			}
+			if (!GameStart)
+			{
+				for (int i = 0; i < MAX_USER; ++i)
+				{
+					if (i == 7 && ((g_clients[i].connect&&g_clients[i].ready) || !g_clients[i].connect))
+					{
+						for (int i = 0; i < MAX_USER; ++i)
+						{
+							if (!g_clients[i].connect)
+								continue;
+							SendStartPacket(i);
+							MovePlayer(i);
+
+							Timer_Event event = { i, high_resolution_clock::now() + 500ms, SYNC_TIME };
+							tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
+							for (int j = 0; j < MAX_USER; ++j)
+							{
+								if (g_clients[j].connect == true)
+									SendRespawnPacket(j, i);
+
+							}
+						}
+						GameStart = true;
+					}
+					if (!g_clients[i].connect)
+						continue;
+					if (!g_clients[i].ready)
+						break;
+					
+				}
+			}
 		}
 	}
 }
@@ -752,34 +881,27 @@ void Accept_Thread()
 		g_clients[new_id].zMove = 0;
 		g_clients[new_id].cameraYrotate = 0;
 		g_clients[new_id].is_active = true;
+		g_clients[new_id].ready = false;
 		g_clients[new_id].last_move_time = high_resolution_clock::now();
 		g_clients[new_id].player.SetBelongType(red < blue ?  BELONG_TYPE_RED : BELONG_TYPE_BLUE);
 		g_clients[new_id].player.m_BelongType == BELONG_TYPE_RED ? red++ : blue++;
+		
+		SendTeamPacket(new_id, g_clients[new_id].team);
+
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)
 				if (i != new_id) {
 					SendPutPlayerPacket(new_id, i);
 					SendPutPlayerPacket(i, new_id);
-					printf("누구 들어오냐?: %d -> %d \n", i, new_id);
 				}
 		}
 
 		//SendInitPacket(new_id);
 		//SendPutPlayerPacket(new_id, new_id);
 
-		//MovePlayer(new_id);
-
-		//Timer_Event event = { new_id, high_resolution_clock::now() + 500ms, SYNC_TIME };
-		//tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-		/*
-		for (int i = 0; i < MAX_USER; ++i)
-		{
-			if (g_clients[i].connect == true)
-			SendRespawnPacket(i, new_id);
-				
-		}*/
-
+		
+		
 		std::cout << "new client accept: " << new_id << std::endl;
 	}
 }

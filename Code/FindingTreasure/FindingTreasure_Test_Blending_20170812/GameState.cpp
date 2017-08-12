@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GameState.h"
 #include "GameManager.h"
+#include "FindingTreasure_Test_Blending.h"
+#include "IOCP_Client.h"
 
 HBITMAP CGameState::m_hMemBitmap = NULL;
 HBITMAP CGameState::m_hIntroBackBitmap = NULL;
@@ -185,9 +187,11 @@ void CIntroState::Update(void)
 		m_iAlpha = 255 * (1.0f - (fTimeElapsed - 4.0f) / 2.0f) + 0 * (fTimeElapsed - 4.0f) / 2.0f;
 		//printf("m_iAlpha : %d \n", m_iAlpha);
 	}
+	
 	else if (fTimeElapsed > 4.0f)
 	{
 		CGameManager::GetInstance()->ChangeGameState(new CTempWaitingRoomState());//new CPlayGameState());
+
 	}
 
 	InvalidateRgn(m_hwnd, NULL, FALSE);
@@ -254,19 +258,49 @@ LRESULT CALLBACK CIntroState::OnProcessingWindowMessage(HWND hWnd, UINT nMessage
 
 CTempWaitingRoomState::CTempWaitingRoomState() 
 {
-	m_pWaitingRoomInformDesc = NULL;
+	m_pWaitingRoomInformDesc = NULL; ;
+
+	
 }
 
 CTempWaitingRoomState::~CTempWaitingRoomState() {}
 
-void CTempWaitingRoomState::Init(void) 
+void CTempWaitingRoomState::Init()
 {
 	m_pWaitingRoomInformDesc = new SWaitingRoomInformDesc();
 
+	m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;
+
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
+	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
+
+	m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
+	
+	for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
+	{
+		if (!waitingplayer[i].connect)
+			continue;
+		if (waitingplayer[i].id > 7 || waitingplayer[i].id < 0)
+			continue;
+		else
+		{
+			printf("waitingplayer[i].id : %d\n", waitingplayer[i].id);
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_bIsSlotActive = true;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_PlayerType = (PLAYER_TYPE)waitingplayer[i].charac;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = waitingplayer[i].team;
+		}
+		
+	}
+
+	CGameState* pTempGameState = new CPlayGameState();
+	pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+	CGameManager::GetInstance()->ChangeGameState(pTempGameState);								// 게임 플레이 상태로 바꾼다.
+	/*
 	for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)
 	{
 		m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = false;
-	}
+	}*/
 }
 void CTempWaitingRoomState::Destroy(void) {}
 void CTempWaitingRoomState::Update(void) 

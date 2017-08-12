@@ -33,7 +33,7 @@ public:
 
 	static void CreateAPIBitmapResource(HINSTANCE hInstance, HWND hwnd);
 
-	virtual void Init(void) {};
+	virtual void Init() {};
 	virtual void Destroy(void) {};
 	virtual void Update(void) {};
 	virtual void Render(void) {};
@@ -105,7 +105,7 @@ public :
 	CTempWaitingRoomState();
 	~CTempWaitingRoomState();
 
-	void Init(void);
+	void Init();
 	void Destroy(void);
 	void Update(void);
 	void Render(void);

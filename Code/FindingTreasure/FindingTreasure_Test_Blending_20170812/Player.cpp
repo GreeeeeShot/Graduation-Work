@@ -146,6 +146,13 @@ CPlayer::CPlayer()
 	m_pLiftedPlayer = NULL;
 	m_bIsDigOrInstall = false;
 	move = false;
+
+	m_MoveX = 0;
+	m_MoveZ = 0;
+	m_CameraY = 0;
+	m_SyncPosition = D3DXVECTOR3(0.f, 0.f, 0.f);
+	m_Delvoxel = false;
+	m_Insvoxel = false;
 }
 
 CPlayer::~CPlayer()
@@ -233,13 +240,13 @@ void CPlayer::InitCameraOperator(void)
 //	m_CameraOperator.MoveCameraOperator(0.01f * d3dxvDirSum);
 //}
 
-void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed)
+void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed, int id)
 {
 #define DIG_COMPLETE_TIME	0.4f
 
-	static float fDigTime = 0.0f;
-	static int iLinearIdx = -1;
-	static int i = 0;
+	static float fDigTime[8] = { 0.0f, };
+	static int iLinearIdx[8] = { -1,-1,-1,-1,-1,-1,-1,-1 };
+	static int i[8] = { 0, };
 
 	static D3DXVECTOR3 d3dxvSearchDir[2] =
 	{
@@ -249,9 +256,9 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 
 	if (!bIsDigging)
 	{
-		fDigTime = 0.0f;
-		iLinearIdx = -1;
-		i = 0;
+		fDigTime[id] = 0.0f;
+		iLinearIdx[id] = -1;
+		i[id] = 0;
 		if (m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel && !m_VoxelPocket[m_iVoxelPocketSlotIdx].m_bIsActive) {
 			m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pStandardMaterial);
 			m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel = NULL;
@@ -279,9 +286,9 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 
 		CVoxel *pCollidedVoxel;
 		D3DXVECTOR3 d3dxvInspectionIdx;			// 콜리젼 박스에 설치될 인덱스 좌표
-		//D3DXVECTOR3 d3dxvInstallPos;			// 복셀이 설치될 위치 좌표
+												//D3DXVECTOR3 d3dxvInstallPos;			// 복셀이 설치될 위치 좌표
 
-		// 탐색 지점을 인덱스화 한다.
+												// 탐색 지점을 인덱스화 한다.
 		D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvSearchPoint, &d3dxmtxFromPosToIdx);
 
 		d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
@@ -291,18 +298,18 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 		//if ((int)d3dxvColLayerRow.y == iPlayerIdxY - 1)
 		//{
 		printf("candidate!\n");
-		for (i = 0; i < 2; i++)
+		for (i[id] = 0; i[id] < 2; i[id]++)
 		{
-			d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i].x;
-			d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i].y;
-			d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i].z;
+			d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i[id]].x;
+			d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i[id]].y;
+			d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i[id]].z;
 
 			if ((0 <= d3dxvInspectionIdx.x && d3dxvInspectionIdx.x < pVoxelTerrain->m_iMaxCol)
 				&& (0 <= d3dxvInspectionIdx.y && d3dxvInspectionIdx.y < pVoxelTerrain->m_iMaxLayer)
 				&& (0 <= d3dxvInspectionIdx.z && d3dxvInspectionIdx.z < pVoxelTerrain->m_iMaxRow))
 			{
 				// printf("d3dxvColLayerRow : %f %f %f \n", d3dxvColLayerRow.x, d3dxvColLayerRow.y, d3dxvColLayerRow.z);
-				if ((pCollidedVoxel = pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx =
+				if ((pCollidedVoxel = pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx[id] =
 					(int)((d3dxvInspectionIdx.y) * pVoxelTerrain->m_iLayerStride
 						+ (d3dxvInspectionIdx.z) * pVoxelTerrain->m_iRowStride
 						+ (d3dxvInspectionIdx.x))]) != NULL)
@@ -319,6 +326,7 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 							printf("iLinearIdx : %d ", iLinearIdx);
 							// pCollidedVoxel->SetActive(false);
 							printf("delete!\n");
+
 							break;
 						}
 					}
@@ -326,15 +334,17 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 					{
 						// 해당 복셀을 소유한다.
 						m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel = pCollidedVoxel;
+
 						printf("iLinearIdx : %d ", iLinearIdx);
 						// pCollidedVoxel->SetActive(false);
 						printf("delete!\n");
+
 						break;
 					}
 				}
 			}
 		}
-		
+
 		//}
 		//else return;
 	}
@@ -345,30 +355,30 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 
 		D3DXVec3Normalize(&d3dxvSearchPoint, &GetLook());
 		d3dxvSearchPoint *= 0.65f;
-		d3dxvSearchPoint += (GetPosition() + d3dxvSearchDir[i]);
+		d3dxvSearchPoint += (GetPosition() + d3dxvSearchDir[i[id]]);
 		d3dxvSearchPoint.y -= 0.655f;
 
 		if (HavingVoxelAABB.m_d3dxvMin.x < d3dxvSearchPoint.x && d3dxvSearchPoint.x < HavingVoxelAABB.m_d3dxvMax.x
 			&& HavingVoxelAABB.m_d3dxvMin.y < d3dxvSearchPoint.y && d3dxvSearchPoint.y < HavingVoxelAABB.m_d3dxvMax.y
 			&& HavingVoxelAABB.m_d3dxvMin.z < d3dxvSearchPoint.z && d3dxvSearchPoint.z < HavingVoxelAABB.m_d3dxvMax.z)
 		{
-			fDigTime += fTimeElapsed;
-			if (fDigTime >= DIG_COMPLETE_TIME)
+			fDigTime[id] += fTimeElapsed;
+			if (fDigTime[id] >= DIG_COMPLETE_TIME)
 			{
 				printf("delete iLinearIdx : %d ", iLinearIdx);
-				pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx] = NULL;
+				pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx[id]] = NULL;
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pStandardMaterial);
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetVisible(false);
-				fDigTime = 0.0f;
-				iLinearIdx = -1;
-				i = 0;
+				fDigTime[id] = 0.0f;
+				iLinearIdx[id] = -1;
+				i[id] = 0;
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_bIsActive = true;
 			}
-			else if (fDigTime >= DIG_COMPLETE_TIME * 0.66f)
+			else if (fDigTime[id] >= DIG_COMPLETE_TIME * 0.66f)
 			{
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pHalfMoreTransMaterial);
 			}
-			else if (fDigTime >= DIG_COMPLETE_TIME * 0.33f)
+			else if (fDigTime[id] >= DIG_COMPLETE_TIME * 0.33f)
 			{
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pHalfLessTransMaterial);
 			}
@@ -376,13 +386,16 @@ void CPlayer::DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, f
 	}
 }
 
-void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed)
+void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed, int id)
 {
 #define INSTALL_COMPLETE_TIME	0.4f
 
-	static float fInstallTime = 0.0f;
-	static int iLinearIdx = -1;
-	static int i = 0;
+	static float fInstallTime[8] = { 0.0f, };
+	static int iLinearIdx[8] = { -1,-1,-1,-1,-1,-1,-1,-1 };
+	static int i[8] = { 0, };
+
+	if (!m_VoxelPocket[m_iVoxelPocketSlotIdx].m_bIsActive)
+		return;
 
 	static D3DXVECTOR3 d3dxvSearchDir[2] =
 	{
@@ -392,9 +405,9 @@ void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, flo
 
 	if (!bIsInstalling)
 	{
-		fInstallTime = 0.0f;
-		iLinearIdx = -1;
-		i = 0;
+		fInstallTime[id] = 0.0f;
+		iLinearIdx[id] = -1;
+		i[id] = 0;
 		if (m_VoxelPocket[m_iVoxelPocketSlotIdx].m_bIsActive) {
 			m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetVisible(false);
 		}
@@ -429,8 +442,8 @@ void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, flo
 		D3DXVECTOR3 d3dxvInspectionIdx;			// 콜리젼 박스에 설치될 인덱스 좌표
 		D3DXVECTOR3 d3dxvInstallPos;			// 복셀이 설치될 위치 좌표
 
-		// 지면에 닿아있는 경우, 
-		// 탐색 지점을 인덱스화 한다.
+												// 지면에 닿아있는 경우, 
+												// 탐색 지점을 인덱스화 한다.
 		D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvSearchPoint, &d3dxmtxFromPosToIdx);
 
 		d3dxvColLayerRow.x = round(d3dxvColLayerRow.x);
@@ -440,23 +453,23 @@ void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, flo
 		//if ((int)d3dxvColLayerRow.y == iPlayerIdxY - 1)
 		//{
 		printf("candidate!\n");
-		for (i = 0; i < 2; i++)
+		for (i[id] = 0; i[id] < 2; i[id]++)
 		{
-			d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i].x;
-			d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i].y;
-			d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i].z;
+			d3dxvInspectionIdx.x = d3dxvColLayerRow.x + d3dxvSearchDir[i[id]].x;
+			d3dxvInspectionIdx.y = d3dxvColLayerRow.y + d3dxvSearchDir[i[id]].y;
+			d3dxvInspectionIdx.z = d3dxvColLayerRow.z + d3dxvSearchDir[i[id]].z;
 
 			if ((0 <= d3dxvInspectionIdx.x && d3dxvInspectionIdx.x < pVoxelTerrain->m_iMaxCol)
 				&& (0 <= d3dxvInspectionIdx.y && d3dxvInspectionIdx.y < pVoxelTerrain->m_iMaxLayer)
 				&& (0 <= d3dxvInspectionIdx.z && d3dxvInspectionIdx.z < pVoxelTerrain->m_iMaxRow))
 			{
 				// printf("d3dxvColLayerRow : %f %f %f \n", d3dxvColLayerRow.x, d3dxvColLayerRow.y, d3dxvColLayerRow.z);
-				if (!pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx =
+				if (!pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx[id] =
 					(int)((d3dxvInspectionIdx.y) * pVoxelTerrain->m_iLayerStride
 						+ (d3dxvInspectionIdx.z) * pVoxelTerrain->m_iRowStride
 						+ (d3dxvInspectionIdx.x))])
 				{
-					if (0 <= d3dxvInspectionIdx.y + 1&& d3dxvInspectionIdx.y + 1 < pVoxelTerrain->m_iMaxLayer)
+					if (0 <= d3dxvInspectionIdx.y + 1 && d3dxvInspectionIdx.y + 1 < pVoxelTerrain->m_iMaxLayer)
 					{
 						if (!pVoxelTerrain->m_ppVoxelObjectsForCollision[
 							(int)((d3dxvInspectionIdx.y + 1) * pVoxelTerrain->m_iLayerStride
@@ -465,11 +478,25 @@ void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, flo
 						{
 							// 해당 위치에 가지고 있는 복셀을 설치한다.
 							D3DXMATRIX d3dxmtxFromIdxToPos;
+							/*
+							D3DXVECTOR4 d3dxvColLayerRow1;
+							int pastindex=0;
 
+							D3DXVec3Transform(&d3dxvColLayerRow1, &m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->GetPosition(), &pVoxelTerrain->m_d3dxmtxFromIdxToPos);
+
+							d3dxvColLayerRow1.x = round(d3dxvColLayerRow1.x);
+							d3dxvColLayerRow1.y = round(d3dxvColLayerRow1.y);
+							d3dxvColLayerRow1.z = round(d3dxvColLayerRow1.z);
+
+							pastindex = (int)((d3dxvColLayerRow1.y) * pVoxelTerrain->m_iLayerStride
+							+ (d3dxvColLayerRow1.z) * pVoxelTerrain->m_iRowStride
+							+ (d3dxvColLayerRow1.x)) - 80;
+							*/
 							D3DXVec3Transform(&d3dxvColLayerRow, &d3dxvInspectionIdx, &pVoxelTerrain->m_d3dxmtxFromIdxToPos);
 							m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetPosition(D3DXVECTOR3(d3dxvColLayerRow.x, d3dxvColLayerRow.y, d3dxvColLayerRow.z));
 							m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetVisible(true);
 							m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pHalfMoreTransMaterial);
+
 							printf("Installing \n");
 							printf(" Install IDX : %d", iLinearIdx);
 							break;
@@ -499,29 +526,29 @@ void CPlayer::InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, flo
 
 		D3DXVec3Normalize(&d3dxvSearchPoint, &GetLook());
 		d3dxvSearchPoint *= 0.65f;
-		d3dxvSearchPoint += ( GetPosition() + d3dxvSearchDir[i]);
+		d3dxvSearchPoint += (GetPosition() + d3dxvSearchDir[i[id]]);
 		d3dxvSearchPoint.y -= 0.655f;
 
 		if (HavingVoxelAABB.m_d3dxvMin.x < d3dxvSearchPoint.x && d3dxvSearchPoint.x < HavingVoxelAABB.m_d3dxvMax.x
 			&& HavingVoxelAABB.m_d3dxvMin.y < d3dxvSearchPoint.y && d3dxvSearchPoint.y < HavingVoxelAABB.m_d3dxvMax.y
 			&& HavingVoxelAABB.m_d3dxvMin.z < d3dxvSearchPoint.z && d3dxvSearchPoint.z < HavingVoxelAABB.m_d3dxvMax.z)
 		{
-			fInstallTime += fTimeElapsed;
-			if (fInstallTime >= INSTALL_COMPLETE_TIME)
+			fInstallTime[id] += fTimeElapsed;
+			if (fInstallTime[id] >= INSTALL_COMPLETE_TIME)
 			{
 				printf("Insert iLinearIdx : %d ", iLinearIdx);
-				
+
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pStandardMaterial);
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetVisible(true);
-				pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx] = m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel;
+				pVoxelTerrain->m_ppVoxelObjectsForCollision[iLinearIdx[id]] = m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel;
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel = NULL;
-				fInstallTime = 0.0f;
-				iLinearIdx = -1;
-				i = 0;
+				fInstallTime[id] = 0.0f;
+				iLinearIdx[id] = -1;
+				i[id] = 0;
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_bIsActive = false;
-				
+
 			}
-			else if (fInstallTime >= INSTALL_COMPLETE_TIME * 0.5f)
+			else if (fInstallTime[id] >= INSTALL_COMPLETE_TIME * 0.5f)
 			{
 				m_VoxelPocket[m_iVoxelPocketSlotIdx].m_pVoxel->SetMaterial(CMaterialResource::pHalfLessTransMaterial);
 			}

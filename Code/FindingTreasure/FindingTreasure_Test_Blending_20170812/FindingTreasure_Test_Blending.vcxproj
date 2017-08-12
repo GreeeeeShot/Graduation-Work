@@ -244,9 +244,18 @@
     <Image Include="bitmap1.bmp" />
     <Image Include="bitmap2.bmp" />
     <Image Include="bmp00001.bmp" />
+    <Image Include="character1.bmp" />
+    <Image Include="character2.bmp" />
+    <Image Include="character3.bmp" />
     <Image Include="FindingTreasure_Test_Blending.ico" />
     <Image Include="grass.jpg" />
+    <Image Include="in_the_room.bmp" />
+    <Image Include="ready.bmp" />
     <Image Include="small.ico" />
+    <Image Include="waiting_room_arrow.bmp" />
+    <Image Include="waiting_room_base.bmp" />
+    <Image Include="waiting_room_blueteam.bmp" />
+    <Image Include="waiting_room_redteam.bmp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="DiffusedPS.fx">

@@ -78,6 +78,7 @@ void CRespawnManager::UpdateRespawnManager(float fTimeElapsed)
 				case BELONG_TYPE_BLUE:
 					m_RespawnSlot[i].pRegisteredPlayer->SetPosition(m_d3dxvBlueRespawnPoints[m_iBlueRespawnPointIdx]);
 					m_iBlueRespawnPointIdx = (m_iBlueRespawnPointIdx + 1) % 4;
+					m_RespawnSlot[i].pRegisteredPlayer->m_d3dxvVelocity.y = 0;
 					break;
 				case BELONG_TYPE_RED:
 					m_RespawnSlot[i].pRegisteredPlayer->SetPosition(m_d3dxvRedRespawnPoints[m_iRedRespawnPointIdx]);

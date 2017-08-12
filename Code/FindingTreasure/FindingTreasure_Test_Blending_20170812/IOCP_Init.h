@@ -35,24 +35,61 @@ struct Client_Data
 
 #define MAX_STR_SIZE  100
 
+#define CS_POSMOVE 1
+#define CS_CAMERAMOVE 2
+#define CS_JUMP 3
+#define CS_INSVOX 4
+#define CS_DELVOX 5
+#define CS_CANCLEVOX 6
+#define CS_CHARAC_CHANGE 7
+#define CS_READY 8
+#define CS_EXIT 9
+#define CS_TEAM_CHANGE 10
+#define CS_GAMEREADY	11
+/*
 #define CS_JUMP  1
 #define CS_UP    2
 #define CS_DOWN  3
 #define CS_LEFT  4
 #define CS_RIGHT 5
-#define CS_CHAT	 6
+#define CS_XSTOP 6
+#define CS_ZSTOP 7
+#define CS_CHAT	 8
+*/
 
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
-#define SC_CHAT		4
-#define SC_INIT			 5
+#define SC_CHAT			 4
+#define SC_SETPOS		 5
+#define SC_INIT			 6
+#define SC_SYNC			 7
+#define SC_DEAD			 8
+#define SC_RESPAWN		 9
+#define SC_DELVOX		 10
+#define SC_INSVOX		 11
+#define SC_CANCLEVOX	 12
+#define SC_JUMP			 13
+#define SC_CHARAC_CHANGE 14
+#define SC_READY		 15
+#define SC_EXIT			 16
+#define SC_TEAM_CHANGE	 17
+#define SC_INIT_TEAM	 18
+#define SC_GAME_START	 19
 
 #pragma pack (push, 1)
 
 struct cs_packet_up {
 	BYTE size;
 	BYTE type;
+	CHAR Movex;
+	CHAR Movez;
+};
+
+struct cs_packet_camera {
+	BYTE size;
+	BYTE type;
+	CHAR Look;
 };
 
 struct cs_packet_chat {
@@ -61,30 +98,90 @@ struct cs_packet_chat {
 	WCHAR message[MAX_STR_SIZE];
 };
 
-struct sc_packet_insertvox {
-
+struct cs_packet_vox {
+	BYTE size;
+	BYTE type;
+	WORD pocket;
 };
 
-struct sc_packet_deletevox {
+struct cs_packet_waiting {
+	BYTE size;
+	BYTE type;
+};
 
+struct cs_packet_ready {
+	BYTE size;
+	BYTE type;
+};
+
+struct sc_packet_start {
+	BYTE size;
+	BYTE type;
+};
+
+
+struct sc_packet_waiting {
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
+struct sc_packet_voxcancle {
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
+struct sc_packet_jump {
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
+struct sc_packet_vox {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	WORD pocket;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
+};
+
+struct sc_packet_respawn {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
+};
+
+struct sc_packet_dead {
+	BYTE size;
+	BYTE type;
+	WORD id;
+};
+
+struct sc_packet_initteam {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	WORD team;
 };
 
 struct sc_packet_pos {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	CHAR x;
-	CHAR y;
-	CHAR z;
+	CHAR MoveX;
+	CHAR MoveZ;
+	CHAR CameraY;
 };
 
 struct sc_packet_put_player {
 	BYTE size;
 	BYTE type;
 	WORD id;
-	CHAR x;
-	CHAR y;
-	CHAR z;
+	BYTE team;
 };
 struct sc_packet_remove_player {
 	BYTE size;
@@ -104,8 +201,16 @@ struct sc_packet_init {
 	BYTE type;
 	WORD id;
 	BYTE team;
-	CHAR x,y,z;
-	//BYTE map;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
+};
+
+struct sc_packet_sync {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
 };
 
 #pragma pack (pop)

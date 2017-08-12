@@ -301,6 +301,33 @@
     <Image Include="bmp00001.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="character1.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="character2.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="character3.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="in_the_room.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="ready.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="waiting_room_arrow.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="waiting_room_base.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="waiting_room_blueteam.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="waiting_room_redteam.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="DiffusedPS.fx">

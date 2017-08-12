@@ -69,10 +69,12 @@ struct Client_Data
 #define SC_INSVOX		 11
 #define SC_CANCLEVOX	 12
 #define SC_JUMP			 13
-#define CS_CHARAC_CHANGE 14
-#define CS_READY		 15
-#define CS_EXIT			 16
-#define CS_TEAM_CHANGE	 17
+#define SC_CHARAC_CHANGE 14
+#define SC_READY		 15
+#define SC_EXIT			 16
+#define SC_TEAM_CHANGE	 17
+#define SC_INIT_TEAM	 18
+#define SC_GAME_START	 19
 
 #pragma pack (push, 1)
 
@@ -99,6 +101,23 @@ struct cs_packet_vox {
 	BYTE size;
 	BYTE type;
 	WORD pocket;
+};
+
+struct cs_packet_waiting {
+	BYTE size;
+	BYTE type;
+};
+
+struct sc_packet_start {
+	BYTE size;
+	BYTE type;
+};
+
+
+struct sc_packet_waiting {
+	BYTE size;
+	BYTE type;
+	WORD id;
 };
 
 struct sc_packet_voxcancle{
@@ -134,6 +153,12 @@ struct sc_packet_dead {
 	BYTE size;
 	BYTE type;
 	WORD id;
+};
+
+struct sc_packet_initteam {
+	BYTE size;
+	BYTE type;
+	WORD team;
 };
 
 struct sc_packet_pos {

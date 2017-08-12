@@ -19,8 +19,8 @@
 
 #define PLAYER_MAX_STAMINA							100.0f
 
-enum PLAYER_TYPE { PLAYER_TYPE_PIRATE, PLAYER_TYPE_SNOW_GIRL, PLAYER_TYPE_COW_GIRL };
-enum BELONG_TYPE { BELONG_TYPE_RED, BELONG_TYPE_BLUE, BELONG_TYPE_INDIVIDUAL };
+enum PLAYER_TYPE { PLAYER_TYPE_PIRATE, PLAYER_TYPE_COW_GIRL, PLAYER_TYPE_SNOW_GIRL };
+enum BELONG_TYPE {  BELONG_TYPE_BLUE, BELONG_TYPE_RED, BELONG_TYPE_INDIVIDUAL };
 enum MAP_TYPE { MAP_TYPE_JUNGLE, MAP_TYPE_ICE };
 
 enum SCENE_TYPE;
@@ -111,6 +111,12 @@ public:
 	CPlayer *m_pLiftedPlayer;
 	bool m_bIsDigOrInstall;
 	
+	int m_MoveX;
+	int m_MoveZ;
+	int m_CameraY;
+	D3DXVECTOR3 m_SyncPosition;
+	bool m_Delvoxel;
+	bool m_Insvoxel;
 	//ACTION m_action;
 
 public:
@@ -128,8 +134,8 @@ public:
 	void SetActive(bool bIsActive) { m_bIsActive = bIsActive; }
 	void SetBelongType(BELONG_TYPE eBelongType) { m_BelongType = eBelongType; }
 	void SetPlayerType(PLAYER_TYPE ePlayerType) { m_PlayerType = ePlayerType; }
-	void DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed);
-	void InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed);
+	void DigInVoxelTerrain(CVoxelTerrain *pVoxelTerrain, bool bIsDigging, float fTimeElapsed, int id);
+	void InstallVoxel(CVoxelTerrain *pVoxelTerrain, bool bIsInstalling, float fTimeElapsed, int id); 
 	void ChangeVoxelPocketSlotIdx(int iIdx);
 	void PushPlayer(CPlayer *pPlayer);
 	void LiftPlayer(CPlayer *pPlayer, CVoxelTerrain *pVoxelTerrain);			// 들어올리는 작업 (플레이어 관점)

@@ -18,13 +18,16 @@
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
-enum State { host_select, server_input, play };
-State state = host_select;
 bool host = 0;
 int strn = 0;
 char	server_ip[20] = "";
 char server_msg[20] = "Join";
 #define	WM_SOCKET				WM_USER + 1
+
+WaitingPlayer waitingplayer[7];
+
+bool ready;
+
 //CGameFramework gGameFramework;
 HWND ghWnd;
 HINSTANCE ghInst;                                // 현재 인스턴스입니다.
@@ -87,24 +90,43 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			// send the message to the window proc
 			DispatchMessage(&msg);
 		} // end if
-		if (state == play)
+		if (state == waitingroom)
 			break;
 	} // end while
-
+	std::thread* timer_thread = NULL;
 	std::thread* accept_thread = NULL;
-	std::thread* process_thread = NULL;
 	std::vector<std::thread *> worker_threads;
 	if (host)
 	{
 		Initialize_Server();
 		for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
 		accept_thread = new std::thread(Accept_Thread);
-		accept_thread = new std::thread(Process_Thread);
+		timer_thread = new std::thread(Time_Thread);
+		strcpy_s(server_ip, "127.0.0.1");
+		ClientMain(ghWnd, server_ip);
 	}
+	else
+		ClientMain(ghWnd, server_ip);
 
-	ClientMain(ghWnd); //?
+	while (1)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			// test if this is a quit
+			if (msg.message == WM_QUIT)
+				break;
 
-	// 기본 메시지 루프입니다.
+			// translate any accelerator keys
+			TranslateMessage(&msg);
+
+			// send the message to the window proc
+			DispatchMessage(&msg);
+		} // end if
+		if (state == play)
+			break;
+	} // end while
+
+	  // 기본 메시지 루프입니다.
 	while (1)
 	{
 		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -128,7 +150,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	delete CGameManager::GetInstance();
 
 	accept_thread->join();
-	process_thread->join();
+	timer_thread->join();
 	//Create_Accept_Thread();
 	for (auto pth : worker_threads) {
 		pth->join();
@@ -216,8 +238,34 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	static HDC hdc, memdc1, memdc2;
+	PAINTSTRUCT ps;
+	static HBITMAP hBit1, hipInputbmp, hwaitingbmp, oldBit1, oldBit2;
+	static HBITMAP charabmp[2], SelectTeambmp[3], charaSelectbmp, readybmp;
+	static RECT rectView;
+	static int yPos;
+
+	static int x, y;
+	static bool Selection;
+	int mx, my;
+
 	switch (message)
 	{
+	case WM_CREATE:
+	{
+		state = host_select;
+		ready = false;
+		hipInputbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP6));
+		hwaitingbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP9));
+		charabmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP4));
+		charabmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
+		charaSelectbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP8));
+		SelectTeambmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+		SelectTeambmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
+		SelectTeambmp[2] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+		readybmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP7));
+		break;
+	}
 	case WM_COMMAND:
 	{
 		int wmId = LOWORD(wParam);
@@ -237,7 +285,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_SIZE:
 	case WM_LBUTTONDOWN:
+		break;
 	case WM_LBUTTONUP:
+	{
+		mx = LOWORD(lParam);
+		my = HIWORD(lParam);
+		if (waitingroom == state)
+		{
+			if (mx > 10 && mx < 90 && my>240 && my < 280)
+			{
+				WaitingPacket(CHARACHANGE);
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 290 && mx < 370 && my>240 && my < 280)
+			{
+				WaitingPacket(CHARACHANGE);
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 50 && mx < 330 && my>40 && my < 458)
+			{
+				WaitingPacket(TEAMCHANGE);
+				my_team = (my_team + 1) % 2;
+			}
+			else if (mx > 357 && mx < 904 && my>514 && my < 661)
+			{
+				WaitingPacket(READY);
+				ready = (ready + 1) % 2;
+			}
+		}
+		InvalidateRgn(hWnd, NULL, false);
+		break;
+	}
 	case WM_RBUTTONDOWN:
 	case WM_RBUTTONUP:
 	case WM_MOUSEMOVE:
@@ -246,25 +324,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (!wParam) break;
 			if (wParam == VK_RETURN) {
-				state = play;
+				state = waitingroom;
+				InvalidateRgn(hWnd, NULL, FALSE);
 				break;
 			}
 			else if (wParam == VK_BACK)
 			{
-				strn--;
+				if (strn>0)
+					strn--;
+			}
+			else if (wParam == VK_OEM_PERIOD)
+			{
+				server_ip[strn++] = '.';
+				server_ip[strn] = '\0';
 			}
 			else {
 				server_ip[strn++] = wParam;
 				server_ip[strn] = '\0';
 			}
-			InvalidateRgn(hWnd, NULL, TRUE);
+			InvalidateRgn(hWnd, NULL, FALSE);
 			break;
 		}
 		else if (state == host_select)
 		{
 			if (!wParam) break;
 			if (wParam == VK_RETURN) {
-				state = server_input;
+				if (host)
+					state = waitingroom;
+				else
+					state = server_input;
 			}
 			else if (wParam == VK_UP) {
 				host = true;
@@ -274,7 +362,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				host = false;
 				strcpy_s(server_msg, "Join");
 			}
-			InvalidateRgn(hWnd, NULL, TRUE);
+			InvalidateRgn(hWnd, NULL, FALSE);
 			break;
 		}
 	case WM_KEYUP:
@@ -283,18 +371,157 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 	{
-		PAINTSTRUCT ps;
-		HDC hdc = BeginPaint(hWnd, &ps);
+		hdc = GetDC(hWnd);
+		hdc = BeginPaint(hWnd, &ps);
+
+		if (hBit1 == NULL)
+			hBit1 = CreateCompatibleBitmap(hdc, 1280, 760);
+
+		memdc1 = CreateCompatibleDC(hdc);
+		memdc2 = CreateCompatibleDC(memdc1);
+		oldBit1 = (HBITMAP)SelectObject(memdc1, hBit1);
+
+
+
 		// TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다.
 		if (state == server_input) {
-			TextOutA(hdc, 90, 100, "server ip input: ", strlen("server ip input: "));
-			TextOutA(hdc, 200, 100, server_ip, strn);
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, hipInputbmp);
+			BitBlt(memdc1, 0, 0, 1280, 760, memdc2, 0, 0, SRCCOPY);
+
+			SelectObject(memdc2, oldBit2);
+
+			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
+			SelectObject(memdc1, oldBit1);
+
+			TextOutA(hdc, 190, 350, "server ip input: ", strlen("server ip input: "));
+			TextOutA(hdc, 300, 350, server_ip, strn);
 		}
 		else if (state == host_select)
 		{
 			TextOutA(hdc, 90, 100, server_msg, strlen(server_msg));
 		}
-		else CGameManager::GetInstance()->m_pGameState->Render(hdc);
+		else if (state == waitingroom)
+		{
+			oldBit2 = (HBITMAP)SelectObject(memdc2, hwaitingbmp);
+
+			BitBlt(memdc1, 0, 0, 1280, 760, memdc2, 0, 0, SRCCOPY);
+			SelectObject(memdc2, oldBit2);
+
+			/////////////////자신의 팀컬러 및 캐릭터, 화살표, 레디//////////////
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[my_team]);
+			GdiTransparentBlt(memdc1, 10, 40, 374, 418, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[charac]);
+			GdiTransparentBlt(memdc1, 55, 195, 258, 193, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, charaSelectbmp);
+			GdiTransparentBlt(memdc1, 10, 200, 360, 120, memdc2, 0, 0, 411, 142, RGB(255, 255, 255));
+
+			if (ready) {
+				oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+				GdiTransparentBlt(memdc1, 80, 270, 227, 142, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+			/////////////////팀컬러////////////////////////////////
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[0].team]);
+			GdiTransparentBlt(memdc1, 380, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[0].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[0].charac]);
+				GdiTransparentBlt(memdc1, 399, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[0].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 405, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[1].team]);
+			GdiTransparentBlt(memdc1, 550, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[1].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[1].charac]);
+				GdiTransparentBlt(memdc1, 569, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[1].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 575, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[2].team]);
+			GdiTransparentBlt(memdc1, 720, 70, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[2].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[2].charac]);
+				GdiTransparentBlt(memdc1, 739, 140, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[2].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 745, 175, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[3].team]);
+			GdiTransparentBlt(memdc1, 340, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[3].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[3].charac]);
+				GdiTransparentBlt(memdc1, 359, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[3].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 365, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[4].team]);
+			GdiTransparentBlt(memdc1, 480, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[4].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[4].charac]);
+				GdiTransparentBlt(memdc1, 499, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[4].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 505, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[5].team]);
+			GdiTransparentBlt(memdc1, 620, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[5].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[5].charac]);
+				GdiTransparentBlt(memdc1, 639, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[5].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 645, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[waitingplayer[6].team]);
+			GdiTransparentBlt(memdc1, 760, 300, 170, 190, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
+			if (waitingplayer[6].connect)
+			{
+				oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[waitingplayer[6].charac]);
+				GdiTransparentBlt(memdc1, 779, 370, 120, 90, memdc2, 0, 0, 640, 480, RGB(255, 255, 255));
+				if (waitingplayer[6].ready)
+				{
+					oldBit2 = (HBITMAP)SelectObject(memdc2, readybmp);
+					GdiTransparentBlt(memdc1, 785, 405, 113, 71, memdc2, 0, 0, 227, 142, RGB(255, 255, 255));
+				}
+			}
+
+			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
+			SelectObject(memdc1, oldBit1);
+		}
+		else if (state == play) CGameManager::GetInstance()->m_pGameState->Render(hdc);
+
+		DeleteDC(memdc2);
+		DeleteDC(memdc1);
 		EndPaint(hWnd, &ps);
 	}
 	break;
@@ -317,10 +544,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			clienterror();
 			break;
 		}
+		
 	}
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
+	if (state != play)
+		InvalidateRgn(hWnd, NULL, FALSE);
 	return 0;
 }
 

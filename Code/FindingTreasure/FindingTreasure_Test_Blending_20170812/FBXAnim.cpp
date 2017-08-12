@@ -79,11 +79,74 @@ void CPirateFBXAnim::SetFBXAnimForType(PIRATE_ANIM_TYPE eAnimType)
 	}
 }
 
+CCowgirlFBXAnim::CCowgirlFBXAnim()
+{
+	m_pFBXAnimIdle = new FBXExporter();
+	m_pFBXAnimIdle->Initialize();
+	m_pFBXAnimIdle->LoadScene("C_standing.FBX");
+	m_pFBXAnimIdle->ImportFBX();
+
+	m_pFBXAnimWalk = new FBXExporter();
+	m_pFBXAnimWalk->Initialize();
+	m_pFBXAnimWalk->LoadScene("C_Walk.FBX");
+	m_pFBXAnimWalk->ImportFBX();
+
+	m_pFBXAnimAttack = new FBXExporter();
+	m_pFBXAnimAttack->Initialize();
+	m_pFBXAnimAttack->LoadScene("C_standing.FBX");
+	m_pFBXAnimAttack->ImportFBX();
+
+	m_pFBXAnimDig = new FBXExporter();
+	m_pFBXAnimDig->Initialize();
+	m_pFBXAnimDig->LoadScene("C_standing.FBX");
+	m_pFBXAnimDig->ImportFBX();
+
+	m_pFBXAnimHit = new FBXExporter();
+	m_pFBXAnimHit->Initialize();
+	m_pFBXAnimHit->LoadScene("C_standing.FBX");
+	m_pFBXAnimHit->ImportFBX();
+
+	m_pSetFBXAnim = m_pFBXAnimIdle;
+	m_pd3dxvVertexList = m_pFBXAnimIdle->CopyMeshVertex(&m_iVertexNum);
+	m_pd3dxvNormalList = m_pFBXAnimIdle->CopyNormalVertex();
+	m_pd3dxvUVList = m_pFBXAnimIdle->CopyUVVertex();
+}
+
+CCowgirlFBXAnim::~CCowgirlFBXAnim()
+{
+
+}
+
+void CCowgirlFBXAnim::SetFBXAnimForType(COWGIRL_ANIM_TYPE eAnimType)
+{
+	switch (eAnimType)
+	{
+	case COWGIRL_ANIM_TYPE_IDLE:
+		m_pSetFBXAnim = m_pFBXAnimIdle;
+		break;
+	case COWGIRL_ANIM_TYPE_WALK:
+		m_pSetFBXAnim = m_pFBXAnimWalk;
+		break;
+	case COWGIRL_ANIM_TYPE_ATTACK:
+		m_pSetFBXAnim = m_pFBXAnimAttack;
+		break;
+	case COWGIRL_ANIM_TYPE_DIG:
+		m_pSetFBXAnim = m_pFBXAnimDig;
+		break;
+	case COWGIRL_ANIM_TYPE_HIT:
+		m_pSetFBXAnim = m_pFBXAnimHit;
+		break;
+	}
+}
+
 CFBXAnim<PIRATE_ANIM_TYPE>* CFBXAnimResource::m_pPirateFBXAnim = NULL;
+CFBXAnim<COWGIRL_ANIM_TYPE>* CFBXAnimResource::m_pCowgirlFBXAnim = NULL;
+
 
 void CFBXAnimResource::CreateFBXAnimResource(void)
 {
 	m_pPirateFBXAnim = new CPirateFBXAnim();
+	m_pCowgirlFBXAnim = new CCowgirlFBXAnim();
 }
 
 void CFBXAnimResource::DestoryFBXAnimResource(void)			// 딱히 해제할 이유는 없다. 

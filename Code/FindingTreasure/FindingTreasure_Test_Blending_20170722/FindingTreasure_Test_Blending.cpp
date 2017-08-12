@@ -25,23 +25,14 @@ char	server_ip[20] = "";
 char server_msg[20] = "Join";
 #define	WM_SOCKET				WM_USER + 1
 
-enum State { host_select, server_input, play, waitingroom };
-State state;
+
+
+WaitingPlayer waitingplayer[7];
 
 bool ready;
-int team, charac;
+int charac;
 
-enum CHARACTER { pirate, cowgirl };
 
-struct WaitingPlayer {
-	bool connect;
-	int id;
-	BELONG_TYPE team;
-	CHARACTER charac;
-	bool ready;
-};
-
-extern WaitingPlayer waitingplayer[7];
 
 //CGameFramework gGameFramework;
 HWND hwnd = NULL;
@@ -294,16 +285,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		SelectTeambmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
 		SelectTeambmp[2] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP9));
 		readybmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP6));
-		for (int i = 0; i < 7; ++i)
-		{
-			waitingplayer[i].connect = false;
-			waitingplayer[i].team = BELONG_TYPE_INDIVIDUAL;
-			waitingplayer[i].ready = false;
-			waitingplayer[i].charac = pirate;
-			waitingplayer[i].id = -1;
-		}
-
-		printf("윈도우: %d", &waitingplayer[0].connect);
+		
 		
 	}
 	break;
@@ -318,18 +300,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			if (mx > 10 && mx < 90 && my>240 && my < 280)
 			{
+				WaitingPacket(CHARACHANGE);
 				charac = (charac + 1) % 2;
 			}
 			else if (mx > 290 && mx < 370 && my>240 && my < 280)
 			{
+				WaitingPacket(CHARACHANGE);
 				charac = (charac + 1) % 2;
 			}
 			else if (mx > 50 && mx < 330 && my>40 && my < 458)
 			{
-				team = (team + 1) % 2;
+				WaitingPacket(TEAMCHANGE);
+				my_team = (my_team + 1) % 2;
 			}
 			else if (mx > 357 && mx < 904 && my>514 && my < 661)
 			{
+				WaitingPacket(READY);
 				ready = (ready + 1) % 2;
 			}
 		}
@@ -429,7 +415,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			SelectObject(memdc2, oldBit2);
 
 			/////////////////자신의 팀컬러 및 캐릭터, 화살표, 레디//////////////
-			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[team]);
+			oldBit2 = (HBITMAP)SelectObject(memdc2, SelectTeambmp[my_team]);
 			GdiTransparentBlt(memdc1, 10, 40, 374, 418, memdc2, 0, 0, 425, 475, RGB(255, 255, 255));
 
 			oldBit2 = (HBITMAP)SelectObject(memdc2, charabmp[charac]);
@@ -538,7 +524,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
 			SelectObject(memdc1, oldBit1);
 		}
-		//else CGameManager::GetInstance()->m_pGameState->Render(hdc);
+		else if(state==play) CGameManager::GetInstance()->m_pGameState->Render(hdc);
 
 
 
@@ -566,11 +552,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			clienterror();
 			break;
 		}
+		if(state != play)
+			InvalidateRgn(hWnd, NULL, FALSE);
 	}
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-	InvalidateRgn(hWnd, NULL, FALSE);
 	return 0;
 }
 

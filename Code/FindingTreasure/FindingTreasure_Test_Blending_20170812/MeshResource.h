@@ -233,6 +233,25 @@ public:
 	virtual void SetFBXAnimForType(int);
 };
 
+class CTexturedLightingCowgirlMesh : public CLightingMesh
+{
+public:
+	/*FBXExporter* m_AniWalk;
+	FBXExporter* m_AniIdle;
+	FBXExporter* m_AniAtk;
+	FBXExporter* m_AniMakeAHole;
+	FBXExporter* m_AniHit;*/
+	CFBXAnim<COWGIRL_ANIM_TYPE> *m_pFBXAnim;
+public:
+	CTexturedLightingCowgirlMesh(ID3D11Device *pd3dDevice);
+	virtual ~CTexturedLightingCowgirlMesh();
+
+	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
+	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
+	virtual void Animate(ID3D11DeviceContext *pd3dDeviceContext, float fTime);
+	virtual void SetFBXAnimForType(int);
+};
+
 class SkydomMesh : public CLightingMesh
 {
 protected:
@@ -240,6 +259,32 @@ protected:
 public:
 	SkydomMesh(ID3D11Device *pd3dDevice);
 	virtual ~SkydomMesh();
+
+	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
+	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
+	virtual void Animate(ID3D11DeviceContext *pd3dDeviceContext, float t);
+};
+
+class ShipMesh : public CLightingMesh
+{
+protected:
+	FBXExporter* Ship;
+public:
+	ShipMesh(ID3D11Device *pd3dDevice);
+	virtual ~ShipMesh();
+
+	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
+	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);
+	virtual void Animate(ID3D11DeviceContext *pd3dDeviceContext, float t);
+};
+
+class TreasureChestMesh : public CLightingMesh
+{
+protected:
+	FBXExporter* TreasureChest;
+public:
+	TreasureChestMesh(ID3D11Device *pd3dDevice);
+	virtual ~TreasureChestMesh();
 
 	virtual void SetRasterizerState(ID3D11Device *pd3dDevice);
 	virtual void Render(ID3D11DeviceContext *pd3dDeviceContext);

@@ -1,6 +1,7 @@
 #pragma once
 
 enum PIRATE_ANIM_TYPE { PIRATE_ANIM_TYPE_IDLE, PIRATE_ANIM_TYPE_WALK, PIRATE_ANIM_TYPE_ATTACK, PIRATE_ANIM_TYPE_DIG, PIRATE_ANIM_TYPE_HIT};
+enum COWGIRL_ANIM_TYPE { COWGIRL_ANIM_TYPE_IDLE, COWGIRL_ANIM_TYPE_WALK, COWGIRL_ANIM_TYPE_ATTACK, COWGIRL_ANIM_TYPE_DIG, COWGIRL_ANIM_TYPE_HIT };
 
 template <typename AnimType>				// typename : 사용할 수 있는 애니메이션 타입을 규정함.
 class CFBXAnim
@@ -35,6 +36,23 @@ public:
 	void SetFBXAnimForType(PIRATE_ANIM_TYPE);
 };
 
+class CCowgirlFBXAnim : public CFBXAnim<COWGIRL_ANIM_TYPE>
+{
+private:
+	FBXExporter* m_pFBXAnimIdle;
+	FBXExporter* m_pFBXAnimWalk;
+	FBXExporter* m_pFBXAnimAttack;
+	FBXExporter* m_pFBXAnimDig;
+	FBXExporter* m_pFBXAnimHit;
+
+public:
+	CCowgirlFBXAnim();
+	~CCowgirlFBXAnim();
+
+	void SetFBXAnimForType(COWGIRL_ANIM_TYPE);
+};
+
+
 class CFBXAnimResource
 {
 public:
@@ -42,6 +60,7 @@ public:
 	~CFBXAnimResource();
 
 	static CFBXAnim<PIRATE_ANIM_TYPE> *m_pPirateFBXAnim;
+	static CFBXAnim<COWGIRL_ANIM_TYPE> *m_pCowgirlFBXAnim;
 
 	static void CreateFBXAnimResource(void);
 	static void DestoryFBXAnimResource(void);

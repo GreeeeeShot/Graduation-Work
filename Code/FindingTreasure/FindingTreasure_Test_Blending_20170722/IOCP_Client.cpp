@@ -4,7 +4,6 @@
 #include "GameManager.h"
 #include "FindingTreasure_Test_Blending.h"
 
-//CPlayer player;
 
 
 SOCKET g_mysocket;
@@ -19,6 +18,10 @@ int		g_myid;
 
 int		g_left_x = 0;
 int     g_top_y = 0;
+
+int my_team;
+
+State state;
 
 Client_Data player;
 
@@ -53,9 +56,12 @@ void ProcessPacket(char *ptr)
 		waitingplayer[id].ready = false;
 		waitingplayer[id].team = (BELONG_TYPE)my_packet->team;
 		waitingplayer[id].id = my_packet->id;
-
-		printf("¹Ù²å´Ù! %d %d\n", id, &waitingplayer[id].connect);
 		break;
+	}
+	case SC_INIT_TEAM:
+	{
+		sc_packet_initteam *my_packet = reinterpret_cast<sc_packet_initteam *>(ptr);
+		my_team = my_packet->team;
 	}
 	case SC_POS:
 	{
@@ -181,6 +187,73 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Delvoxel = false;
 		break;
 	}
+	case SC_TEAM_CHANGE:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		id = my_packet->id;
+		for (int i = 0; i < 7; ++i)
+		{
+			if (waitingplayer[i].id == id)
+			{
+				waitingplayer[i].team = (BELONG_TYPE)((int)(waitingplayer[i].team + 1) % 2);
+				printf("ÆÀ¹Ù²å´Ù");
+				break;
+			}
+		}
+		break;
+	}
+	case SC_CHARAC_CHANGE:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		id = my_packet->id;
+		for (int i = 0; i < 7; ++i)
+		{
+			if (waitingplayer[i].id == id)
+			{
+				waitingplayer[i].charac = (CHARACTER)((int)(waitingplayer[i].charac + 1) % 2);
+				printf("Ä³¸¯¹Ù²å´Ù");
+				break;
+			}
+		}
+		break;
+	}
+	case SC_READY:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		id = my_packet->id;
+		for (int i = 0; i < 7; ++i)
+		{
+			if (waitingplayer[i].id == id)
+			{
+				waitingplayer[i].ready = (waitingplayer[i].ready + 1) % 2;
+				printf("·¹µð¹Ú¾Ò´Ù");
+				break;
+			}
+		}
+		break;
+	}
+	case SC_EXIT:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		id = my_packet->id;
+		for (int i = 0; i < 7; ++i)
+		{
+			if (waitingplayer[i].id == id)
+			{
+				waitingplayer[i].connect = false;
+				waitingplayer[i].team = BELONG_TYPE_INDIVIDUAL;
+				printf("³ª°¬´Ù");
+				break;
+			}
+		}
+		break;
+	}
+	case SC_GAME_START:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		state = play;
+		break;
+	}
 	/*
 	case SC_CHAT:
 	{
@@ -259,6 +332,15 @@ void ClientMain(HWND main_window_handle, const char* serverip)
 	recv_wsabuf.buf = recv_buffer;
 	recv_wsabuf.len = BUF_SIZE;
 	//ReadPacket(g_mysocket);
+
+	for (int i = 0; i < 7; ++i)
+	{
+		waitingplayer[i].connect = false;
+		waitingplayer[i].team = BELONG_TYPE_INDIVIDUAL;
+		waitingplayer[i].ready = false;
+		waitingplayer[i].charac = pirate;
+		waitingplayer[i].id = -1;
+	}
 }
 
 void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
@@ -331,6 +413,63 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 		my_packet_voxel->size = sizeof(my_packet_voxel);
 		send_wsabuf.len = sizeof(my_packet_voxel);
 		my_packet_voxel->type = CS_CANCLEVOX;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
+void WaitingPacket(PACKETTYPE type)
+{
+	int ret = 0;
+	int id = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID;
+	cs_packet_waiting *my_packet = reinterpret_cast<cs_packet_waiting *>(send_buffer);
+	DWORD iobyte;
+	switch (type)
+	{
+	case TEAMCHANGE:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
+		my_packet->type = CS_TEAM_CHANGE;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case READY:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
+		my_packet->type = CS_READY;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case CHARACHANGE:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
+		my_packet->type = CS_CHARAC_CHANGE;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case EXIT:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
+		my_packet->type = CS_EXIT;
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();
