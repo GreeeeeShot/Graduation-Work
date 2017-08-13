@@ -29,7 +29,6 @@ struct OverlappedEX {
 };
 
 struct CLIENT {
-	bool team;
 	bool connect;
 	int MoveX;
 	int MoveZ;
@@ -483,6 +482,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 		}
 		break;
 	case CS_TEAM_CHANGE:
+		g_clients[ci].player.m_BelongType = (BELONG_TYPE)((g_clients[ci].player.m_BelongType + 1) % 2);
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (!g_clients[i].connect)
@@ -525,7 +525,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, false);
 		
 		MovePlayer(ci);
-		event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+		event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
 		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		SendInitPacket(ci);
 		break;
@@ -771,7 +771,7 @@ void Worker_Thread()
 		{
 			if (!g_clients[ci].player.m_bIsActive)
 			{
-				Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+				Timer_Event event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				delete over;
 				continue;
@@ -785,7 +785,7 @@ void Worker_Thread()
 				SendSyncPacket(i, ci);
 				g_clients[ci].vl_lock.unlock();
 			}
-			Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+			Timer_Event event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
@@ -894,7 +894,6 @@ void Accept_Thread()
 		g_clients[new_id].recv_over.event_type = OP_RECV;
 		g_clients[new_id].recv_over.wsabuf.buf = reinterpret_cast<CHAR*>(g_clients[new_id].recv_over.IOCP_buf);
 		g_clients[new_id].recv_over.wsabuf.len = sizeof(g_clients[new_id].recv_over.IOCP_buf);
-		g_clients[new_id].team = new_id % 2;
 
 
 
@@ -915,8 +914,7 @@ void Accept_Thread()
 		g_clients[new_id].player.SetBelongType(red < blue ? BELONG_TYPE_RED : BELONG_TYPE_BLUE);
 		g_clients[new_id].player.m_BelongType == BELONG_TYPE_RED ? red++ : blue++;
 		g_clients[new_id].vl_lock.unlock();
-		SendTeamPacket(new_id, g_clients[new_id].team);
-		printf("%d %d\n", &g_clients[new_id].MoveX, &g_clients[new_id].MoveZ);
+		SendTeamPacket(new_id, g_clients[new_id].player.m_BelongType);
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (g_clients[i].connect == true)

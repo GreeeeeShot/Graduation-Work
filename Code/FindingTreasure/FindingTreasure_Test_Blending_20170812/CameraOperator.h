@@ -49,6 +49,7 @@ public:
 
 	void SetViewport(ID3D11DeviceContext *pd3dDeviceContext, DWORD xTopLeft, DWORD yTopLeft, DWORD nWidth, DWORD nHeight, float fMinZ = 0.0f, float fMaxZ = 1.0f);
 	void GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle);
+	void SetPosition(D3DXVECTOR3 pos) { m_d3dxvCameraPos = pos; }
 
 	D3DXVECTOR3 GetLook(void) { return m_d3dxvLook; }
 	D3DXVECTOR3 GetUp(void) { return m_d3dxvUp; }

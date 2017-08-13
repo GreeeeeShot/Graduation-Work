@@ -168,7 +168,10 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+
+
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = true;
 		break;
@@ -179,7 +182,10 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+
+
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Delvoxel = true;
 		break;
