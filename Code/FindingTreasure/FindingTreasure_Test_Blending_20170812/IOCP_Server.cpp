@@ -127,10 +127,11 @@ void Initialize_Server()
 	}
 	blue = 0;
 	red = 0;
-	
+
 	g_RespawnManager.InitRespawnManager();
 	Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
 	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
 }
 
 void SendPacket(int cl, void *packet)
@@ -524,7 +525,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, false);
 		
 		MovePlayer(ci);
-		event = { ci, high_resolution_clock::now() + 500ms, SYNC_TIME };
+		event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		SendInitPacket(ci);
 		break;
@@ -770,7 +771,7 @@ void Worker_Thread()
 		{
 			if (!g_clients[ci].player.m_bIsActive)
 			{
-				Timer_Event event = { ci, high_resolution_clock::now() + 500ms, SYNC_TIME };
+				Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				delete over;
 				continue;
@@ -784,7 +785,7 @@ void Worker_Thread()
 				SendSyncPacket(i, ci);
 				g_clients[ci].vl_lock.unlock();
 			}
-			Timer_Event event = { ci, high_resolution_clock::now() + 500ms, SYNC_TIME };
+			Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
@@ -820,8 +821,9 @@ void Time_Thread()
 			{
 				g_RespawnManager.UpdateRespawnManager(0.01f);
 
-				Timer_Event event = { -1, high_resolution_clock::now() + 1ms, RESPAWN_TIME };
+				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+				delete over;
 			}
 			else if (SYNC_TIME == t.event) {
 				over->event_type = SEND_SYNC;
@@ -839,6 +841,7 @@ void Time_Thread()
 								continue;
 							SendStartPacket(i);
 						}
+						
 						GameStart = true;
 					}
 					if (!g_clients[i].connect)
