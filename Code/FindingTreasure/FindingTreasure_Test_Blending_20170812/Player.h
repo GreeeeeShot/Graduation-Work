@@ -117,6 +117,8 @@ public:
 	D3DXVECTOR3 m_SyncPosition;
 	bool m_Delvoxel;
 	bool m_Insvoxel;
+	bool m_serverActive;
+	bool m_IsLift;
 	//ACTION m_action;
 
 public:
@@ -185,6 +187,7 @@ public:
 
 		SetMaterial(CMaterialResource::pStandardMaterial);
 		SetTexture(CTextureResource::pWoodTexture);
+		//SetTexture(CTextureResource::pTreasureTexture);
 		SetMesh(CMeshResource::pTreasureChestMesh);
 		SetShader(CShaderResource::pTexturedLightingShader);
 		SetPosition(0.0f, 10.f, 0.0f);
@@ -216,5 +219,17 @@ class CSnowGirl : public CPlayer
 
 class CCowGirl : public CPlayer
 {
+public:
+	CCowGirl(ID3D11Device *pd3dDevice)
+	{
+		m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
+		m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
+		m_fMass = 40.0f;               // 질량
 
+		m_fRecoveryStaminaPerSec = 40.0f;
+		m_fDecrementStaminaPerSec = 12.0f;
+
+		SetMesh(new CTexturedLightingCowgirlMesh(pd3dDevice));
+	}
+	~CCowGirl() {}
 };

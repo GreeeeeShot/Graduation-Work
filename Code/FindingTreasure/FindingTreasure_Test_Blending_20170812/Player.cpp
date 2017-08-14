@@ -43,6 +43,15 @@ CPlayer* CPlayersMgrInform::CreatePlayerForType(ID3D11Device *pd3dDevice, SPlaye
 		if (pPlayerInformDesc->m_BelongType == BELONG_TYPE_RED) pOutputPlayer->SetTexture(CTextureResource::pPirateTexture);
 		else pOutputPlayer->SetTexture(CTextureResource::pPirateTexture);
 		break;
+
+	case PLAYER_TYPE_COW_GIRL:
+		// 질량, 속도, 순간 점프 속도, 메시가 정의된다.
+		pOutputPlayer = new CCowGirl(pd3dDevice);
+
+		// 텍스쳐 기반 색상이 정의된다.
+		if (pPlayerInformDesc->m_BelongType == BELONG_TYPE_RED) pOutputPlayer->SetTexture(CTextureResource::pCowgirlTexture);
+		else pOutputPlayer->SetTexture(CTextureResource::pCowgirlTexture);
+		break;
 	default:
 		break;
 	}
@@ -153,6 +162,8 @@ CPlayer::CPlayer()
 	m_SyncPosition = D3DXVECTOR3(0.f, 0.f, 0.f);
 	m_Delvoxel = false;
 	m_Insvoxel = false;
+	m_serverActive = false;
+	m_IsLift = false;
 }
 
 CPlayer::~CPlayer()

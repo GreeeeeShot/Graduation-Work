@@ -19,7 +19,7 @@ bool GameStart = false;
 //std::mutex g_Respawnlock;
 int red, blue;
 
-enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC };
+enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC , BOX_MOVE, BOX_SYNC};
 
 struct OverlappedEX {
 	WSAOVERLAPPED over;
@@ -33,9 +33,7 @@ struct CLIENT {
 	int MoveX;
 	int MoveZ;
 
-	int z;
 	int cameraYrotate;
-	int x;
 	bool VoxDelOrIns;
 	bool ready;
 
@@ -52,7 +50,14 @@ struct CLIENT {
 	std::mutex vl_lock;
 };
 
-enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME };
+struct BOX {
+	CPlayer player;
+	high_resolution_clock::time_point last_move_time;
+	std::mutex vl_lock;
+};
+
+
+enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME,BOX_EVENT,BOX_SYNC_TIME };
 
 struct Timer_Event {
 	int object_id;
@@ -75,7 +80,7 @@ std::priority_queue <Timer_Event, std::vector <Timer_Event>, mycomp> timer_queue
 std::mutex tq_lock;
 
 CLIENT g_clients[MAX_USER];
-
+BOX g_TreasureBox;
 void error_display(char *msg, int err_no)
 {
 	WCHAR *lpMsgBuf;
@@ -166,9 +171,13 @@ void SendInitPacket(int client)
 	packet.Posy = g_clients[client].player.GetPosition().y;
 	packet.Posz = g_clients[client].player.GetPosition().z;
 
-	packet.Lookx = g_clients[client].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[client].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[client].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[client].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[client].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[client].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[client].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[client].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[client].player.m_CameraOperator.GetOperatorPosition().z;
 
 	SendPacket(client, &packet);
 }
@@ -206,9 +215,13 @@ void SendInstallVoxel(int client, int object, int pocket)
 	packet.Posy = g_clients[object].player.GetPosition().y;
 	packet.Posz = g_clients[object].player.GetPosition().z;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
 	SendPacket(client, &packet);
 }
@@ -225,12 +238,61 @@ void SendDeleteVoxel(int client, int object, int pocket)
 	packet.Posy = g_clients[object].player.GetPosition().y;
 	packet.Posz = g_clients[object].player.GetPosition().z;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
 	SendPacket(client, &packet);
 }
+
+void SendLiftBox(int client, int object)
+{
+	sc_packet_lift packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_LIFTBOX;
+	packet.id = object;
+
+	packet.Posx = g_clients[object].player.GetPosition().x;
+	packet.Posy = g_clients[object].player.GetPosition().y;
+	packet.Posz = g_clients[object].player.GetPosition().z;
+
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
+
+	SendPacket(client, &packet);
+}
+
+void SendLiftEnd(int client, int object)
+{
+	sc_packet_lift packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_OUTBOX;
+	packet.id = object;
+
+	packet.Posx = g_clients[object].player.GetPosition().x;
+	packet.Posy = g_clients[object].player.GetPosition().y;
+	packet.Posz = g_clients[object].player.GetPosition().z;
+
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
+
+	SendPacket(client, &packet);
+}
+
 
 void SendCancleVoxel(int client, int object)
 {
@@ -275,9 +337,13 @@ void SendSetPositionPacket(int client, int object)
 	packet.Posy = g_clients[object].player.GetPosition().y;
 	packet.Posz = g_clients[object].player.GetPosition().z;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
 	SendPacket(client, &packet);
 }
@@ -292,9 +358,13 @@ void SendSyncPacket(int client, int object)
 	packet.Posy = g_clients[object].player.GetPosition().y;
 	packet.Posz = g_clients[object].player.GetPosition().z;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 	/*
 	packet.Lookx = g_clients[object].player.m_CameraOperator.GetLook().x;
 	packet.Looky = g_clients[object].player.m_CameraOperator.GetLook().y;
@@ -313,9 +383,13 @@ void SendRespawnPacket(int client, int object)
 	packet.Posy = g_clients[object].player.GetPosition().y;
 	packet.Posz = g_clients[object].player.GetPosition().z;
 
-	packet.Lookx = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().x;
-	packet.Looky = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().y;
-	packet.Lookz = g_clients[object].player.m_CameraOperator.m_Camera.GetPosition().z;
+	packet.Lookx = g_clients[object].player.m_CameraOperator.GetPosition().x;
+	packet.Looky = g_clients[object].player.m_CameraOperator.GetPosition().y;
+	packet.Lookz = g_clients[object].player.m_CameraOperator.GetPosition().z;
+
+	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
+	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
+	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
 	SendPacket(client, &packet);
 }
@@ -340,6 +414,8 @@ void SendTeamPacket(int client, int team)
 
 	SendPacket(client, &packet);
 }
+
+
 
 void SendCharaChangePacket(int client, int object)
 {
@@ -389,6 +465,21 @@ void SendStartPacket(int client)
 
 	SendPacket(client, &packet);
 }
+
+void SendBoxPacket(int client)
+{
+	sc_packet_box packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_BOX;
+
+	packet.Posx = g_TreasureBox.player.GetPosition().x;
+	packet.Posy = g_TreasureBox.player.GetPosition().y;
+	packet.Posz = g_TreasureBox.player.GetPosition().z;
+
+	SendPacket(client, &packet);
+}
+
+
 
 
 void DisconnectClient(int ci)
@@ -510,13 +601,36 @@ void ProcessPacket(int ci, unsigned char packet[])
 				SendExitPacket(i, ci);
 		}
 		break;
+	case CS_LIFTBOX:
+		g_clients[ci].vl_lock.lock();
+		g_clients[ci].player.m_IsLift = true;
+		g_clients[ci].vl_lock.unlock();
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendLiftBox(i, ci);
+		}
+		break;
+	case CS_OUTBOX:
+		g_clients[ci].vl_lock.lock();
+		g_clients[ci].player.m_IsLift = false;
+		g_clients[ci].vl_lock.unlock();
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendLiftEnd(i, ci);
+		}
+		break;
 	case CS_GAMEREADY:
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
 		g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
 		g_clients[ci].player.m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
 		g_clients[ci].player.m_fMass = 40.0f;               // 질량
-
 		g_clients[ci].player.m_fRecoveryStaminaPerSec = 40.0f;
 		g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
 		g_clients[ci].player.InitCameraOperator();
@@ -525,9 +639,28 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, false);
 		
 		MovePlayer(ci);
-		event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
+		event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		SendInitPacket(ci);
+		SendRespawnPacket(ci,ci);
+
+		if (ci == 0)
+		{
+			g_TreasureBox.vl_lock.lock();
+			//g_TreasureBox.player.m_pMesh = new TreasureChestMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
+			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 0.5f, 0.5f, 0.5f);
+
+			g_TreasureBox.player.m_fJumpdVelYM = 0.0f;			//Y축에 대한 순간 점프 속도 크기 // 보물상자는 스스로 점프하지 못한다.
+			g_TreasureBox.player.m_fMaxRunVelM = 15.0f;			// 밀리는 속도에 대한 최대 크기
+			g_TreasureBox.player.m_fMass = 40.0f;               // 질량
+
+			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 0.f, 0.f));
+			g_TreasureBox.vl_lock.unlock();
+			event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+		}		
 		break;
 	default:
 		std::cout << "Unknown Packet Type from Client" << ci << std::endl;
@@ -688,26 +821,35 @@ void Worker_Thread()
 			currentclient.RotateMoveDir(t);
 			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
 			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
+			
+
 			if (currentclient.m_bIsActive)
 			{
-				/*if (CPhysicalCollision::IsCollided(
-				&CPhysicalCollision::MoveAABB(g_clients[i].player.m_pMesh->m_AABB, g_clients[i].player.GetPosition()),
-				&CPhysicalCollision::MoveAABB(g_box->m_pMesh->m_AABB, g_box->GetPosition())))
+				CPlayer box;
+				g_TreasureBox.vl_lock.lock();
+				box = g_TreasureBox.player;
+				g_TreasureBox.vl_lock.unlock();
+
+				if (CPhysicalCollision::IsCollided(
+				&CPhysicalCollision::MoveAABB(currentclient.m_pMesh->m_AABB, currentclient.GetPosition()),
+				&CPhysicalCollision::MoveAABB(box.m_pMesh->m_AABB, box.GetPosition())))
 				{
-				if (g_clients[i].player.m_d3dxvVelocity.y <= 0.0f && g_clients[i].player.GetPosition().y > g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y)
+				if (currentclient.m_d3dxvVelocity.y <= 0.0f && currentclient.GetPosition().y > box.GetPosition().y + box.m_pMesh->m_AABB.m_d3dxvMax.y)
 				{
 				//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
 				D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-				d3dxvRevision.y = g_box->GetPosition().y + g_box->m_pMesh->m_AABB.m_d3dxvMax.y - (g_clients[i].player.GetPosition().y + g_clients[i].player.m_pMesh->m_AABB.m_d3dxvMin.y);
-				g_clients[i].player.Moving(d3dxvRevision);
-				g_clients[i].player.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
-				g_clients[i].player.m_d3dxvVelocity.y = 0.0;
+				d3dxvRevision.y = box.GetPosition().y + box.m_pMesh->m_AABB.m_d3dxvMax.y - (currentclient.GetPosition().y + currentclient.m_pMesh->m_AABB.m_d3dxvMin.y);
+				currentclient.Moving(d3dxvRevision);
+				currentclient.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
+				currentclient.m_d3dxvVelocity.y = 0.0;
 
-				if (g_clients[i].player.m_d3dxvMoveDir.y != 0.0f) g_clients[i].player.m_d3dxvVelocity.y = 4.95;
+				if (currentclient.m_d3dxvMoveDir.y != 0.0f) currentclient.m_d3dxvVelocity.y = 4.95;
 				}
-				else CPhysicalCollision::ImpurseBasedCollisionResolution(&g_clients[i].player, g_box);
-				}*/
-
+				else CPhysicalCollision::ImpurseBasedCollisionResolution(&currentclient, &box);
+				}
+				g_TreasureBox.vl_lock.lock();
+				g_TreasureBox.player = box;
+				g_TreasureBox.vl_lock.unlock();
 				// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
 				for (int i = 0; i < MAX_USER; i++)
 				{
@@ -731,7 +873,8 @@ void Worker_Thread()
 				}
 				// 복셀 터레인 및 씬의 환경 변수에 기반한 충돌 체크 및 물리 움직임
 				CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&currentclient, t);
-				
+				currentclient.m_CameraOperator.GenerateViewMatrix(t, true);
+
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
@@ -751,6 +894,37 @@ void Worker_Thread()
 							SendDeadPacket(i, ci);
 					}
 				}
+				g_clients[ci].vl_lock.lock();
+				currentclient.m_IsLift = g_clients[ci].player.m_IsLift;
+				currentclient.m_pLiftingPlayer = g_clients[ci].player.m_pLiftingPlayer;
+				g_clients[ci].vl_lock.unlock();
+				if (currentclient.m_IsLift)
+				{
+					currentclient.LiftPlayer(&box, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pVoxelTerrain);
+					currentclient.m_bIsPushed = true;
+				}
+				else if (currentclient.m_pLiftingPlayer)
+				{
+					currentclient.m_bIsPushed = false;
+					box.BeRelievedFromLiftingPlayer();
+				}
+					
+				for (int i = 0; i < 2; i++)
+				{
+					if (CPhysicalCollision::IsCollided(
+						&CPhysicalCollision::MoveAABB(CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->m_pMesh->m_AABB, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->GetPosition()),
+						&CPhysicalCollision::MoveAABB(box.m_pMesh->m_AABB, box.GetPosition())))
+					{
+						if (box.GetPosition().y > CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->GetPosition().y + CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y)
+						{
+							//printf("%d 팀이 승리하였습니다.\n", i);
+						}
+					}
+				}
+				g_TreasureBox.vl_lock.lock();
+				g_TreasureBox.player = box;
+				g_TreasureBox.vl_lock.unlock();
+
 			}
 			/*
 			for (int i = 0; i < MAX_USER; ++i)
@@ -768,15 +942,16 @@ void Worker_Thread()
 			delete over;
 		}
 		else if (SEND_SYNC == over->event_type)
-		{
+		{	
+			/*
 			if (!g_clients[ci].player.m_bIsActive)
 			{
-				Timer_Event event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
+				Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				delete over;
 				continue;
 			}
-			
+			*/
 			for (int i = 0; i < MAX_USER; ++i)
 			{
 				if (!g_clients[i].connect)
@@ -785,7 +960,40 @@ void Worker_Thread()
 				SendSyncPacket(i, ci);
 				g_clients[ci].vl_lock.unlock();
 			}
-			Timer_Event event = { ci, high_resolution_clock::now() + 100ms, SYNC_TIME };
+			Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			delete over;
+		}
+		else if (BOX_MOVE == over->event_type)
+		{
+			g_clients[ci].vl_lock.lock();
+			duration<float> sec = high_resolution_clock::now() - g_TreasureBox.last_move_time;
+			g_TreasureBox.vl_lock.unlock();
+
+			float t = sec.count();
+			g_TreasureBox.vl_lock.lock();
+			CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
+			g_TreasureBox.player.BeDraggedAwayByLiftingPlayer(t);
+			g_TreasureBox.last_move_time = high_resolution_clock::now();
+			g_TreasureBox.vl_lock.unlock();
+
+			Timer_Event event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
+			delete over;			
+		}
+		else if (BOX_SYNC == over->event_type)
+		{
+			for (int i = 0; i < MAX_USER; ++i)
+			{
+				if (!g_clients[i].connect)
+					continue;
+				g_TreasureBox.vl_lock.lock();
+				SendBoxPacket(i);
+				g_TreasureBox.vl_lock.unlock();
+			}
+			printf("%f %f %f\n", g_TreasureBox.player.GetPosition().x, g_TreasureBox.player.GetPosition().y, g_TreasureBox.player.GetPosition().z);
+			Timer_Event event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
@@ -828,6 +1036,11 @@ void Time_Thread()
 			else if (SYNC_TIME == t.event) {
 				over->event_type = SEND_SYNC;
 				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
+			}
+			else if (BOX_SYNC_TIME == t.event)
+			{
+				over->event_type = BOX_SYNC;
+				PostQueuedCompletionStatus(g_hiocp, 1, -1, &over->over);
 			}
 			if (!GameStart)
 			{

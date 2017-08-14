@@ -46,6 +46,8 @@ struct Client_Data
 #define CS_EXIT 9
 #define CS_TEAM_CHANGE 10
 #define CS_GAMEREADY	11
+#define CS_LIFTBOX		12
+#define CS_OUTBOX		13
 /*
 #define CS_JUMP  1
 #define CS_UP    2
@@ -76,6 +78,9 @@ struct Client_Data
 #define SC_TEAM_CHANGE	 17
 #define SC_INIT_TEAM	 18
 #define SC_GAME_START	 19
+#define SC_BOX			 20
+#define SC_LIFTBOX		 21
+#define SC_OUTBOX		 22
 
 #pragma pack (push, 1)
 
@@ -114,6 +119,26 @@ struct cs_packet_ready {
 	BYTE type;
 };
 
+struct cs_packet_lift {
+	BYTE size;
+	BYTE type;
+};
+
+struct sc_packet_lift {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+	FLOAT Lookx, Looky, Lookz;
+	FLOAT Operx, Opery, Operz;
+};
+
+struct sc_packet_box {
+	BYTE size;
+	BYTE type;
+	FLOAT Posx, Posy, Posz;
+};
+
 struct sc_packet_start {
 	BYTE size;
 	BYTE type;
@@ -145,6 +170,7 @@ struct sc_packet_vox {
 	WORD pocket;
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
+	FLOAT Operx, Opery, Operz;
 };
 
 struct sc_packet_respawn {
@@ -153,6 +179,7 @@ struct sc_packet_respawn {
 	WORD id;
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
+	FLOAT Operx, Opery, Operz;
 };
 
 struct sc_packet_dead {
@@ -203,6 +230,7 @@ struct sc_packet_init {
 	BYTE team;
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
+	FLOAT Operx, Opery, Operz;
 };
 
 struct sc_packet_sync {
@@ -211,6 +239,7 @@ struct sc_packet_sync {
 	WORD id;
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
+	FLOAT Operx, Opery, Operz;
 };
 
 #pragma pack (pop)

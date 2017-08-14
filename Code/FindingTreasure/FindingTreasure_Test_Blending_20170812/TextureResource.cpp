@@ -62,8 +62,12 @@ ID3D11ShaderResourceView** CTextureResource::ppd3dTexturePlayer = NULL;
 ID3D11ShaderResourceView* CTextureResource::pd3dTextureArrayVoxel = NULL;
 ID3D11SamplerState** CTextureResource::ppd3dSamplerState = NULL;
 
+
 CTexture* CTextureResource::pSkydomTexture = NULL;
 CTexture* CTextureResource::pPirateTexture = NULL;
+CTexture* CTextureResource::pCowgirlTexture = NULL;
+CTexture* CTextureResource::pShipTexture = NULL;
+CTexture* CTextureResource::pTreasureTexture = NULL;
 CTexture* CTextureResource::pGrassTexture = NULL;
 CTexture* CTextureResource::pWoodTexture = NULL;
 CTexture* CTextureResource::pZungleUphillTexture = NULL;
@@ -86,6 +90,8 @@ CTexture* CTextureResource::pEffect_ParticleBlue0 = NULL;
 
 CTexture* CTextureResource::pVoxelTextures[17];
 
+ID3D11ShaderResourceView** CTextureResource::ppd3dShipTexture = NULL;
+ID3D11ShaderResourceView** CTextureResource::ppd3dTreasureTexture = NULL;
 ID3D11ShaderResourceView** CTextureResource::ppd3dSkyTexture = NULL;
 ID3D11ShaderResourceView** CTextureResource::ppd3dWaveTexture = NULL;
 ID3D11ShaderResourceView** CTextureResource::ppd3dWaveNormalMap = NULL;
@@ -242,8 +248,10 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice, ID3D11Dev
 	ppd3dTextureEffect = new ID3D11ShaderResourceView*[1];
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/effect/particle_blue.png"), NULL, NULL, &ppd3dTextureEffect[0], NULL);
 
-	ppd3dTexturePlayer = new ID3D11ShaderResourceView*[1];
+	ppd3dTexturePlayer = new ID3D11ShaderResourceView*[2];
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/pirate.png"), NULL, NULL, &ppd3dTexturePlayer[0], NULL);
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/cowgirl.png"), NULL, NULL, &ppd3dTexturePlayer[1], NULL);
+
 
 	ppd3dSkyTexture = new ID3D11ShaderResourceView*();
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/sky4.png"), NULL, NULL, ppd3dSkyTexture, NULL);
@@ -251,7 +259,10 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice, ID3D11Dev
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/wave1.jpg"), NULL, NULL, ppd3dWaveTexture, NULL);
 	ppd3dWaveNormalMap = new ID3D11ShaderResourceView*();
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/wavenormal.png"), NULL, NULL, ppd3dWaveNormalMap, NULL);
-
+	ppd3dShipTexture = new ID3D11ShaderResourceView*();
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/boat.jpg"), NULL, NULL, ppd3dShipTexture, NULL);
+	ppd3dTreasureTexture = new ID3D11ShaderResourceView*();
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/treasurebox.jpg"), NULL, NULL, ppd3dTreasureTexture, NULL);
 	
 
 	ppd3dSamplerState = new  ID3D11SamplerState*[1];
@@ -267,7 +278,10 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice, ID3D11Dev
 	d3dSamplerDesc.MaxLOD = 0;
 	pd3dDevice->CreateSamplerState(&d3dSamplerDesc, &ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 
+	pShipTexture = new CTexture(1);
+	pTreasureTexture = new CTexture(1);
 	pSkydomTexture = new CTexture(1);
+	pCowgirlTexture = new CTexture(1);
 	pPirateTexture = new CTexture(1);
 	pGrassTexture = new CTexture(1);
 	pWoodTexture = new CTexture(1);
@@ -329,10 +343,13 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice, ID3D11Dev
 	pEffect_ParticleBlue0->SetTexture(0, ppd3dTextureEffect[0], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 
 	pPirateTexture->SetTexture(0, ppd3dTexturePlayer[0], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	pCowgirlTexture->SetTexture(0, ppd3dTexturePlayer[1], CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 
 	pWaveTexture->SetTexture(0, *ppd3dWaveTexture, CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	pWaveNormalMap->SetTexture(0, *ppd3dWaveNormalMap, CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 	pSkydomTexture->SetTexture(0, *ppd3dSkyTexture, CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	pShipTexture->SetTexture(0, *ppd3dShipTexture, CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
+	pTreasureTexture->SetTexture(0, *ppd3dTreasureTexture, CTextureResource::ppd3dSamplerState[SAMPLER_WRAP_MODE_0]);
 }
 
 void CTextureResource::DestroyTextureResource(void)

@@ -21,7 +21,7 @@ private:
 	CGameObject *m_pSkydom;
 
 	char* m_cSceneTextFileName;
-	CPlayer *m_pTreasureChest;
+	
 	
 
 	int m_nObjects;
@@ -38,6 +38,8 @@ private:
 	float m_fGravitationalAcceleration;
 
 public:
+	CPlayer *m_pTreasureChest;
+
 	CVoxelTerrain *m_pVoxelTerrain;
 	CGameObject *m_pShips[2];
 	CRespawnManager m_RespawnManager;

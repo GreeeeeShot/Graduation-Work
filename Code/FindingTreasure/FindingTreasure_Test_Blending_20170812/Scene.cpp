@@ -51,7 +51,7 @@ void CScene::BuildObjects(ID3D11Device *pd3dDevice)
 	{
 		m_pShips[i] = new CGameObject();
 		m_pShips[i]->SetMaterial(CMaterialResource::pStandardMaterial);
-		m_pShips[i]->SetTexture(CTextureResource::pWoodTexture);
+		m_pShips[i]->SetTexture(CTextureResource::pShipTexture);
 		m_pShips[i]->SetMesh(CMeshResource::pShipMesh);
 		m_pShips[i]->SetShader(CShaderResource::pTexturedLightingShader);
 	}
@@ -305,6 +305,9 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				switch (m_pPlayersMgrInform->GetMyPlayer()->m_PlayerType)
 				{
 					case PLAYER_TYPE_PIRATE: 
+						m_pPlayersMgrInform->GetMyPlayer()->SetFBXAnimForType(PIRATE_ANIM_TYPE_ATTACK);
+						break;
+					case PLAYER_TYPE_COW_GIRL:
 						m_pPlayersMgrInform->GetMyPlayer()->SetFBXAnimForType(PIRATE_ANIM_TYPE_ATTACK);
 						break;
 					default:
@@ -932,7 +935,7 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 	{
 		if (m_pPlayersMgrInform->m_ppPlayers[i])
 		{
-			
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive = m_pPlayersMgrInform->m_ppPlayers[i]->m_serverActive;
 
 			if (m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsActive)
 			{
@@ -1023,6 +1026,13 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 		}
 	}
 	//printf("Pos (%.2f, %.2f, %.2f)\n", m_pPlayersMgrInform->GetMyPlayer()->GetPosition().x, m_pPlayersMgrInform->GetMyPlayer()->GetPosition().y, m_pPlayersMgrInform->GetMyPlayer()->GetPosition().z);
+	D3DXVECTOR3 boxPos = m_pTreasureChest->GetPosition();
+	D3DXVECTOR3 boxmove = m_pTreasureChest->m_SyncPosition;
+	float mx = m_pTreasureChest->m_SyncPosition.x - m_pTreasureChest->GetPosition().x;
+	float my = m_pTreasureChest->m_SyncPosition.y - m_pTreasureChest->GetPosition().y;
+	float mz = m_pTreasureChest->m_SyncPosition.z - m_pTreasureChest->GetPosition().z;
+	m_pTreasureChest->SetPosition(D3DXVECTOR3(boxPos.x+ (mx*fTimeElapsed), boxPos.y + (my*fTimeElapsed), boxPos.z + (mz*fTimeElapsed)));
+	//printf("박스 위치 : %f %f %f\n", boxPos.x, boxPos.y, boxPos.z);
 	MoveObjectUnderPhysicalEnvironment(m_pTreasureChest, fTimeElapsed);
 	m_pTreasureChest->BeDraggedAwayByLiftingPlayer(fTimeElapsed);
 
@@ -1036,7 +1046,25 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 	//}
 
 	m_RespawnManager.UpdateRespawnManager(fTimeElapsed);
-
+	for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; i++)
+	{
+		if (i == m_pPlayersMgrInform->m_iMyPlayerID)
+			continue;
+		if (m_pPlayersMgrInform->m_ppPlayers[i])
+		{
+			if (m_pPlayersMgrInform->m_ppPlayers[i]->m_IsLift)
+			{
+				m_pPlayersMgrInform->m_ppPlayers[i]->LiftPlayer(m_pTreasureChest, m_pVoxelTerrain);
+				m_pPlayersMgrInform->m_ppPlayers[i]->PushPlayers(m_pPlayersMgrInform->m_ppPlayers, m_pPlayersMgrInform->m_iPlayersNum);
+				m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed = true;
+			}
+			else if(m_pPlayersMgrInform->m_ppPlayers[i]->m_pLiftingPlayer)
+			{
+				m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed = false;
+				m_pTreasureChest->BeRelievedFromLiftingPlayer();
+			}
+		}
+	}
 	for (int i = 0; i < 2; i++)
 	{
 		if (CPhysicalCollision::IsCollided(

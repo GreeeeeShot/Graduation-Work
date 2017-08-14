@@ -19,6 +19,8 @@ CCameraOperator::CCameraOperator()
 	m_d3dxvRight = D3DXVECTOR3(1.0f, 0.0f, 0.0f);
 	m_d3dxvUp = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
 	m_d3dxvLook = D3DXVECTOR3(0.0f, 0.0f, 1.0f);
+
+	m_pastYpos = 0.0f;
 }
 
 
@@ -171,7 +173,7 @@ void CCameraOperator::GenerateViewMatrix(float fTimeElapsed, bool bSoftMoving)
 		m_pObject->GetPosition().z);
 */
 	if (bSoftMoving)
-	{
+	{		
 		D3DXVECTOR3 d3dxvToUpdatedDir = (m_d3dxvCameraDir * m_fDistance + m_d3dxvPosition + m_d3dxvZoomDir) - m_d3dxvCameraPos;
 		
 		m_d3dxvCameraPos += d3dxvToUpdatedDir / (float(CAMERA_SOFT_MOVING_SPLIT_FRACTION) * (1/fTimeElapsed));
@@ -181,7 +183,7 @@ void CCameraOperator::GenerateViewMatrix(float fTimeElapsed, bool bSoftMoving)
 	printf("CameraOperator Position : (%f, %f, %f) \n", m_d3dxvPosition.x, m_d3dxvPosition.y, m_d3dxvPosition.z);*/
 	
 	d3dxvLookAt = m_pObject ? m_pObject->GetPosition() : m_d3dxvPosition;
-
+	
 	m_Camera.GenerateViewMatrix(m_d3dxvCameraPos, d3dxvLookAt, D3DXVECTOR3(0.0f, 1.0f, 0.0f));
 	//카메라의 위치와 방향이 바뀌면(카메라 변환 행렬이 바뀌면) 절두체 평면을 다시 계산한다.
 	m_Camera.CalculateFrustumPlanes();

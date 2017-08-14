@@ -105,7 +105,6 @@ void ProcessPacket(char *ptr)
 		sc_packet_init *my_packet = reinterpret_cast<sc_packet_init *>(ptr);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_iMyPlayerID = my_packet->id;
 		id = my_packet->id;
-		std::cout << "Position: " << my_packet->Posx << ", " << my_packet->Posy << ", " << my_packet->Posz << std::endl;
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
@@ -113,29 +112,52 @@ void ProcessPacket(char *ptr)
 
 		break;
 	}
-
+	case SC_BOX:
+	{
+		sc_packet_box *my_packet = reinterpret_cast<sc_packet_box *>(ptr);
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		break;
+	}
 	case SC_SYNC:
 	{
 		sc_packet_sync *my_packet = reinterpret_cast<sc_packet_sync *>(ptr);
 		id = my_packet->id;
-
-
-		if ((int)CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y < -1)
+		D3DXVECTOR3 pos = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition();
+		if (CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_bIsDigOrInstall)
+			break;
+		if (pos.y < -1)
 		{
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-			//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInformtl->m_ppPlayers[id]->m_CameraOperator.SetCameraVector(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
 
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
 		}
+		else if ((pos.y-my_packet->Posy < -0.9f || pos.y - my_packet->Posy > 0.9f) || (pos.z - my_packet->Posz < -0.9f || pos.z - my_packet->Posz > 0.9f) || (pos.x - my_packet->Posx < -0.9f || pos.x - my_packet->Posx > 0.9f))
+		{
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_pastYpos = my_packet->Looky;
+		}
 		else
 		{
+			float pasty = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_pastYpos;
+			float currenty = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.GetPosition().y;
+			float x = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.GetPosition().x;
+			float z = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.GetPosition().z;
+			
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+			
+			if(!(my_packet->Looky - pasty < 0.5 && my_packet->Looky - pasty > -0.5))
+				CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+			else if(!(my_packet->Lookx - x < 0.7 && my_packet->Lookx - x > -0.7) || !(my_packet->Lookz - z < 0.7 && my_packet->Lookz - z > -0.7))
+				CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, currenty, my_packet->Lookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
 
-			//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-			//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInformtl->m_ppPlayers[id]->m_CameraOperator.SetCameraVector(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_pastYpos = my_packet->Looky;
 		}
 		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetCameraVector(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
@@ -152,7 +174,7 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
-		
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_serverActive = true;
 		break;
 	}
 	case SC_DEAD:
@@ -160,6 +182,7 @@ void ProcessPacket(char *ptr)
 		sc_packet_sync *my_packet = reinterpret_cast<sc_packet_sync *>(ptr);
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_RespawnManager.RegisterRespawnManager(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id], true);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_serverActive = false;
 		break;
 	}
 	case SC_INSVOX:
@@ -168,9 +191,7 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
-
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = true;
@@ -182,7 +203,6 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
-		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 
 
@@ -196,6 +216,28 @@ void ProcessPacket(char *ptr)
 		id = my_packet->id;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = false;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Delvoxel = false;
+		break;
+	}
+	case SC_LIFTBOX:
+	{
+		sc_packet_lift *my_packet = reinterpret_cast<sc_packet_lift *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift=true;
+		break;
+	}
+	case SC_OUTBOX:
+	{
+		sc_packet_lift *my_packet = reinterpret_cast<sc_packet_lift *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift = false;
 		break;
 	}
 	case SC_TEAM_CHANGE:
@@ -359,6 +401,7 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 	cs_packet_up *my_packet_jump = reinterpret_cast<cs_packet_up *>(send_buffer);
 	cs_packet_camera *my_packet_camera = reinterpret_cast<cs_packet_camera *>(send_buffer);
 	cs_packet_vox *my_packet_voxel = reinterpret_cast<cs_packet_vox *>(send_buffer);
+	cs_packet_lift *my_packet_lift = reinterpret_cast<cs_packet_lift *>(send_buffer);
 	DWORD iobyte;
 	switch (type)
 	{
@@ -421,6 +464,28 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 		my_packet_voxel->size = sizeof(my_packet_voxel);
 		send_wsabuf.len = sizeof(my_packet_voxel);
 		my_packet_voxel->type = CS_CANCLEVOX;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case LIFTBOX:
+		my_packet_lift->size = sizeof(my_packet_lift);
+		send_wsabuf.len = sizeof(my_packet_lift);
+		my_packet_lift->type = CS_LIFTBOX;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case OUTBOX:
+		my_packet_lift->size = sizeof(my_packet_lift);
+		send_wsabuf.len = sizeof(my_packet_lift);
+		my_packet_lift->type = CS_OUTBOX;
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();

@@ -38,8 +38,10 @@ protected:
 	D3DXVECTOR3 m_d3dxvRight;
 	D3DXVECTOR3 m_d3dxvUp;
 	D3DXVECTOR3 m_d3dxvLook;
-
 	float m_fAngleX;
+
+public:
+	float m_pastYpos;
 
 public:
 	CCameraOperator();
@@ -50,6 +52,9 @@ public:
 	void SetViewport(ID3D11DeviceContext *pd3dDeviceContext, DWORD xTopLeft, DWORD yTopLeft, DWORD nWidth, DWORD nHeight, float fMinZ = 0.0f, float fMaxZ = 1.0f);
 	void GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle);
 	void SetPosition(D3DXVECTOR3 pos) { m_d3dxvCameraPos = pos; }
+	void SetOperatorPosition(D3DXVECTOR3 pos) { m_d3dxvPosition = pos; }
+	D3DXVECTOR3 GetPosition() {return m_d3dxvCameraPos;}
+	D3DXVECTOR3 GetOperatorPosition() { return m_d3dxvPosition; }
 
 	D3DXVECTOR3 GetLook(void) { return m_d3dxvLook; }
 	D3DXVECTOR3 GetUp(void) { return m_d3dxvUp; }
@@ -67,5 +72,6 @@ public:
 
 	void GenerateViewMatrix(float fTimeElapsed, bool bSoftMoving = false);							// 부드럽게 움직이는 표현을 하고 싶으면 true로 설정한다.
 	void UpdateShaderVariables(ID3D11DeviceContext *pd3dDeviceContext);			// 카메라 상수 버퍼를 갱신한다.
+	
 };
 

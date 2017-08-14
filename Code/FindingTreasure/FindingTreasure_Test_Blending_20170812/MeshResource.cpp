@@ -1243,7 +1243,7 @@ void CTexturedLightingCowgirlMesh::Animate(ID3D11DeviceContext *pd3dDeviceContex
 
 	for (int i = 0; i < m_nVertices; ++i)
 	{
-		Vertices[i] = CTexturedLightingVertex(D3DXVECTOR3(vec[i].x*0.01, vec[i].y*0.01, vec[i].z*0.01 - 0.2f), nor[i], uv[i]);
+		Vertices[i] = CTexturedLightingVertex(D3DXVECTOR3(vec[i].x*0.001, vec[i].z*0.003 , -vec[i].y*0.001 ), nor[i], uv[i]);
 	}
 
 	delete[] vec;
@@ -1443,7 +1443,7 @@ void ShipMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 
 TreasureChestMesh::TreasureChestMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
 {
-	float fx = 1.f, fy = 1.f, fz = 1.f;
+	float fx = 0.5f, fy = 0.5f, fz = 0.5f;
 	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
 	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
 	m_AABB.m_pRenderObject = new CGameObject();
@@ -1474,7 +1474,7 @@ TreasureChestMesh::TreasureChestMesh(ID3D11Device *pd3dDevice) : CLightingMesh(p
 	printf("m_nVertices : %d", m_nVertices);
 	for (int i = 0; i < m_nVertices; ++i)
 	{
-		d3dxVertex = D3DXVECTOR3(vec[i].x*0.1, vec[i].y*0.1, vec[i].z*0.1);
+		d3dxVertex = D3DXVECTOR3(vec[i].x*0.05, vec[i].y*0.1, vec[i].z*0.1);
 		D3DXMatrixRotationX(&mtxRotate, D3DXToRadian(0.0f));
 		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
 		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);

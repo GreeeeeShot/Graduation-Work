@@ -46,6 +46,9 @@ public:
 
 	static CTexture* pSkydomTexture;
 	static CTexture* pPirateTexture;
+	static CTexture* pCowgirlTexture;
+	static CTexture* pShipTexture;
+	static CTexture* pTreasureTexture;
 	static CTexture* pGrassTexture;
 	static CTexture* pWaveTexture;
 	static CTexture* pWaveNormalMap;
@@ -70,6 +73,8 @@ public:
 
 	static CTexture* pEffect_ParticleBlue0;
 
+	static ID3D11ShaderResourceView** ppd3dShipTexture;
+	static ID3D11ShaderResourceView** ppd3dTreasureTexture;
 	static ID3D11ShaderResourceView** ppd3dSkyTexture;
 	static ID3D11ShaderResourceView** ppd3dWaveTexture;
 	static ID3D11ShaderResourceView** ppd3dWaveNormalMap;
