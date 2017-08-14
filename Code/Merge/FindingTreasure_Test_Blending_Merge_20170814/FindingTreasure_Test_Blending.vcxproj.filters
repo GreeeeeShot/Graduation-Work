@@ -349,6 +349,9 @@
     <Image Include="waiting_room_redteam.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="title.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="DiffusedPS.fx">

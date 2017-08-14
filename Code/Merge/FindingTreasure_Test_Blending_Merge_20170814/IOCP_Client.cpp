@@ -132,15 +132,25 @@ void ProcessPacket(char *ptr)
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+			
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
 
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
 		}
-		else if ((pos.y-my_packet->Posy < -0.9f || pos.y - my_packet->Posy > 0.9f) || (pos.z - my_packet->Posz < -0.9f || pos.z - my_packet->Posz > 0.9f) || (pos.x - my_packet->Posx < -0.9f || pos.x - my_packet->Posx > 0.9f))
+		else if ((pos.y-my_packet->Posy < -1.0f || pos.y - my_packet->Posy > 1.0f) || (pos.z - my_packet->Posz < -1.9f || pos.z - my_packet->Posz > 1.9f) || (pos.x - my_packet->Posx < -1.9f || pos.x - my_packet->Posx > 1.9f))
 		{
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_pastYpos = my_packet->Looky;
 		}
 		else
@@ -157,6 +167,11 @@ void ProcessPacket(char *ptr)
 			else if(!(my_packet->Lookx - x < 0.7 && my_packet->Lookx - x > -0.7) || !(my_packet->Lookz - z < 0.7 && my_packet->Lookz - z > -0.7))
 				CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, currenty, my_packet->Lookz));
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 
 			CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_pastYpos = my_packet->Looky;
 		}
@@ -170,11 +185,19 @@ void ProcessPacket(char *ptr)
 	{
 		sc_packet_respawn *my_packet = reinterpret_cast<sc_packet_respawn *>(ptr);
 		id = my_packet->id;
+		//printf("id : %d", id);
 		float y = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->GetPosition().y;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.m_Camera.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.InitCameraOperator(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]);
+
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_serverActive = true;
 		break;
 	}
@@ -194,6 +217,12 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_Insvoxel = true;
@@ -206,6 +235,11 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
 
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_iVoxelPocketSlotIdx = my_packet->pocket;
@@ -227,6 +261,12 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift=true;
 		break;
@@ -238,6 +278,12 @@ void ProcessPacket(char *ptr)
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetPosition(D3DXVECTOR3(my_packet->Lookx, my_packet->Looky, my_packet->Lookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetOperatorPosition(D3DXVECTOR3(my_packet->Operx, my_packet->Opery, my_packet->Operz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDir(D3DXVECTOR3(my_packet->Dirx, my_packet->Diry, my_packet->Dirz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetDistance(my_packet->distance);
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetLook(D3DXVECTOR3(my_packet->oLookx, my_packet->oLooky, my_packet->oLookz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraOperator.SetRight(D3DXVECTOR3(my_packet->Rightx, my_packet->Righty, my_packet->Rightz));
+
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift = false;
 		break;

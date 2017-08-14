@@ -1391,6 +1391,7 @@ ShipMesh::ShipMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
 		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
 		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);
 	}
+	
 
 	m_nBuffers = 1;
 	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];
@@ -1479,6 +1480,12 @@ TreasureChestMesh::TreasureChestMesh(ID3D11Device *pd3dDevice) : CLightingMesh(p
 		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
 		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);
 	}
+
+	/*
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+	pVertices[i] = CTexturedLightingVertex(D3DXVECTOR3(vec[i].x*0.1f, vec[i].y*0.1f, vec[i].z*0.1f), nor[i], uv[i]);
+	}*/
 
 	m_nBuffers = 1;
 	m_ppd3dVertexBuffers = new ID3D11Buffer*[1];

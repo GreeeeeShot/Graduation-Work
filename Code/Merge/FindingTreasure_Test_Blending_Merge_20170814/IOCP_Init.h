@@ -131,6 +131,10 @@ struct sc_packet_lift {
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
+	FLOAT Dirx, Diry, Dirz;
+	FLOAT distance;
+	FLOAT oLookx, oLooky, oLookz;
+	FLOAT Rightx, Righty, Rightz;
 };
 
 struct sc_packet_box {
@@ -171,6 +175,10 @@ struct sc_packet_vox {
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
+	FLOAT Dirx, Diry, Dirz;
+	FLOAT distance;
+	FLOAT oLookx, oLooky, oLookz;
+	FLOAT Rightx, Righty, Rightz;
 };
 
 struct sc_packet_respawn {
@@ -180,6 +188,10 @@ struct sc_packet_respawn {
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
+	FLOAT Dirx, Diry, Dirz;
+	FLOAT distance;
+	FLOAT oLookx, oLooky, oLookz;
+	FLOAT Rightx, Righty, Rightz;
 };
 
 struct sc_packet_dead {
@@ -231,6 +243,10 @@ struct sc_packet_init {
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
+	FLOAT Dirx, Diry, Dirz;
+	FLOAT distance;
+	FLOAT oLookx, oLooky, oLookz;
+	FLOAT Rightx, Righty, Rightz;
 };
 
 struct sc_packet_sync {
@@ -240,6 +256,10 @@ struct sc_packet_sync {
 	FLOAT Posx, Posy, Posz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
+	FLOAT Dirx, Diry, Dirz;
+	FLOAT distance;
+	FLOAT oLookx, oLooky, oLookz;
+	FLOAT Rightx, Righty, Rightz;
 };
 
 #pragma pack (pop)

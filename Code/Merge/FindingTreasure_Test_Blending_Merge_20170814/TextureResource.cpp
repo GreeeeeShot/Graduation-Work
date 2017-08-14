@@ -262,9 +262,9 @@ void CTextureResource::CreateTextureResource(ID3D11Device *pd3dDevice, ID3D11Dev
 	ppd3dWaveNormalMap = new ID3D11ShaderResourceView*();
 	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/wavenormal.png"), NULL, NULL, ppd3dWaveNormalMap, NULL);
 	ppd3dShipTexture = new ID3D11ShaderResourceView*();
-	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/boat.jpg"), NULL, NULL, ppd3dShipTexture, NULL);
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/boat.png"), NULL, NULL, ppd3dShipTexture, NULL);
 	ppd3dTreasureTexture = new ID3D11ShaderResourceView*();
-	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/treasurebox.jpg"), NULL, NULL, ppd3dTreasureTexture, NULL);
+	D3DX11CreateShaderResourceViewFromFile(pd3dDevice, _T("Texture/cpl/TreasureBox.png"), NULL, NULL, ppd3dTreasureTexture, NULL);
 	
 
 	ppd3dSamplerState = new  ID3D11SamplerState*[1];

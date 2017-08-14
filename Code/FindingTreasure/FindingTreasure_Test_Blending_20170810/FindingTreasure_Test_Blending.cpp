@@ -191,7 +191,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	if (!ghWnd) return(FALSE);
 
 	//gGameFramework.OnCreate(hInstance, hMainWnd);
-	//CGameManager::GetInstance()->ChangeGameState(new CPlayGameState());
+	//CGameManager:: GetInstance()->ChangeGameState(new CPlayGameState());
 
 	CFBXAnimResource::CreateFBXAnimResource();
 	CGameManager::CreateGameManagerInst(&ghInst, &ghWnd);

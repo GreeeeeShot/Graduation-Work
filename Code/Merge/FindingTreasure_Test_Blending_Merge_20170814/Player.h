@@ -188,7 +188,7 @@ public:
 		m_fMass = 40.0f;               // Áú·®
 
 		SetMaterial(CMaterialResource::pStandardMaterial);
-		SetTexture(CTextureResource::pWoodTexture);
+		SetTexture(CTextureResource::pTreasureTexture);
 		//SetTexture(CTextureResource::pTreasureTexture);
 		SetMesh(CMeshResource::pTreasureChestMesh);
 		SetShader(CShaderResource::pTexturedLightingShader);

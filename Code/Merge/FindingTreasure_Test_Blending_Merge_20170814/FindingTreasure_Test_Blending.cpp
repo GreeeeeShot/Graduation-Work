@@ -19,15 +19,13 @@
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
-bool host = 0;
-int strn = 0;
-char	server_ip[20] = "";
-char server_msg[20] = "Join";
+
+
 #define	WM_SOCKET				WM_USER + 1
 
 WaitingPlayer waitingplayer[7];
 
-bool ready;
+
 
 //CGameFramework gGameFramework;
 HWND ghWnd;
@@ -77,91 +75,63 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg;
 
-	while (1)
-	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			// test if this is a quit
-			if (msg.message == WM_QUIT)
-				break;
-
-			// translate any accelerator keys
-			TranslateMessage(&msg);
-
-			// send the message to the window proc
-			DispatchMessage(&msg);
-		} // end if
-		if (state == waitingroom)
-			break;
-	} // end while
 	std::thread* timer_thread = NULL;
 	std::thread* accept_thread = NULL;
 	std::vector<std::thread *> worker_threads;
-	if (host)
-	{
-		Initialize_Server();
-		for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
-		accept_thread = new std::thread(Accept_Thread);
-		timer_thread = new std::thread(Time_Thread);
-		strcpy_s(server_ip, "127.0.0.1");
-		ClientMain(ghWnd, server_ip);
-	}
-	else
-		ClientMain(ghWnd, server_ip);
-
-	while (1)
-	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			// test if this is a quit
-			if (msg.message == WM_QUIT)
-				break;
-
-			// translate any accelerator keys
-			TranslateMessage(&msg);
-
-			// send the message to the window proc
-			DispatchMessage(&msg);
-		} // end if
-		if (state == play)
-			break;
-	} // end while
 
 	  // 기본 메시지 루프입니다.
 	while (1)
 	{
-		if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
-			if (msg.message == WM_QUIT) break;
-			if (!::TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+			// test if this is a quit
+			if (msg.message == WM_QUIT)
+				break;
+
+			// translate any accelerator keys
+			TranslateMessage(&msg);
+
+			// send the message to the window proc
+			DispatchMessage(&msg);
+		}
+		//gGameFramework.FrameAdvance();
+		CGameManager::GetInstance()->m_pGameState->Render();
+		CGameManager::GetInstance()->m_pGameState->Update();
+		//CGameManager::GetInstance()->ChangeGameState(new CPlayGameState());
+		if (IsWaitingRoom)
+		{
+			if (host)
 			{
-				::TranslateMessage(&msg);
-				::DispatchMessage(&msg);
+				Initialize_Server();
+				for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
+				accept_thread = new std::thread(Accept_Thread);
+				timer_thread = new std::thread(Time_Thread);
+				strcpy_s(server_ip, "127.0.0.1");
+				ClientMain(ghWnd, server_ip);
 			}
+			else
+				ClientMain(ghWnd, server_ip);
+
+			IsWaitingRoom = false;
 		}
-		else
-		{
-			//gGameFramework.FrameAdvance();
-			CGameManager::GetInstance()->m_pGameState->Update();
-			CGameManager::GetInstance()->m_pGameState->Render();
-			//CGameManager::GetInstance()->ChangeGameState(new CPlayGameState());
-		}
+		
 	}
 	// gGameFramework.OnDestroy();
 	delete CGameManager::GetInstance();
+	if (host)
+	{
+		accept_thread->join();
+		timer_thread->join();
+		//Create_Accept_Thread();
+		for (auto pth : worker_threads) {
+			pth->join();
+			delete pth;
+		}
+		ShutDown_Server();
 
-	accept_thread->join();
-	timer_thread->join();
-	//Create_Accept_Thread();
-	for (auto pth : worker_threads) {
-		pth->join();
-		delete pth;
+		if (accept_thread != NULL)
+			delete accept_thread;
 	}
-	ShutDown_Server();
-
-	if (accept_thread != NULL)
-		delete accept_thread;
-
 	return (int)msg.wParam;
 }
 
@@ -224,6 +194,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	::ShowWindow(ghWnd, nCmdShow);
 	::UpdateWindow(ghWnd);
 
+	IsWaitingRoom = false;
+	host = 0;
+	strn = 0;
+	ZeroMemory(server_ip, sizeof(server_ip));
+	strcpy_s(server_msg, "Join");
+	ready = 0;
+	state = host_select;
+
 	return(TRUE);
 }
 
@@ -253,21 +231,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch (message)
 	{
-	case WM_CREATE:
-	{
-		state = host_select;
-		ready = false;
-		hipInputbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP6));
-		hwaitingbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP9));
-		charabmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP4));
-		charabmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
-		charaSelectbmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP8));
-		SelectTeambmp[0] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
-		SelectTeambmp[1] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
-		SelectTeambmp[2] = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
-		readybmp = LoadBitmap(((LPCREATESTRUCT)lParam)->hInstance, MAKEINTRESOURCE(IDB_BITMAP7));
-		break;
-	}
 	case WM_COMMAND:
 	{
 		int wmId = LOWORD(wParam);
@@ -289,39 +252,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDOWN:
 		break;
 	case WM_LBUTTONUP:
-	{
-		mx = LOWORD(lParam);
-		my = HIWORD(lParam);
-		if (waitingroom == state)
-		{
-			if (mx > 10 && mx < 90 && my>240 && my < 280)
-			{
-				WaitingPacket(CHARACHANGE);
-				charac = (charac + 1) % 2;
-			}
-			else if (mx > 290 && mx < 370 && my>240 && my < 280)
-			{
-				WaitingPacket(CHARACHANGE);
-				charac = (charac + 1) % 2;
-			}
-			else if (mx > 50 && mx < 330 && my>40 && my < 458)
-			{
-				WaitingPacket(TEAMCHANGE);
-				my_team = (my_team + 1) % 2;
-			}
-			else if (mx > 357 && mx < 904 && my>514 && my < 661)
-			{
-				WaitingPacket(READY);
-				ready = (ready + 1) % 2;
-			}
-		}
-		InvalidateRgn(hWnd, NULL, false);
-		break;
-	}
 	case WM_RBUTTONDOWN:
 	case WM_RBUTTONUP:
 	case WM_MOUSEMOVE:
 	case WM_KEYDOWN:
+		/*
 		if (state == server_input)
 		{
 			if (!wParam) break;
@@ -366,7 +301,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			InvalidateRgn(hWnd, NULL, FALSE);
 			break;
-		}
+			
+		}*/
 	case WM_KEYUP:
 		//gGameFramework.OnProcessingWindowMessage(hWnd, message, wParam, lParam);
 		CGameManager::GetInstance()->m_pGameState->OnProcessingWindowMessage(hWnd, message, wParam, lParam);
@@ -375,7 +311,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		hdc = GetDC(hWnd);
 		hdc = BeginPaint(hWnd, &ps);
-
+		/*
 		if (hBit1 == NULL)
 			hBit1 = CreateCompatibleBitmap(hdc, 1280, 760);
 
@@ -519,8 +455,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			BitBlt(hdc, 0, 0, 1280, 760, memdc1, 0, 0, SRCCOPY);
 			SelectObject(memdc1, oldBit1);
-		}
-		else if (state == play) CGameManager::GetInstance()->m_pGameState->Render(hdc);
+		}*/
+		CGameManager::GetInstance()->m_pGameState->Render(hdc);
 
 		DeleteDC(memdc2);
 		DeleteDC(memdc1);
@@ -551,7 +487,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-	if (state != play)
+	if(state != play)
 		InvalidateRgn(hWnd, NULL, FALSE);
 	return 0;
 }

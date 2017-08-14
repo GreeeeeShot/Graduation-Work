@@ -23,7 +23,10 @@ public:
 	static HBITMAP m_hIntroBackBitmap;
 	static HBITMAP m_hIntroCompanyBitmap;
 	static HBITMAP m_hTempWaitingRoomBitmap;
+	static HBITMAP charaSelectbmp, readybmp, hBit1, hipInputbmp,hwaitingbmp , htitle;
+	static HBITMAP SelectTeambmp[3], charabmp[2];
 
+	//static HBITMAP piratebmp, cowgirlcharabmp, blueTeambmp, redTeambmp, nonteam;
 	static HINSTANCE m_hInstance;
 	static HWND m_hwnd;
 

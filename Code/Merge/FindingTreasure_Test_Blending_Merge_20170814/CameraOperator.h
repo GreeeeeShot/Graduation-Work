@@ -53,12 +53,18 @@ public:
 	void GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle);
 	void SetPosition(D3DXVECTOR3 pos) { m_d3dxvCameraPos = pos; }
 	void SetOperatorPosition(D3DXVECTOR3 pos) { m_d3dxvPosition = pos; }
+	void SetDir(D3DXVECTOR3 pos) { m_d3dxvCameraDir = pos; }
+	void SetDistance(float dis) { m_fDistance = dis; }
 	D3DXVECTOR3 GetPosition() {return m_d3dxvCameraPos;}
 	D3DXVECTOR3 GetOperatorPosition() { return m_d3dxvPosition; }
-
+	D3DXVECTOR3 GetDir() { return m_d3dxvCameraDir; }
+	float GetDistance() { return m_fDistance; }
 	D3DXVECTOR3 GetLook(void) { return m_d3dxvLook; }
 	D3DXVECTOR3 GetUp(void) { return m_d3dxvUp; }
 	D3DXVECTOR3 GetRight(void) { return m_d3dxvRight; }
+	void SetLook(D3DXVECTOR3 pos) { m_d3dxvLook = pos; }
+	void SetUp(D3DXVECTOR3 pos) { m_d3dxvUp = pos; }
+	void SetRight(D3DXVECTOR3 pos) { m_d3dxvRight = pos; }
 
 	void MoveCameraOperator(const D3DXVECTOR3& d3dxvShift);						// 카메라 조작기를 현 위치에서 d3dxvShift만큼 이동시킨다.
 	void RotateLocalY(float fRotationDegreePerSec, float fTimeElapsed);							// m_d3dxvCameraDir을 로컬 Y축에 대하여 회전한다. ; 좌표계 전체도 움직인다.

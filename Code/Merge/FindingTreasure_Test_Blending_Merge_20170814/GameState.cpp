@@ -8,8 +8,31 @@ HBITMAP CGameState::m_hMemBitmap = NULL;
 HBITMAP CGameState::m_hIntroBackBitmap = NULL;
 HBITMAP CGameState::m_hIntroCompanyBitmap = NULL;
 HBITMAP CGameState::m_hTempWaitingRoomBitmap = NULL;
+HBITMAP CGameState::hipInputbmp = NULL;
+HBITMAP CGameState::hwaitingbmp = NULL;
+HBITMAP CGameState::htitle = NULL;
+/*
+HBITMAP CGameState::piratebmp = NULL;
+HBITMAP CGameState::cowgirlcharabmp = NULL;
+HBITMAP CGameState::blueTeambmp = NULL;
+HBITMAP CGameState::redTeambmp = NULL;
+HBITMAP CGameState::nonteam = NULL;
+*/
+
+HBITMAP CGameState::charaSelectbmp = NULL;
+HBITMAP CGameState::readybmp = NULL;
+HBITMAP CGameState::SelectTeambmp[3] = { 0, };
+HBITMAP CGameState::charabmp[2] = { 0, };
+
 HINSTANCE CGameState::m_hInstance;
 HWND CGameState::m_hwnd;
+
+char server_ip[20];
+char server_msg[20];
+bool host;
+int strn;
+bool IsWaitingRoom;
+bool ready;
 
 CButton::CButton()
 {
@@ -52,10 +75,28 @@ void CGameState::CreateAPIBitmapResource(HINSTANCE hInstance, HWND hwnd)
 {
 	m_hInstance = hInstance;
 	m_hwnd = hwnd;
-
+	/*
+	CGameState::piratebmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP4));
+	CGameState::cowgirlcharabmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
+	CGameState::blueTeambmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+	CGameState::redTeambmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
+	CGameState::nonteam = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+	*/
+	
 	CGameState::m_hIntroBackBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_INTRO_BACK));
 	CGameState::m_hIntroCompanyBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_INTRO_COMPANY_LOGO));
 	CGameState::m_hTempWaitingRoomBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_TEMP_WAITINGROOM));
+	CGameState::htitle = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP12));
+	CGameState::hipInputbmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP6));
+	CGameState::hwaitingbmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP9));
+	CGameState::charabmp[0] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP4));
+	CGameState::charabmp[1] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
+	CGameState::SelectTeambmp[0] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+	CGameState::SelectTeambmp[1] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
+	CGameState::SelectTeambmp[2] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+	CGameState::charaSelectbmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP8));
+	CGameState::readybmp = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP7));
+
 }
 
 CPlayGameState::CPlayGameState()
@@ -268,7 +309,7 @@ CTempWaitingRoomState::~CTempWaitingRoomState() {}
 void CTempWaitingRoomState::Init()
 {
 	m_pWaitingRoomInformDesc = new SWaitingRoomInformDesc();
-
+	/*
 	m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;
 
 	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
@@ -291,16 +332,18 @@ void CTempWaitingRoomState::Init()
 			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = waitingplayer[i].team;
 		}
 		
-	}
+	}*/
 
-	CGameState* pTempGameState = new CPlayGameState();
-	pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
-	CGameManager::GetInstance()->ChangeGameState(pTempGameState);								// 게임 플레이 상태로 바꾼다.
-	/*
 	for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)
 	{
 		m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = false;
-	}*/
+	}
+	/*
+	CGameState* pTempGameState = new CPlayGameState();
+	pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+	CGameManager::GetInstance()->ChangeGameState(pTempGameState);								// 게임 플레이 상태로 바꾼다.
+	*/
+	
 }
 void CTempWaitingRoomState::Destroy(void) {}
 void CTempWaitingRoomState::Update(void) 
@@ -330,6 +373,163 @@ void CTempWaitingRoomState::Render(HDC hdc)
 	//TransparentBlt(hMemDC, 0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, hBackDC, 0, 0, 128, 72, RGB(0, 0, 0));			
 	//TransparentBlt(hMemDC, 325, 182, 630, 355, hCompanyDC, 0, 0, 630, 355, RGB(0, 0, 0));
 
+	if (state == server_input) {
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, hipInputbmp);
+		BitBlt(hMemDC, 0, 0, 1280, 760, hTempWaitingRoomDC, 0, 0, SRCCOPY);
+
+		SelectObject(hTempWaitingRoomDC, oldTempWaitingRoomBitmap);
+
+		BitBlt(hdc, 0, 0, 1280, 760, hMemDC, 0, 0, SRCCOPY);
+		SelectObject(hMemDC, oldMemBitmap);
+
+		TextOutA(hdc, 190, 350, "server ip input: ", strlen("server ip input: "));
+		TextOutA(hdc, 300, 350, server_ip, strn);
+	}
+	else if (state == host_select)
+	{
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, CGameState::htitle);
+	}
+	else if (state == waitingroom)
+	{
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, hwaitingbmp);
+
+		BitBlt(hMemDC, 0, 0, 1280, 760, hTempWaitingRoomDC, 0, 0, SRCCOPY);
+		SelectObject(hTempWaitingRoomDC, oldTempWaitingRoomBitmap);
+
+		/////////////////자신의 팀컬러 및 캐릭터, 화살표, 레디//////////////
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[my_team]);
+		GdiTransparentBlt(hMemDC, 10, 40, 374, 418, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[charac]);
+		GdiTransparentBlt(hMemDC, 55, 195, 258, 193, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charaSelectbmp);
+		GdiTransparentBlt(hMemDC, 10, 200, 360, 120, hTempWaitingRoomDC, 0, 0, 411, 142, RGB(255, 255, 255));
+
+		if (ready) {
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+			GdiTransparentBlt(hMemDC, 80, 270, 227, 142, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+		}
+		/////////////////팀컬러////////////////////////////////
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[0].team]);
+		GdiTransparentBlt(hMemDC, 380, 70, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[0].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[0].charac]);
+			GdiTransparentBlt(hMemDC, 399, 140, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[0].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 405, 175, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[1].team]);
+		GdiTransparentBlt(hMemDC, 550, 70, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[1].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[1].charac]);
+			GdiTransparentBlt(hMemDC, 569, 140, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[1].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 575, 175, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[2].team]);
+		GdiTransparentBlt(hMemDC, 720, 70, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[2].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[2].charac]);
+			GdiTransparentBlt(hMemDC, 739, 140, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[2].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 745, 175, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[3].team]);
+		GdiTransparentBlt(hMemDC, 340, 300, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[3].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[3].charac]);
+			GdiTransparentBlt(hMemDC, 359, 370, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[3].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 365, 405, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[4].team]);
+		GdiTransparentBlt(hMemDC, 480, 300, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[4].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[4].charac]);
+			GdiTransparentBlt(hMemDC, 499, 370, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[4].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 505, 405, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[5].team]);
+		GdiTransparentBlt(hMemDC, 620, 300, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[5].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[5].charac]);
+			GdiTransparentBlt(hMemDC, 639, 370, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[5].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 645, 405, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, SelectTeambmp[waitingplayer[6].team]);
+		GdiTransparentBlt(hMemDC, 760, 300, 170, 190, hTempWaitingRoomDC, 0, 0, 425, 475, RGB(255, 255, 255));
+		if (waitingplayer[6].connect)
+		{
+			oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, charabmp[waitingplayer[6].charac]);
+			GdiTransparentBlt(hMemDC, 779, 370, 120, 90, hTempWaitingRoomDC, 0, 0, 640, 480, RGB(255, 255, 255));
+			if (waitingplayer[6].ready)
+			{
+				oldTempWaitingRoomBitmap = (HBITMAP)SelectObject(hTempWaitingRoomDC, readybmp);
+				GdiTransparentBlt(hMemDC, 785, 405, 113, 71, hTempWaitingRoomDC, 0, 0, 227, 142, RGB(255, 255, 255));
+			}
+		}
+
+		BitBlt(hdc, 0, 0, 1280, 760, hMemDC, 0, 0, SRCCOPY);
+		SelectObject(hMemDC, oldMemBitmap);
+	}
+	else if (state == play)
+	{
+		m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;				// 이건 준상이 알아서
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
+		m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
+		for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
+		{
+			if (!waitingplayer[i].connect)
+				continue;
+			if (!(waitingplayer[i].id >= 0 && waitingplayer[i].id < 8))
+				continue;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_bIsSlotActive = true;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_PlayerType = (PLAYER_TYPE)waitingplayer[i].charac;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = (BELONG_TYPE)waitingplayer[i].team;
+		}
+
+		CGameState* pTempGameState = new CPlayGameState();
+		pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+		CGameManager::GetInstance()->ChangeGameState(pTempGameState);
+	}
+
 	BitBlt(hMemDC, 0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, hTempWaitingRoomDC, 0, 0, SRCCOPY);
 
 	//SelectObject(hBackDC, oldBackBitmap);
@@ -346,6 +546,8 @@ void CTempWaitingRoomState::Render(HDC hdc)
 
 void CTempWaitingRoomState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) 
 {
+	int mx, my;
+
 	static LONG x;
 	static LONG y;
 
@@ -359,40 +561,83 @@ void CTempWaitingRoomState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID,
 		else if (m_sSnowButton.IsInButton(LOWORD(lParam), HIWORD(lParam))) bIsClickedSnowButton = true;
 		break;
 	case WM_LBUTTONUP:			// 마우스 클릭 후 마우스 커서가 아까 눌렀던 버튼 위에 있다면 게임 플레이 상태로 전환함.
-		if (m_sJungleButton.IsInButton(LOWORD(lParam), HIWORD(lParam)))
+		if (state == host_select)
 		{
-			if (bIsClickedJungleButton)										// 정글 맵을 눌렀을 경우
-			{
-				m_pWaitingRoomInformDesc->m_iMyPlayerID = 0;				// 이건 준상이 알아서
-				m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
-				for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
-				{
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = true;
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_PlayerType = PLAYER_TYPE_PIRATE;
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_BelongType = i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED;
-				}
+			mx = LOWORD(lParam);
+			my = HIWORD(lParam);
 
-				CGameState* pTempGameState = new CPlayGameState();
-				pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
-				CGameManager::GetInstance()->ChangeGameState(pTempGameState);								// 게임 플레이 상태로 바꾼다.
+			if (mx > 468 && mx < 750 && my>367 && my < 438)
+			{
+				host = true;
+				IsWaitingRoom = true;
+				state = waitingroom;
+			}
+			else if (mx > 468 && mx < 750 && my>454 && my < 515)
+			{
+				state = server_input;
 			}
 		}
-		else if (m_sSnowButton.IsInButton(LOWORD(lParam), HIWORD(lParam)))	// 눈 맵을 선택했을 경우
+		if (waitingroom == state)
 		{
-			if (bIsClickedSnowButton)
+			mx = LOWORD(lParam);
+			my = HIWORD(lParam);
+			if (mx > 10 && mx < 90 && my>240 && my < 280)
 			{
-				m_pWaitingRoomInformDesc->m_iMyPlayerID = 0;				// 이건 준상이 알아서
-				m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_SNOW;
-				for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
+				WaitingPacket(CHARACHANGE);
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 290 && mx < 370 && my>240 && my < 280)
+			{
+				WaitingPacket(CHARACHANGE);
+				charac = (charac + 1) % 2;
+			}
+			else if (mx > 50 && mx < 330 && my>40 && my < 458)
+			{
+				WaitingPacket(TEAMCHANGE);
+				my_team = (my_team + 1) % 2;
+			}
+			else if (mx > 357 && mx < 904 && my>514 && my < 661)
+			{
+				WaitingPacket(READY);
+				ready = (ready + 1) % 2;
+			}
+		}
+		else {
+			if (m_sJungleButton.IsInButton(LOWORD(lParam), HIWORD(lParam)))
+			{
+				if (bIsClickedJungleButton)										// 정글 맵을 눌렀을 경우
 				{
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = true;
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_PlayerType = PLAYER_TYPE_PIRATE;
-					m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_BelongType = i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED;
-				}
+					m_pWaitingRoomInformDesc->m_iMyPlayerID = 0;				// 이건 준상이 알아서
+					m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
+					for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
+					{
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = true;
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_PlayerType = PLAYER_TYPE_PIRATE;
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_BelongType = i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED;
+					}
 
-				CGameState* pTempGameState = new CPlayGameState();
-				pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
-				CGameManager::GetInstance()->ChangeGameState(pTempGameState);
+					CGameState* pTempGameState = new CPlayGameState();
+					pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+					CGameManager::GetInstance()->ChangeGameState(pTempGameState);								// 게임 플레이 상태로 바꾼다.
+				}
+			}
+			else if (m_sSnowButton.IsInButton(LOWORD(lParam), HIWORD(lParam)))	// 눈 맵을 선택했을 경우
+			{
+				if (bIsClickedSnowButton)
+				{
+					m_pWaitingRoomInformDesc->m_iMyPlayerID = 0;				// 이건 준상이 알아서
+					m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_SNOW;
+					for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)			// 이건 준상이 알아서
+					{
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_bIsSlotActive = true;
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_PlayerType = PLAYER_TYPE_PIRATE;
+						m_pWaitingRoomInformDesc->m_PlayerInformDesc[i].m_BelongType = i < 4 ? BELONG_TYPE_BLUE : BELONG_TYPE_RED;
+					}
+
+					CGameState* pTempGameState = new CPlayGameState();
+					pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);			// 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+					CGameManager::GetInstance()->ChangeGameState(pTempGameState);
+				}
 			}
 		}
 		bIsClickedJungleButton = false;
@@ -403,15 +648,64 @@ void CTempWaitingRoomState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID,
 
 void CTempWaitingRoomState::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) 
 {
-	
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		if (state == server_input)
+		{
+			if (!wParam) break;
+			if (wParam == VK_RETURN) {
+				state = waitingroom;
+				IsWaitingRoom = true;
+				InvalidateRgn(hWnd, NULL, FALSE);
+				break;
+			}
+			else if (wParam == VK_BACK)
+			{
+				if (strn>0)
+					strn--;
+			}
+			else if (wParam == VK_OEM_PERIOD)
+			{
+				server_ip[strn++] = '.';
+				server_ip[strn] = '\0';
+			}
+			else {
+				server_ip[strn++] = wParam;
+				server_ip[strn] = '\0';
+			}
+			InvalidateRgn(hWnd, NULL, FALSE);
+			break;
+		}
+		else if (state == host_select)
+		{
+			if (!wParam) break;
+			if (wParam == VK_RETURN) {
+			}
+			else if (wParam == VK_UP) {
+				host = true;
+				strcpy_s(server_msg, "Host");
+			}
+			else if (wParam == VK_DOWN) {
+				host = false;
+				strcpy_s(server_msg, "Join");
+			}
+			InvalidateRgn(hWnd, NULL, FALSE);
+			break;
+		}
+	}
 }
 LRESULT CALLBACK CTempWaitingRoomState::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) 
 {
 	switch (nMessageID)
 	{
 	case WM_LBUTTONDOWN:
+		break;
 	case WM_LBUTTONUP:
 		OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+		break;
+	case WM_KEYDOWN:
+		OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 		break;
 	}
 	return 0;

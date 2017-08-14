@@ -98,7 +98,7 @@ void error_display(char *msg, int err_no)
 
 void MovePlayer(int id)
 {
-	Timer_Event event = { id, high_resolution_clock::now() + 17ms, E_MOVE };
+	Timer_Event event = { id, high_resolution_clock::now() + 23ms, E_MOVE };
 	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 }
 
@@ -179,6 +179,20 @@ void SendInitPacket(int client)
 	packet.Opery = g_clients[client].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[client].player.m_CameraOperator.GetOperatorPosition().z;
 
+	packet.Dirx = g_clients[client].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[client].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[client].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[client].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[client].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[client].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[client].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[client].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[client].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[client].player.m_CameraOperator.GetRight().z;
+
 	SendPacket(client, &packet);
 }
 
@@ -223,6 +237,20 @@ void SendInstallVoxel(int client, int object, int pocket)
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 	SendPacket(client, &packet);
 }
 
@@ -246,6 +274,20 @@ void SendDeleteVoxel(int client, int object, int pocket)
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 	SendPacket(client, &packet);
 }
 
@@ -268,6 +310,20 @@ void SendLiftBox(int client, int object)
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 	SendPacket(client, &packet);
 }
 
@@ -289,6 +345,20 @@ void SendLiftEnd(int client, int object)
 	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
+
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
 
 	SendPacket(client, &packet);
 }
@@ -345,6 +415,20 @@ void SendSetPositionPacket(int client, int object)
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
 
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 	SendPacket(client, &packet);
 }
 
@@ -365,6 +449,21 @@ void SendSyncPacket(int client, int object)
 	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
+
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+	
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 	/*
 	packet.Lookx = g_clients[object].player.m_CameraOperator.GetLook().x;
 	packet.Looky = g_clients[object].player.m_CameraOperator.GetLook().y;
@@ -390,6 +489,21 @@ void SendRespawnPacket(int client, int object)
 	packet.Operx = g_clients[object].player.m_CameraOperator.GetOperatorPosition().x;
 	packet.Opery = g_clients[object].player.m_CameraOperator.GetOperatorPosition().y;
 	packet.Operz = g_clients[object].player.m_CameraOperator.GetOperatorPosition().z;
+
+	packet.Dirx = g_clients[object].player.m_CameraOperator.GetDir().x;
+	packet.Diry = g_clients[object].player.m_CameraOperator.GetDir().y;
+	packet.Dirz = g_clients[object].player.m_CameraOperator.GetDir().z;
+
+	packet.distance = g_clients[object].player.m_CameraOperator.GetDistance();
+
+	packet.oLookx = g_clients[object].player.m_CameraOperator.GetLook().x;
+	packet.oLooky = g_clients[object].player.m_CameraOperator.GetLook().y;
+	packet.oLookz = g_clients[object].player.m_CameraOperator.GetLook().z;
+
+	packet.Rightx = g_clients[object].player.m_CameraOperator.GetRight().x;
+	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
+	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
+
 
 	SendPacket(client, &packet);
 }
@@ -635,14 +749,19 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
 		g_clients[ci].player.InitCameraOperator();
 		g_clients[ci].vl_lock.unlock();
-
+		
 		g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, false);
 		
 		MovePlayer(ci);
-		event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+		event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
 		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		SendInitPacket(ci);
-		SendRespawnPacket(ci,ci);
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			SendRespawnPacket(i, ci);
+		}
 
 		if (ci == 0)
 		{
@@ -657,9 +776,9 @@ void ProcessPacket(int ci, unsigned char packet[])
 			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 10.f, 0.f));
 			printf("\n%f\n",g_TreasureBox.player.m_d3dxvVelocity.y);
 			g_TreasureBox.vl_lock.unlock();
-			event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
+			event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-			event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
+			event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		}		
 		break;
@@ -756,6 +875,15 @@ void Worker_Thread()
 		}
 		else if (USER_MOVE == over->event_type)
 		{
+			if (!g_TreasureBox.player.m_pMesh)
+			{
+				g_clients[ci].vl_lock.lock();
+				g_clients[ci].last_move_time = high_resolution_clock::now();
+				g_clients[ci].vl_lock.unlock();
+				MovePlayer(ci);
+				delete over;
+				continue;
+			}
 			if (!CGameManager::GetInstance()->m_pGameFramework->m_pScene)
 			{
 				g_clients[ci].vl_lock.lock();
@@ -989,7 +1117,7 @@ void Worker_Thread()
 				SendSyncPacket(i, ci);
 				g_clients[ci].vl_lock.unlock();
 			}
-			Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
+			Timer_Event event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
@@ -1004,7 +1132,7 @@ void Worker_Thread()
 			g_TreasureBox.vl_lock.lock();
 			if (g_TreasureBox.player.m_d3dxvVelocity.y < -10.f)
 				g_TreasureBox.player.m_d3dxvVelocity.y = 0.f;
-			if (g_TreasureBox.player.GetPosition().y < -2.f)
+			if (g_TreasureBox.player.GetPosition().y < -4.f)
 				g_TreasureBox.player.SetPosition(D3DXVECTOR3(g_TreasureBox.player.GetPosition().x, 10.f, g_TreasureBox.player.GetPosition().z));
 
 			CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
@@ -1015,7 +1143,7 @@ void Worker_Thread()
 			if(g_TreasureBox.player.m_pLiftingPlayer)
 				printf("플레이어의 위치 : %f %f %f\n", g_TreasureBox.player.m_pLiftingPlayer->GetPosition().x, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().y, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().z);
 
-			Timer_Event event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
+			Timer_Event event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			
 			delete over;			
@@ -1030,7 +1158,7 @@ void Worker_Thread()
 				SendBoxPacket(i);
 				g_TreasureBox.vl_lock.unlock();
 			}
-			Timer_Event event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
+			Timer_Event event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			
 			delete over;
