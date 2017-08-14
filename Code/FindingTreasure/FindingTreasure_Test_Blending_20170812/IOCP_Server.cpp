@@ -648,13 +648,14 @@ void ProcessPacket(int ci, unsigned char packet[])
 		{
 			g_TreasureBox.vl_lock.lock();
 			//g_TreasureBox.player.m_pMesh = new TreasureChestMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
-			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 0.5f, 0.5f, 0.5f);
+			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 1.0f, 1.0f, 1.0f);
 
 			g_TreasureBox.player.m_fJumpdVelYM = 0.0f;			//Y축에 대한 순간 점프 속도 크기 // 보물상자는 스스로 점프하지 못한다.
 			g_TreasureBox.player.m_fMaxRunVelM = 15.0f;			// 밀리는 속도에 대한 최대 크기
 			g_TreasureBox.player.m_fMass = 40.0f;               // 질량
 
-			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 0.f, 0.f));
+			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 10.f, 0.f));
+			printf("\n%f\n",g_TreasureBox.player.m_d3dxvVelocity.y);
 			g_TreasureBox.vl_lock.unlock();
 			event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
@@ -804,6 +805,11 @@ void Worker_Thread()
 					}
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].is_active = true;
+				g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
+				g_clients[ci].player.m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
+				g_clients[ci].player.m_fMass = 40.0f;               // 질량
+				g_clients[ci].player.m_fRecoveryStaminaPerSec = 40.0f;
+				g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
 				g_clients[ci].vl_lock.unlock();
 			}
 			g_clients[ci].vl_lock.lock();
@@ -829,23 +835,22 @@ void Worker_Thread()
 				g_TreasureBox.vl_lock.lock();
 				box = g_TreasureBox.player;
 				g_TreasureBox.vl_lock.unlock();
+				
+				/*
+				AABB playeraabb = CPhysicalCollision::MoveAABB(currentclient.m_pMesh->m_AABB, currentclient.GetPosition());
+				AABB boxaabb = CPhysicalCollision::MoveAABB(box.m_pMesh->m_AABB, box.GetPosition());
 
+
+				printf("Player: MIN(%f %f %f) MAX(%f %f %f)  BOX:MIN(%f %f %f) MAX(%f %f %f)\n", 
+					playeraabb.m_d3dxvMin.x, playeraabb.m_d3dxvMin.y, playeraabb.m_d3dxvMin.z, playeraabb.m_d3dxvMax.x, playeraabb.m_d3dxvMax.y, playeraabb.m_d3dxvMax.z,
+					boxaabb.m_d3dxvMin.x, boxaabb.m_d3dxvMin.y, boxaabb.m_d3dxvMin.z, boxaabb.m_d3dxvMax.x, boxaabb.m_d3dxvMax.y, boxaabb.m_d3dxvMax.z);
+				*/			
 				if (CPhysicalCollision::IsCollided(
-				&CPhysicalCollision::MoveAABB(currentclient.m_pMesh->m_AABB, currentclient.GetPosition()),
-				&CPhysicalCollision::MoveAABB(box.m_pMesh->m_AABB, box.GetPosition())))
+					&CPhysicalCollision::MoveAABB(currentclient.m_pMesh->m_AABB, currentclient.GetPosition()),
+					&CPhysicalCollision::MoveAABB(box.m_pMesh->m_AABB, box.GetPosition())))
 				{
-				if (currentclient.m_d3dxvVelocity.y <= 0.0f && currentclient.GetPosition().y > box.GetPosition().y + box.m_pMesh->m_AABB.m_d3dxvMax.y)
-				{
-				//if (pPlayer->m_d3dxvVelocity.y > 0.0f)
-				D3DXVECTOR3 d3dxvRevision = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-				d3dxvRevision.y = box.GetPosition().y + box.m_pMesh->m_AABB.m_d3dxvMax.y - (currentclient.GetPosition().y + currentclient.m_pMesh->m_AABB.m_d3dxvMin.y);
-				currentclient.Moving(d3dxvRevision);
-				currentclient.m_CameraOperator.MoveCameraOperator(d3dxvRevision);
-				currentclient.m_d3dxvVelocity.y = 0.0;
-
-				if (currentclient.m_d3dxvMoveDir.y != 0.0f) currentclient.m_d3dxvVelocity.y = 4.95;
-				}
-				else CPhysicalCollision::ImpurseBasedCollisionResolution(&currentclient, &box);
+					CPhysicalCollision::ImpurseBasedCollisionResolution(&currentclient, &box);
+					box.BeRelievedFromLiftingPlayer();
 				}
 				g_TreasureBox.vl_lock.lock();
 				g_TreasureBox.player = box;
@@ -894,21 +899,43 @@ void Worker_Thread()
 							SendDeadPacket(i, ci);
 					}
 				}
+
+				g_TreasureBox.vl_lock.lock();
+				g_TreasureBox.player = box;
+				g_TreasureBox.vl_lock.unlock();
+
 				g_clients[ci].vl_lock.lock();
-				currentclient.m_IsLift = g_clients[ci].player.m_IsLift;
-				currentclient.m_pLiftingPlayer = g_clients[ci].player.m_pLiftingPlayer;
+				g_clients[ci].player = currentclient;
 				g_clients[ci].vl_lock.unlock();
-				if (currentclient.m_IsLift)
+				if (g_clients[ci].player.m_IsLift && !g_clients[ci].player.m_bIsPushed)
 				{
-					currentclient.LiftPlayer(&box, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pVoxelTerrain);
-					currentclient.m_bIsPushed = true;
-				}
-				else if (currentclient.m_pLiftingPlayer)
-				{
-					currentclient.m_bIsPushed = false;
-					box.BeRelievedFromLiftingPlayer();
-				}
 					
+					g_TreasureBox.vl_lock.lock();
+					g_clients[ci].player.LiftPlayer(&g_TreasureBox.player, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pVoxelTerrain);
+					g_TreasureBox.vl_lock.unlock();
+					
+					g_clients[ci].vl_lock.lock();
+					g_clients[ci].player.m_bIsPushed = true;
+					g_clients[ci].vl_lock.unlock();
+
+				}
+				else if (!g_clients[ci].player.m_IsLift && g_TreasureBox.player.m_pLiftingPlayer)
+				{
+					printf("키놓으면 들어오긴하냐");
+					g_clients[ci].vl_lock.lock();
+					g_clients[ci].player.m_bIsPushed = false;
+					g_TreasureBox.player.BeRelievedFromLiftingPlayer();
+					g_clients[ci].vl_lock.unlock();
+				}
+				g_clients[ci].vl_lock.lock();
+				currentclient = g_clients[ci].player;
+				g_clients[ci].vl_lock.unlock();
+
+
+				g_TreasureBox.vl_lock.lock();
+				box = g_TreasureBox.player;
+				g_TreasureBox.vl_lock.unlock();
+
 				for (int i = 0; i < 2; i++)
 				{
 					if (CPhysicalCollision::IsCollided(
@@ -921,11 +948,13 @@ void Worker_Thread()
 						}
 					}
 				}
+				
 				g_TreasureBox.vl_lock.lock();
 				g_TreasureBox.player = box;
 				g_TreasureBox.vl_lock.unlock();
 
 			}
+
 			/*
 			for (int i = 0; i < MAX_USER; ++i)
 			{
@@ -966,20 +995,29 @@ void Worker_Thread()
 		}
 		else if (BOX_MOVE == over->event_type)
 		{
-			g_clients[ci].vl_lock.lock();
+			g_TreasureBox.vl_lock.lock();
 			duration<float> sec = high_resolution_clock::now() - g_TreasureBox.last_move_time;
 			g_TreasureBox.vl_lock.unlock();
 
 			float t = sec.count();
+			
 			g_TreasureBox.vl_lock.lock();
+			if (g_TreasureBox.player.m_d3dxvVelocity.y < -10.f)
+				g_TreasureBox.player.m_d3dxvVelocity.y = 0.f;
+			if (g_TreasureBox.player.GetPosition().y < -2.f)
+				g_TreasureBox.player.SetPosition(D3DXVECTOR3(g_TreasureBox.player.GetPosition().x, 10.f, g_TreasureBox.player.GetPosition().z));
+
 			CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
 			g_TreasureBox.player.BeDraggedAwayByLiftingPlayer(t);
 			g_TreasureBox.last_move_time = high_resolution_clock::now();
 			g_TreasureBox.vl_lock.unlock();
+			
+			if(g_TreasureBox.player.m_pLiftingPlayer)
+				printf("플레이어의 위치 : %f %f %f\n", g_TreasureBox.player.m_pLiftingPlayer->GetPosition().x, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().y, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().z);
 
 			Timer_Event event = { -1, high_resolution_clock::now() + 17ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-
+			
 			delete over;			
 		}
 		else if (BOX_SYNC == over->event_type)
@@ -992,9 +1030,9 @@ void Worker_Thread()
 				SendBoxPacket(i);
 				g_TreasureBox.vl_lock.unlock();
 			}
-			printf("%f %f %f\n", g_TreasureBox.player.GetPosition().x, g_TreasureBox.player.GetPosition().y, g_TreasureBox.player.GetPosition().z);
 			Timer_Event event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			
 			delete over;
 		}
 		else {
@@ -1040,6 +1078,11 @@ void Time_Thread()
 			else if (BOX_SYNC_TIME == t.event)
 			{
 				over->event_type = BOX_SYNC;
+				PostQueuedCompletionStatus(g_hiocp, 1, -1, &over->over);
+			}
+			else if (BOX_EVENT == t.event)
+			{
+				over->event_type = BOX_MOVE;
 				PostQueuedCompletionStatus(g_hiocp, 1, -1, &over->over);
 			}
 			if (!GameStart)

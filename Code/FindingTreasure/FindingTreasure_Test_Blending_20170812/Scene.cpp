@@ -4,6 +4,7 @@
 #include "TextureResource.h"
 #include "ShaderResource.h"
 #include "EffectManager.h"
+#include "IOCP_Client.h"
 
 CScene::CScene(char* cSceneTextFileName)
 {
@@ -276,6 +277,7 @@ bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 
 bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
+	static bool liftbox = false;
 	switch (nMessageID)
 	{
 	case WM_KEYUP:
@@ -285,7 +287,10 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			::PostQuitMessage(0);
 			break;
 		case 'a': case 'A':
+			
 			m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed = false;
+			SetPacket(OUTBOX, 0, 0, 0);
+			liftbox = false;
 			if(!m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed) m_pTreasureChest->BeRelievedFromLiftingPlayer();
 			break;
 		default:
@@ -302,6 +307,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				m_pPlayersMgrInform->GetMyPlayer()->LiftPlayer(m_pTreasureChest, m_pVoxelTerrain);
 				m_pPlayersMgrInform->GetMyPlayer()->PushPlayers(m_pPlayersMgrInform->m_ppPlayers, m_pPlayersMgrInform->m_iPlayersNum);
 				m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed = true;
+				
+				if (!liftbox)
+				{
+					SetPacket(LIFTBOX, 0, 0, 0);
+					liftbox = true;
+				}
 				switch (m_pPlayersMgrInform->GetMyPlayer()->m_PlayerType)
 				{
 					case PLAYER_TYPE_PIRATE: 
@@ -1052,13 +1063,13 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 			continue;
 		if (m_pPlayersMgrInform->m_ppPlayers[i])
 		{
-			if (m_pPlayersMgrInform->m_ppPlayers[i]->m_IsLift)
+			if (m_pPlayersMgrInform->m_ppPlayers[i]->m_IsLift&&!m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed)
 			{
 				m_pPlayersMgrInform->m_ppPlayers[i]->LiftPlayer(m_pTreasureChest, m_pVoxelTerrain);
 				m_pPlayersMgrInform->m_ppPlayers[i]->PushPlayers(m_pPlayersMgrInform->m_ppPlayers, m_pPlayersMgrInform->m_iPlayersNum);
 				m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed = true;
 			}
-			else if(m_pPlayersMgrInform->m_ppPlayers[i]->m_pLiftingPlayer)
+			else if(!m_pPlayersMgrInform->m_ppPlayers[i]->m_IsLift&&m_pTreasureChest->m_pLiftingPlayer && m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed)
 			{
 				m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsPushed = false;
 				m_pTreasureChest->BeRelievedFromLiftingPlayer();
