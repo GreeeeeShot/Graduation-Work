@@ -81,6 +81,7 @@ struct Client_Data
 #define SC_BOX			 20
 #define SC_LIFTBOX		 21
 #define SC_OUTBOX		 22
+#define SC_MISSBOX		 23
 
 #pragma pack (push, 1)
 
@@ -142,6 +143,14 @@ struct sc_packet_box {
 	BYTE type;
 	FLOAT Posx, Posy, Posz;
 };
+
+struct sc_packet_missbox {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	FLOAT Posx, Posy, Posz;
+};
+
 
 struct sc_packet_start {
 	BYTE size;

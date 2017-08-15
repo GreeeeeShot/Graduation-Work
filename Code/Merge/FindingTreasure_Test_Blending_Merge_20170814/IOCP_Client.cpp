@@ -117,6 +117,11 @@ void ProcessPacket(char *ptr)
 	{
 		sc_packet_box *my_packet = reinterpret_cast<sc_packet_box *>(ptr);
 		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		if (my_packet->Posy - CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->GetPosition().y > 5.0f || my_packet->Posy - CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->GetPosition().y < -5.0f)
+		{
+			CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+			printf("순간이동!");
+		}
 		break;
 	}
 	case SC_SYNC:
@@ -286,6 +291,18 @@ void ProcessPacket(char *ptr)
 
 
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift = false;
+		break;
+	}
+	case SC_MISSBOX:
+	{
+		sc_packet_missbox *my_packet = reinterpret_cast<sc_packet_missbox *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->m_SyncPosition = D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz);
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->SetPosition(D3DXVECTOR3(my_packet->Posx, my_packet->Posy, my_packet->Posz));
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_bIsPushed = false;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsLift = false;
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pTreasureChest->BeRelievedFromLiftingPlayer();
+
 		break;
 	}
 	case SC_TEAM_CHANGE:

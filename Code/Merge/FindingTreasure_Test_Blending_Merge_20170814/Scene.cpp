@@ -293,6 +293,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			liftbox = false;
 			if(!m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed) m_pTreasureChest->BeRelievedFromLiftingPlayer();
 			break;
+		case 'M': case 'm':
+			printf("박스위치가? %f %f %f\n", m_pTreasureChest->GetPosition().x, m_pTreasureChest->GetPosition().y, m_pTreasureChest->GetPosition().z);
 		default:
 			break;
 		}
