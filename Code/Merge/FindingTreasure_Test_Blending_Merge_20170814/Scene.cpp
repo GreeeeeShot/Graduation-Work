@@ -287,14 +287,17 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			::PostQuitMessage(0);
 			break;
 		case 'a': case 'A':
-			
 			m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed = false;
 			SetPacket(OUTBOX, 0, 0, 0);
 			liftbox = false;
 			if(!m_pPlayersMgrInform->GetMyPlayer()->m_bIsPushed) m_pTreasureChest->BeRelievedFromLiftingPlayer();
 			break;
 		case 'M': case 'm':
-			printf("박스위치가? %f %f %f\n", m_pTreasureChest->GetPosition().x, m_pTreasureChest->GetPosition().y, m_pTreasureChest->GetPosition().z);
+			printf("박스위치가? %f %f %f\n", m_pTreasureChest->m_SyncPosition.x, m_pTreasureChest->m_SyncPosition.y, m_pTreasureChest->m_SyncPosition.z);
+			break;
+		case 'K': case 'k':
+			printf("플레이어위치가? %f %f %f\n", m_pPlayersMgrInform->GetMyPlayer()->GetPosition().x , m_pPlayersMgrInform->GetMyPlayer()->GetPosition().y, m_pPlayersMgrInform->GetMyPlayer()->GetPosition().z);
+			break;
 		default:
 			break;
 		}
@@ -1005,7 +1008,7 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 
 				m_pPlayersMgrInform->m_ppPlayers[i]->RotateMoveDir(fTimeElapsed);
 				m_pPlayersMgrInform->m_ppPlayers[i]->Animate(pd3dDeviceContext, m_fAccumulatedTime * 33);
-
+				/*
 				if (CPhysicalCollision::IsCollided(
 					&CPhysicalCollision::MoveAABB(m_pPlayersMgrInform->m_ppPlayers[i]->m_pMesh->m_AABB, m_pPlayersMgrInform->m_ppPlayers[i]->GetPosition()),
 					&CPhysicalCollision::MoveAABB(m_pTreasureChest->m_pMesh->m_AABB, m_pTreasureChest->GetPosition())))
@@ -1016,7 +1019,7 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 					}
 					m_pTreasureChest->BeRelievedFromLiftingPlayer();
 				}
-
+				*/
 				// i 번째 플레이어를 기준으로 한 플레이어 간 충격량 기반 충돌 체크
 				for (int j = i + 1; j < m_pPlayersMgrInform->m_iPlayersNum; j++)
 				{

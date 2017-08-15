@@ -16,8 +16,10 @@ SOCKET g_ssocket;
 CPlayer* g_box = NULL;
 CRespawnManager g_RespawnManager;
 bool GameStart = false;
+bool Close_Server = false;
 //std::mutex g_Respawnlock;
 int red, blue;
+int g_GameTime = 183;
 
 enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC , BOX_MOVE, BOX_SYNC};
 
@@ -57,7 +59,7 @@ struct BOX {
 };
 
 
-enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME,BOX_EVENT,BOX_SYNC_TIME };
+enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME,BOX_EVENT,BOX_SYNC_TIME, CLOSE_SOCKET, GAME_TIME};
 
 struct Timer_Event {
 	int object_id;
@@ -464,6 +466,10 @@ void SendSyncPacket(int client, int object)
 	packet.Righty = g_clients[object].player.m_CameraOperator.GetRight().y;
 	packet.Rightz = g_clients[object].player.m_CameraOperator.GetRight().z;
 
+	packet.Velx = g_clients[object].player.m_d3dxvVelocity.x;
+	packet.Vely = g_clients[object].player.m_d3dxvVelocity.y;
+	packet.Velz = g_clients[object].player.m_d3dxvVelocity.z;
+
 	/*
 	packet.Lookx = g_clients[object].player.m_CameraOperator.GetLook().x;
 	packet.Looky = g_clients[object].player.m_CameraOperator.GetLook().y;
@@ -589,7 +595,11 @@ void SendBoxPacket(int client)
 	packet.Posx = g_TreasureBox.player.GetPosition().x;
 	packet.Posy = g_TreasureBox.player.GetPosition().y;
 	packet.Posz = g_TreasureBox.player.GetPosition().z;
-
+	/*
+	packet.Posx = g_TreasureBox.player.m_d3dxvVelocity.x;
+	packet.Posy = g_TreasureBox.player.m_d3dxvVelocity.y;
+	packet.Posz = g_TreasureBox.player.m_d3dxvVelocity.z;
+	*/
 	SendPacket(client, &packet);
 }
 
@@ -607,7 +617,39 @@ void SendBoxMissPacket(int client, int object)
 	SendPacket(client, &packet);
 }
 
+void SendWinPacket(int client)
+{
+	sc_packet_result packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_WIN;
+	SendPacket(client, &packet);
+}
 
+void SendDrawPacket(int client)
+{
+	sc_packet_result packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_DRAW;
+	SendPacket(client, &packet);
+}
+
+void SendDefeatPacket(int client)
+{
+	sc_packet_result packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_DEFEAT;
+	SendPacket(client, &packet);
+}
+
+void SendGameTimePacket(int client, int gametime)
+{
+	sc_packet_gametime packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_DEFEAT;
+	packet.time = gametime;
+
+	SendPacket(client, &packet);
+}
 
 
 void DisconnectClient(int ci)
@@ -721,6 +763,12 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].ready = (g_clients[ci].ready + 1) % 2;
 		break;
 	case CS_EXIT:
+		g_clients[ci].connect = false;
+		if (ci == 0)
+		{
+			CloseHandle(g_hiocp); g_hiocp = INVALID_HANDLE_VALUE;
+			//ShutDown_Server();
+		}
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (!g_clients[i].connect)
@@ -728,6 +776,8 @@ void ProcessPacket(int ci, unsigned char packet[])
 			if (i != ci)
 				SendExitPacket(i, ci);
 		}
+		event = { -1, high_resolution_clock::now(), CLOSE_SOCKET };
+		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		break;
 	case CS_LIFTBOX:
 		g_clients[ci].vl_lock.lock();
@@ -756,10 +806,6 @@ void ProcessPacket(int ci, unsigned char packet[])
 	case CS_GAMEREADY:
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].player.m_pMesh = new CTexturedLightingPirateMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
-		g_clients[ci].player.m_pMesh->m_AABB.m_d3dxvMax.x = 0.4;
-		g_clients[ci].player.m_pMesh->m_AABB.m_d3dxvMax.z = 0.4;
-		g_clients[ci].player.m_pMesh->m_AABB.m_d3dxvMin.x = -0.4;
-		g_clients[ci].player.m_pMesh->m_AABB.m_d3dxvMin.z = -0.4;
 		g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
 		g_clients[ci].player.m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
 		g_clients[ci].player.m_fMass = 40.0f;               // 질량
@@ -785,18 +831,19 @@ void ProcessPacket(int ci, unsigned char packet[])
 		{
 			g_TreasureBox.vl_lock.lock();
 			//g_TreasureBox.player.m_pMesh = new TreasureChestMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
-			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 1.0f, 0.5f, 1.0f);
+			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 1.5f, 0.5f, 1.5f);
 
 			g_TreasureBox.player.m_fJumpdVelYM = 0.0f;			//Y축에 대한 순간 점프 속도 크기 // 보물상자는 스스로 점프하지 못한다.
 			g_TreasureBox.player.m_fMaxRunVelM = 15.0f;			// 밀리는 속도에 대한 최대 크기
 			g_TreasureBox.player.m_fMass = 40.0f;               // 질량
 
 			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 10.f, 0.f));
-			printf("\n%f\n",g_TreasureBox.player.m_d3dxvVelocity.y);
 			g_TreasureBox.vl_lock.unlock();
 			event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		}		
 		break;
@@ -834,6 +881,11 @@ void Worker_Thread()
 		unsigned long long ci;
 		OverlappedEX *over;
 		BOOL ret = GetQueuedCompletionStatus(g_hiocp, &io_size, reinterpret_cast<PULONG_PTR>(&ci), reinterpret_cast<LPWSAOVERLAPPED *> (&over), INFINITE);
+		if (Close_Server)
+		{
+			delete over;
+			return;
+		}
 		//std::cout << "GQCS :";
 		if (FALSE == ret)
 		{
@@ -898,7 +950,10 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
-				MovePlayer(ci);
+				if (GameStart)
+				{
+					MovePlayer(ci);
+				}
 				delete over;
 				continue;
 			}
@@ -907,7 +962,10 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
-				MovePlayer(ci);
+				if (GameStart)
+				{
+					MovePlayer(ci);
+				}
 				delete over;
 				continue;
 			}
@@ -916,7 +974,10 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
-				MovePlayer(ci);
+				if (GameStart)
+				{
+					MovePlayer(ci);
+				}
 				delete over;
 				continue;
 			}
@@ -924,7 +985,10 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.lock();
 				g_clients[ci].last_move_time = high_resolution_clock::now();
 				g_clients[ci].vl_lock.unlock();
-				MovePlayer(ci);
+				if (GameStart)
+				{
+					MovePlayer(ci);
+				}
 				delete over;
 				continue;
 			}
@@ -1040,27 +1104,6 @@ void Worker_Thread()
 					}
 				*/
 
-				if (g_clients[ci].player.GetPosition().y < -1.0f)
-				{
-					printf("서버에서 플레이어가 물에 빠져버렸습니다!");
-					g_clients[ci].vl_lock.lock();
-					g_clients[ci].is_active = false;
-					g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
-					g_clients[ci].player.m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
-					g_clients[ci].player.m_fMass = 40.0f;               // 질량
-					g_clients[ci].player.m_fRecoveryStaminaPerSec = 40.0f;
-					g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
-					g_clients[ci].vl_lock.unlock();
-					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
-					
-					currentclient.m_bIsActive = false;
-					for (int i = 0; i < MAX_USER; ++i)
-					{
-						if (g_clients[i].connect)
-							SendDeadPacket(i, ci);
-					}
-				}
-
 				g_TreasureBox.vl_lock.lock();
 				g_TreasureBox.player = box;
 				g_TreasureBox.vl_lock.unlock();
@@ -1070,11 +1113,10 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.unlock();
 				if (g_clients[ci].player.m_IsLift && !g_clients[ci].player.m_bIsPushed)
 				{
-					printf("키누르면 들어오긴하냐");
 					g_TreasureBox.vl_lock.lock();
 					g_clients[ci].player.LiftPlayer(&g_TreasureBox.player, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pVoxelTerrain);
 					g_TreasureBox.vl_lock.unlock();
-					
+
 					g_clients[ci].vl_lock.lock();
 					g_clients[ci].player.m_bIsPushed = true;
 					g_clients[ci].vl_lock.unlock();
@@ -1082,7 +1124,6 @@ void Worker_Thread()
 				}
 				else if (!g_clients[ci].player.m_IsLift && g_TreasureBox.player.m_pLiftingPlayer)
 				{
-					printf("키놓으면 들어오긴하냐");
 					g_clients[ci].vl_lock.lock();
 					g_clients[ci].player.m_bIsPushed = false;
 					g_clients[ci].player.m_pLiftedPlayer = NULL;
@@ -1093,7 +1134,6 @@ void Worker_Thread()
 				}
 				else if (!g_clients[ci].player.m_IsLift && !g_TreasureBox.player.m_pLiftingPlayer&&g_clients[ci].player.m_pLiftedPlayer)
 				{
-					printf("키안누를때 사라지냐?");
 					g_clients[ci].vl_lock.lock();
 					g_clients[ci].player.m_pLiftedPlayer = NULL;
 					g_clients[ci].vl_lock.unlock();
@@ -1120,10 +1160,10 @@ void Worker_Thread()
 				/*
 				if (g_TreasureBox.player.m_pLiftingPlayer)
 				{
-					printf("들렸다!");
+				printf("들렸다!");
 				}
 				else {
-					printf("바닥에 있다!");
+				printf("바닥에 있다!");
 				}*/
 
 				g_clients[ci].vl_lock.lock();
@@ -1135,6 +1175,39 @@ void Worker_Thread()
 				box = g_TreasureBox.player;
 				g_TreasureBox.vl_lock.unlock();
 
+				if (g_clients[ci].player.GetPosition().y < -1.0f)
+				{
+					if (g_TreasureBox.player.m_pLiftingPlayer)
+					{
+						g_clients[ci].vl_lock.lock();
+						g_clients[ci].player.m_bIsPushed = false;
+						g_clients[ci].player.m_pLiftedPlayer = NULL;
+						g_clients[ci].vl_lock.unlock();
+						g_TreasureBox.vl_lock.lock();
+						g_TreasureBox.player.BeRelievedFromLiftingPlayer();
+						g_TreasureBox.vl_lock.unlock();
+					}
+					printf("서버에서 플레이어가 물에 빠져버렸습니다!");
+					g_clients[ci].vl_lock.lock();
+					g_clients[ci].is_active = false;
+					g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
+					g_clients[ci].player.m_fMaxRunVelM = 5.0f;   // 달리는 속도에 대한 크기
+					g_clients[ci].player.m_fMass = 40.0f;               // 질량
+					g_clients[ci].player.m_fRecoveryStaminaPerSec = 40.0f;
+					g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
+					g_clients[ci].vl_lock.unlock();
+					g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, true);
+					
+					currentclient.m_bIsActive = false;
+					for (int i = 0; i < MAX_USER; ++i)
+					{
+						if (g_clients[i].connect)
+							SendDeadPacket(i, ci);
+					}
+				}
+				g_TreasureBox.vl_lock.lock();
+				box = g_TreasureBox.player;
+				g_TreasureBox.vl_lock.unlock();
 				for (int i = 0; i < 2; i++)
 				{
 					if (CPhysicalCollision::IsCollided(
@@ -1144,6 +1217,19 @@ void Worker_Thread()
 						if (box.GetPosition().y > CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->GetPosition().y + CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pShips[i]->m_pMesh->m_AABB.m_d3dxvMax.y)
 						{
 							//printf("%d 팀이 승리하였습니다.\n", i);
+							for (int j = 0; j < MAX_USER; ++j)
+							{
+								if (!g_clients[j].connect)
+									continue;
+								if (g_clients[j].player.m_BelongType == i)
+								{
+									SendWinPacket(j);
+								}
+								else
+								{
+									SendDefeatPacket(j);
+								}
+							}
 						}
 					}
 				}
@@ -1165,8 +1251,10 @@ void Worker_Thread()
 			g_clients[ci].vl_lock.lock();
 			g_clients[ci].player = currentclient;
 			g_clients[ci].vl_lock.unlock();
-
-			MovePlayer(ci);
+			if (GameStart)
+			{
+				MovePlayer(ci);
+			}
 			delete over;
 		}
 		else if (SEND_SYNC == over->event_type)
@@ -1188,8 +1276,11 @@ void Worker_Thread()
 				SendSyncPacket(i, ci);
 				g_clients[ci].vl_lock.unlock();
 			}
-			Timer_Event event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
-			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			if (GameStart)
+			{
+				Timer_Event event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			}
 			delete over;
 		}
 		else if (BOX_MOVE == over->event_type)
@@ -1215,9 +1306,11 @@ void Worker_Thread()
 			/*if(g_TreasureBox.player.m_pLiftingPlayer)
 				printf("플레이어의 위치 : %f %f %f\n", g_TreasureBox.player.m_pLiftingPlayer->GetPosition().x, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().y, g_TreasureBox.player.m_pLiftingPlayer->GetPosition().z);
 				*/
-			Timer_Event event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
-			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-			
+			if (GameStart)
+			{
+				Timer_Event event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			}
 			delete over;			
 		}
 		else if (BOX_SYNC == over->event_type)
@@ -1230,9 +1323,17 @@ void Worker_Thread()
 				SendBoxPacket(i);
 				g_TreasureBox.vl_lock.unlock();
 			}
-			Timer_Event event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
+			if (GameStart)
+			{
+				Timer_Event event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
+				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+			}
+			delete over;
+		}
+		else if (GAME_TIME == over->event_type)
+		{
+			Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-			
 			delete over;
 		}
 		else {
@@ -1284,6 +1385,18 @@ void Time_Thread()
 			{
 				over->event_type = BOX_MOVE;
 				PostQueuedCompletionStatus(g_hiocp, 1, -1, &over->over);
+			}
+			else if (CLOSE_SOCKET == t.event)
+			{
+				over->event_type = BOX_MOVE;
+				PostQueuedCompletionStatus(g_hiocp, 0, t.object_id, &over->over);
+			}
+			if (Close_Server)
+			{
+				g_GameTime--;
+				timer_queue.empty();
+				delete over;
+				return;
 			}
 			if (!GameStart)
 			{

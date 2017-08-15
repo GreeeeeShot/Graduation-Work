@@ -26,6 +26,7 @@ bool host;
 int strn;
 bool IsWaitingRoom;
 bool ready;
+bool g_GameStart;
 
 CButton::CButton()
 {
@@ -334,6 +335,7 @@ void CTitleState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 	case WM_LBUTTONUP:
 		if (m_sButtonMakingWaitingRoom.IsInButton(LOWORD(lParam), HIWORD(lParam)))
 		{
+			ServerMain();
 			if (bIsClickedButtonMakingWaitingRoom) CGameManager::GetInstance()->ChangeGameState(new CWaitingRoomState());                        
 		}
 		else if (m_sButtonJoinInWaitingRoom.IsInButton(LOWORD(lParam), HIWORD(lParam)))
@@ -454,28 +456,29 @@ void CWaitingRoomState::Init(void)
 void CWaitingRoomState::Destroy(void) {}
 void CWaitingRoomState::Update(void) 
 {
-	//else if (state == play)
-	//{
-	//	m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;            // 이건 준상이 알아서
-	//	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
-	//	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
-	//	m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
-	//	m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
-	//	for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)         // 이건 준상이 알아서
-	//	{
-	//		if (!waitingplayer[i].connect)
-	//			continue;
-	//		if (!(waitingplayer[i].id >= 0 && waitingplayer[i].id < 8))
-	//			continue;
-	//		m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_bIsSlotActive = true;
-	//		m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_PlayerType = (PLAYER_TYPE)waitingplayer[i].charac;
-	//		m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = (BELONG_TYPE)waitingplayer[i].team;
-	//	}
+	
+	if (g_GameStart)
+	{
+		m_pWaitingRoomInformDesc->m_iMyPlayerID = my_id;            // 이건 준상이 알아서
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
+		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
+		m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
+		for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)         // 이건 준상이 알아서
+		{
+			if (!waitingplayer[i].connect)
+				continue;
+			if (!(waitingplayer[i].id >= 0 && waitingplayer[i].id < 8))
+				continue;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_bIsSlotActive = true;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_PlayerType = (PLAYER_TYPE)waitingplayer[i].charac;
+			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = (BELONG_TYPE)waitingplayer[i].team;
+		}
 
-	//	CGameState* pTempGameState = new CPlayGameState();
-	//	pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);         // 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
-	//	CGameManager::GetInstance()->ChangeGameState(pTempGameState);
-	//}
+		CGameState* pTempGameState = new CPlayGameState();
+		pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);         // 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
+		CGameManager::GetInstance()->ChangeGameState(pTempGameState);
+	}
 }
 void CWaitingRoomState::Render(void) {}
 void CWaitingRoomState::Render(HDC hdc) 
@@ -541,24 +544,24 @@ void CWaitingRoomState::Render(HDC hdc)
 	for (int i = 0; i < 7; i++)
 	{
 		hSelectedTeamFrameDC = CreateCompatibleDC(hdc);
-		oldSelectedTeamFrameBitmap = (HBITMAP)SelectObject(hSelectedTeamFrameDC, m_hSelectedTeamFrameBitmap[waitingplayer[0].team]);
+		oldSelectedTeamFrameBitmap = (HBITMAP)SelectObject(hSelectedTeamFrameDC, m_hSelectedTeamFrameBitmap[waitingplayer[i].team]);
 
 		GdiTransparentBlt(hMemDC, m_sStartTeamPos[i].x, m_sStartTeamPos[i].y, 170, 190, hSelectedTeamFrameDC, 0, 0, 425, 475, RGB(255, 255, 255));
 
 		SelectObject(hSelectedTeamFrameDC, oldSelectedTeamFrameBitmap);
 		DeleteDC(hSelectedTeamFrameDC);
 
-		if (waitingplayer[0].connect)
+		if (waitingplayer[i].connect)
 		{
 			hCharacterDC = CreateCompatibleDC(hdc);
-			oldCharacterBitmap = (HBITMAP)SelectObject(hCharacterDC, m_hCharacterBitmap[waitingplayer[0].charac]);
+			oldCharacterBitmap = (HBITMAP)SelectObject(hCharacterDC, m_hCharacterBitmap[waitingplayer[i].charac]);
 
 			GdiTransparentBlt(hMemDC, m_sStartCharaterPos[i].x, m_sStartCharaterPos[i].y, 120, 90, hCharacterDC, 0, 0, 640, 480, RGB(255, 255, 255));
 
 			SelectObject(hCharacterDC, oldCharacterBitmap);
 			DeleteDC(hCharacterDC);
 
-			if (waitingplayer[0].ready)
+			if (waitingplayer[i].ready)
 			{
 				HDC hReadyDC = CreateCompatibleDC(hdc);
 				HBITMAP oldReadyBitmap = (HBITMAP)SelectObject(hReadyDC, m_hReadyBitmap);
@@ -630,6 +633,7 @@ void CWaitingRoomState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPA
 		}
 		else if (m_sButtonFakie.IsInButton(LOWORD(lParam), HIWORD(lParam)))
 		{
+			WaitingPacket(EXIT);
 			CGameManager::GetInstance()->ChangeGameState(new CTitleState());
 		}
 		break;
@@ -709,8 +713,10 @@ void CIPInputState::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPAR
 		{
 		case VK_RETURN:
 			//state = waitingroom;
-			IsWaitingRoom = true;
+			//IsWaitingRoom = true;
 			//InvalidateRgn(hWnd, NULL, FALSE);
+			ClientMain(hWnd, server_ip);
+			CGameManager::GetInstance()->ChangeGameState(new CWaitingRoomState());
 			break;
 		case VK_BACK:
 			if (strn>0)

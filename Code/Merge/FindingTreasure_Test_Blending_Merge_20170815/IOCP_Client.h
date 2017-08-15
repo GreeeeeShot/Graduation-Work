@@ -27,3 +27,4 @@ struct WaitingPlayer {
 };
 
 extern WaitingPlayer waitingplayer[7];
+extern bool g_GameStart;

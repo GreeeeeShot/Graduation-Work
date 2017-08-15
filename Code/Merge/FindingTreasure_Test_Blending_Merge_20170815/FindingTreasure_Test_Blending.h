@@ -1,6 +1,8 @@
 #pragma once
-
+#include <thread>
 #include "resource.h"
+
+void ServerMain();
 
 enum State { host_select, server_input, play, waitingroom };
 

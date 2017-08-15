@@ -25,7 +25,9 @@
 
 WaitingPlayer waitingplayer[7];
 
-
+std::thread* timer_thread;
+std::thread* accept_thread;
+std::vector<std::thread *> worker_threads;
 
 //CGameFramework gGameFramework;
 HWND ghWnd;
@@ -38,6 +40,35 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+void ServerMain()
+{
+	if (accept_thread != NULL)
+	{
+		accept_thread->join();
+		accept_thread = NULL;
+	}
+	if (timer_thread != NULL)
+	{
+		timer_thread->join();
+		timer_thread = NULL;
+	}
+	if (worker_threads.size() != 0)
+	{
+		for (auto pth : worker_threads) {
+			pth->join();
+			delete pth;
+		}
+		printf("멈추냐?");
+	}
+
+	Initialize_Server();
+	for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
+	accept_thread = new std::thread(Accept_Thread);
+	timer_thread = new std::thread(Time_Thread);
+	strcpy_s(server_ip, "127.0.0.1");
+	ClientMain(ghWnd, server_ip);
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -75,10 +106,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg;
 
-	std::thread* timer_thread = NULL;
-	std::thread* accept_thread = NULL;
-	std::vector<std::thread *> worker_threads;
-
 	  // 기본 메시지 루프입니다.
 	while (1)
 	{
@@ -98,40 +125,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		CGameManager::GetInstance()->m_pGameState->Render();
 		CGameManager::GetInstance()->m_pGameState->Update();
 		//CGameManager::GetInstance()->ChangeGameState(new CPlayGameState());
-		if (IsWaitingRoom)
-		{
-			if (host)
-			{
-				Initialize_Server();
-				for (int i = 0; i < 8; ++i) worker_threads.push_back(new std::thread{ Worker_Thread });
-				accept_thread = new std::thread(Accept_Thread);
-				timer_thread = new std::thread(Time_Thread);
-				strcpy_s(server_ip, "127.0.0.1");
-				ClientMain(ghWnd, server_ip);
-			}
-			else
-				ClientMain(ghWnd, server_ip);
-
-			IsWaitingRoom = false;
-		}
-		
+		/*
+		*/
 	}
 	// gGameFramework.OnDestroy();
 	delete CGameManager::GetInstance();
+	
 	if (host)
 	{
 		accept_thread->join();
 		timer_thread->join();
-		//Create_Accept_Thread();
 		for (auto pth : worker_threads) {
 			pth->join();
 			delete pth;
 		}
 		ShutDown_Server();
-
-		if (accept_thread != NULL)
-			delete accept_thread;
 	}
+
 	return (int)msg.wParam;
 }
 
@@ -201,6 +211,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	strcpy_s(server_msg, "Join");
 	ready = 0;
 	state = host_select;
+	timer_thread = NULL;
+	accept_thread = NULL;
 
 	return(TRUE);
 }

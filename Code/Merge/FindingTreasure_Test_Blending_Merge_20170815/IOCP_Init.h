@@ -82,6 +82,10 @@ struct Client_Data
 #define SC_LIFTBOX		 21
 #define SC_OUTBOX		 22
 #define SC_MISSBOX		 23
+#define SC_WIN			 24
+#define SC_DEFEAT		 25
+#define SC_DRAW			 26
+#define SC_GAMETIME		 27
 
 #pragma pack (push, 1)
 
@@ -125,6 +129,12 @@ struct cs_packet_lift {
 	BYTE type;
 };
 
+struct sc_packet_gametime {
+	BYTE size;
+	BYTE type;
+	WORD time;
+};
+
 struct sc_packet_lift {
 	BYTE size;
 	BYTE type;
@@ -142,6 +152,12 @@ struct sc_packet_box {
 	BYTE size;
 	BYTE type;
 	FLOAT Posx, Posy, Posz;
+	//FLOAT Velx, Vely, Velz;
+};
+
+struct sc_packet_result {
+	BYTE size;
+	BYTE type;
 };
 
 struct sc_packet_missbox {
@@ -263,6 +279,7 @@ struct sc_packet_sync {
 	BYTE type;
 	WORD id;
 	FLOAT Posx, Posy, Posz;
+	FLOAT Velx, Vely, Velz;
 	FLOAT Lookx, Looky, Lookz;
 	FLOAT Operx, Opery, Operz;
 	FLOAT Dirx, Diry, Dirz;

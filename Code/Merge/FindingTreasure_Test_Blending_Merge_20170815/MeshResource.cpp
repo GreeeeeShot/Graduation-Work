@@ -1355,7 +1355,7 @@ void SkydomMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 
 ShipMesh::ShipMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
 {
-	float fx = 1.8f, fy = 1.8f, fz = 4.0f;
+	float fx = 2.5f, fy = 1.8f, fz = 5.0f;
 	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
 	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
 	m_AABB.m_pRenderObject = new CGameObject();
@@ -1475,7 +1475,7 @@ TreasureChestMesh::TreasureChestMesh(ID3D11Device *pd3dDevice) : CLightingMesh(p
 	printf("m_nVertices : %d", m_nVertices);
 	for (int i = 0; i < m_nVertices; ++i)
 	{
-		d3dxVertex = D3DXVECTOR3(vec[i].x*0.05+0.25f, vec[i].y*0.1, vec[i].z*0.1-0.25);
+		d3dxVertex = D3DXVECTOR3(vec[i].x*0.05f - 0.1f, vec[i].y*0.1f, vec[i].z*0.1f - 0.5f);
 		D3DXMatrixRotationX(&mtxRotate, D3DXToRadian(0.0f));
 		D3DXVec3TransformNormal(&d3dxVertex, &d3dxVertex, &mtxRotate);
 		pVertices[i] = CTexturedVertex(d3dxVertex, uv[i]);
