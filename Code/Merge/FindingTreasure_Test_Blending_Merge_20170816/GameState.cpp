@@ -11,11 +11,13 @@ HBITMAP CGameState::m_hTempWaitingRoomBitmap = NULL;
 HBITMAP CGameState::m_hIPInputBitmap = NULL;
 HBITMAP CGameState::m_hWaitingRoomBitmap = NULL;
 HBITMAP CGameState::m_hTitleBitmap = NULL;
+HBITMAP CGameState::m_hMapbowlBitmap = NULL;
 
 HBITMAP CGameState::m_hLeftAndRightArrowBitmap = NULL;
 HBITMAP CGameState::m_hReadyBitmap = NULL;
 HBITMAP CGameState::m_hSelectedTeamFrameBitmap[3] = { 0, };
 HBITMAP CGameState::m_hCharacterBitmap[2] = { 0, };
+HBITMAP CGameState::m_hMapBitmap[2] = { 0, };
 
 HINSTANCE CGameState::m_hInstance;
 HWND CGameState::m_hwnd;
@@ -24,6 +26,7 @@ char server_ip[20];
 char server_msg[20];
 bool host;
 int strn;
+int g_map;
 bool IsWaitingRoom;
 bool ready;
 bool g_GameStart;
@@ -80,10 +83,12 @@ void CGameState::CreateAPIBitmapResource(HINSTANCE hInstance, HWND hwnd)
 	m_hCharacterBitmap[1] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP5));
 	m_hSelectedTeamFrameBitmap[0] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
 	m_hSelectedTeamFrameBitmap[1] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP11));
-	m_hSelectedTeamFrameBitmap[2] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP10));
+	m_hSelectedTeamFrameBitmap[2] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP13));
 	m_hLeftAndRightArrowBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP8));
 	m_hReadyBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP7));
-
+	m_hMapBitmap[0] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP14));
+	m_hMapBitmap[1] = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP16));
+	m_hMapbowlBitmap = (HBITMAP)LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP15));
 }
 
 CPlayGameState::CPlayGameState()
@@ -463,7 +468,7 @@ void CWaitingRoomState::Update(void)
 		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_bIsSlotActive = true;
 		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_PlayerType = (PLAYER_TYPE)charac;
 		m_pWaitingRoomInformDesc->m_PlayerInformDesc[my_id].m_BelongType = (BELONG_TYPE)my_team;
-		m_pWaitingRoomInformDesc->m_eSceneType = SCENE_TYPE_JUNGLE;
+		m_pWaitingRoomInformDesc->m_eSceneType = (SCENE_TYPE)g_map;
 		for (int i = 0; i < MAX_CONNECTED_PLAYERS_NUM; i++)         // 이건 준상이 알아서
 		{
 			if (!waitingplayer[i].connect)
@@ -572,7 +577,37 @@ void CWaitingRoomState::Render(HDC hdc)
 				DeleteDC(hReadyDC);
 			}
 		}
+		else
+		{
+			hCharacterDC = CreateCompatibleDC(hdc);
+			oldCharacterBitmap = (HBITMAP)SelectObject(hCharacterDC, m_hCharacterBitmap[2]);
+
+			GdiTransparentBlt(hMemDC, m_sStartCharaterPos[i].x, m_sStartCharaterPos[i].y, 120, 90, hCharacterDC, 0, 0, 640, 480, RGB(255, 255, 255));
+
+			SelectObject(hCharacterDC, oldCharacterBitmap);
+			DeleteDC(hCharacterDC);
+		}
 	}
+
+	/////////////////맵////////////////////////
+
+	HDC hMapDC = CreateCompatibleDC(hdc);
+	HBITMAP oldMapBitmap = (HBITMAP)SelectObject(hMapDC, m_hMapbowlBitmap);
+
+	GdiTransparentBlt(hMemDC, m_sMapPos[0].x , m_sMapPos[0].y, 350, 350, hMapDC, 0, 0, 425, 425, RGB(255, 255, 255));
+
+	SelectObject(hMapDC, oldCharacterBitmap);
+	DeleteDC(hMapDC);
+
+	hMapDC = CreateCompatibleDC(hdc);
+
+	oldMapBitmap = (HBITMAP)SelectObject(hMapDC, m_hMapBitmap[g_map]);
+
+	GdiTransparentBlt(hMemDC, m_sMapPos[1].x, m_sMapPos[1].y, 250, 290, hMapDC, 0, 0, 295, 371, RGB(255, 255, 255));
+
+	SelectObject(hMapDC, oldCharacterBitmap);
+	DeleteDC(hMapDC);
+
 
 	BitBlt(hdc, 0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, hMemDC, 0, 0, SRCCOPY);
 	SelectObject(hMemDC, oldMemBitmap);
@@ -630,6 +665,14 @@ void CWaitingRoomState::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPA
 			ready = (ready + 1) % 2;
 
 			//
+		}
+		else if (m_sButtonMap.IsInButton(LOWORD(lParam), HIWORD(lParam)))
+		{
+			if (my_id == 0)
+			{
+				WaitingPacket(MAPCHANGE);
+				g_map = (g_map + 1) % 2;
+			}
 		}
 		else if (m_sButtonFakie.IsInButton(LOWORD(lParam), HIWORD(lParam)))
 		{

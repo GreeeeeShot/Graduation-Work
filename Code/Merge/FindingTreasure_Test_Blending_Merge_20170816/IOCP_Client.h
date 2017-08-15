@@ -7,7 +7,8 @@
 #define	BUF_SIZE				1024
 #define	WM_SOCKET				WM_USER + 1
 
-enum PACKETTYPE { POSMOVE, CAMERAMOVE, JUMP, VOXELDEL, VOXELINS, VOXELCANCLE, TEAMCHANGE, EXIT, CHARACHANGE, READY ,GAMESET , LIFTBOX, OUTBOX };
+enum PACKETTYPE { POSMOVE, CAMERAMOVE, JUMP, VOXELDEL, VOXELINS, VOXELCANCLE, TEAMCHANGE, EXIT, CHARACHANGE, READY ,GAMESET , LIFTBOX, OUTBOX ,
+	THROWBOX, MAPCHANGE};
 
 void clienterror();
 void ProcessPacket(char *ptr);
@@ -28,3 +29,4 @@ struct WaitingPlayer {
 
 extern WaitingPlayer waitingplayer[7];
 extern bool g_GameStart;
+extern int g_map;

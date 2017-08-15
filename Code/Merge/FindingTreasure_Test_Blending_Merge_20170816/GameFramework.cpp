@@ -42,7 +42,7 @@ CGameFramework::CGameFramework()
 	m_PastXMove = 0;
 	m_PastZMove = 0;
 	m_PastCameraYRotate = 0;
-
+	m_Isthrow = false;
 	//current_time = 0.0f;
 }
 
@@ -221,6 +221,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			break;
 		case 'q': case 'Q': case 'e': case'E':
 			SetPacket(CAMERAMOVE, 0, 0, 0);
+			break;
+		case 's': case 'S':case 'd': case 'D':
+			m_Isthrow = false;
 			break;
 		default:
 			break;
@@ -419,8 +422,8 @@ void CGameFramework::BuildObjects()
 
 	if (m_pScene)
 	{
-		m_TimeManager.SetTimeLimitSec(GAME_TIME_LIMMIT);
-		//CSoundManager::FMODSoundPlayAndRepeat(SOUND_TYPE_BACK_WAVE);
+		m_TimeManager.SetTimeLimitSec(180.0f);
+		CSoundManager::FMODSoundPlayAndRepeat(SOUND_TYPE_BACK_WAVE);
 		m_pScene->SetPlayersMgrInform(m_pPlayersMgrInform);
 		m_pScene->BuildObjects(m_pd3dDevice);
 	}
@@ -465,6 +468,11 @@ void CGameFramework::ProcessInput()
 					{
 						CSoundManager::FMODSoundPlayAndRepeat(SOUND_TYPE_EFFECT_FALL, 0.5f, false);
 						pMyPlayer->ThrowPlayer();
+						if (!m_Isthrow)
+						{
+							m_Isthrow = true;
+							SetPacket(THROWBOX, 0, 0, 0);
+						}
 					}
 
 				}
@@ -648,6 +656,11 @@ void CGameFramework::FrameAdvance()
 			m_pPlayersMgrInform->m_ppPlayers[i]->DigInVoxelTerrain(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(), i);
 			m_pPlayersMgrInform->m_ppPlayers[i]->InstallVoxel(m_pScene->m_pVoxelTerrain, false, m_GameTimer.GetTimeElapsed(), i);
 			m_pPlayersMgrInform->m_ppPlayers[i]->m_bIsDigOrInstall = false;
+		}
+		if (m_pPlayersMgrInform->m_ppPlayers[i]->m_IsThrow && m_pPlayersMgrInform->m_ppPlayers[i]->m_IsLift)
+		{
+			m_pPlayersMgrInform->m_ppPlayers[i]->ThrowPlayer();
+			m_pPlayersMgrInform->m_ppPlayers[i]->m_IsThrow = false;
 		}
 	}
 

@@ -16,7 +16,6 @@ char	packet_buffer[BUF_SIZE];
 DWORD		in_packet_size = 0;
 int		saved_packet_size = 0;
 int		g_myid;
-
 int		g_left_x = 0;
 int     g_top_y = 0;
 
@@ -67,6 +66,7 @@ void ProcessPacket(char *ptr)
 		sc_packet_initteam *my_packet = reinterpret_cast<sc_packet_initteam *>(ptr);
 		my_team = my_packet->team;
 		my_id = my_packet->id;
+		g_map = my_packet->map;
 		break;
 	}
 	case SC_POS:
@@ -325,6 +325,12 @@ void ProcessPacket(char *ptr)
 		}
 		break;
 	}
+	case SC_MAPCHANGE:
+	{
+		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
+		g_map = (g_map + 1) % 2;
+		break;
+	}
 	case SC_CHARAC_CHANGE:
 	{
 		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
@@ -384,18 +390,30 @@ void ProcessPacket(char *ptr)
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
 		g_GameStart = false;
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_cResultManager.RegisterWinnerType(CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_BelongType);
 		break;
 	}
 	case SC_DRAW:
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
 		g_GameStart = false;
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_cResultManager.ResultIsDraw();
 		break;
 	}
 	case SC_DEFEAT:
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
 		g_GameStart = false;
+		int team = CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->GetMyPlayer()->m_BelongType;
+		team = (team + 1) % 2;
+		CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_cResultManager.RegisterWinnerType((BELONG_TYPE)team);
+		break;
+	}
+	case SC_THROWBOX:
+	{
+		sc_packet_throwbox *my_packet = reinterpret_cast<sc_packet_throwbox *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_IsThrow = true;
 		break;
 	}
 	/*
@@ -487,6 +505,7 @@ void ClientMain(HWND main_window_handle, const char* serverip)
 	}
 
 	g_GameStart = false;
+	g_map = 0;
 }
 
 void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
@@ -498,6 +517,7 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 	cs_packet_camera *my_packet_camera = reinterpret_cast<cs_packet_camera *>(send_buffer);
 	cs_packet_vox *my_packet_voxel = reinterpret_cast<cs_packet_vox *>(send_buffer);
 	cs_packet_lift *my_packet_lift = reinterpret_cast<cs_packet_lift *>(send_buffer);
+	cs_packet_throwbox *my_packet_throwbox = reinterpret_cast<cs_packet_throwbox *>(send_buffer);
 	DWORD iobyte;
 	switch (type)
 	{
@@ -589,6 +609,17 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 			break;
 		}
 		break;
+	case THROWBOX:
+		my_packet_throwbox->size = sizeof(my_packet_throwbox);
+		send_wsabuf.len = sizeof(my_packet_throwbox);
+		my_packet_throwbox->type = CS_THROWBOX;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
 	default:
 		break;
 	}
@@ -639,6 +670,17 @@ void WaitingPacket(PACKETTYPE type)
 		my_packet->size = sizeof(my_packet);
 		send_wsabuf.len = sizeof(my_packet);
 		my_packet->type = CS_EXIT;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case MAPCHANGE:
+		my_packet->size = sizeof(my_packet);
+		send_wsabuf.len = sizeof(my_packet);
+		my_packet->type = CS_MAPCHANGE;
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();

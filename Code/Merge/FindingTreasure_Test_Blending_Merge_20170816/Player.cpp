@@ -692,6 +692,8 @@ void CPlayer::ThrowPlayer(void)
 {
 	if (!m_pLiftedPlayer) return;
 
+	
+
 	//
 	// m_pLigtedPlayer(자기가 들고 있는 플레이어)의 속도값을 바꾼다.
 	//
@@ -704,11 +706,13 @@ void CPlayer::ThrowPlayer(void)
 
 	if (fFos < 0.4) fFos = 0.4f;
 	fFos *= m_pLiftedPlayer->m_fMass;
-
+	
 	m_pLiftedPlayer->m_d3dxvVelocity.x = d3dxvThrowDir.x * fFos / 2.5f;
 	m_pLiftedPlayer->m_d3dxvVelocity.y = d3dxvThrowDir.y * fFos / 7.0f;
 	m_pLiftedPlayer->m_d3dxvVelocity.z = d3dxvThrowDir.z * fFos / 2.5f;
 	
+	printf("여기까진 돼영");
+
 	m_pLiftedPlayer->BeRelievedFromLiftingPlayer();
 }
 

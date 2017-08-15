@@ -352,6 +352,18 @@
     <Image Include="title.bmp">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="Invailduser.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="junglemap.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="Mapbowl.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="snowmap.bmp">
+      <Filter>리소스 파일</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="DiffusedPS.fx">

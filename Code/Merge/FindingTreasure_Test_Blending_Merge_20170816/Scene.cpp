@@ -1103,7 +1103,7 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 			}
 		}
 	}
-
+	/*
 	if (!m_cResultManager.IsGameOver())
 	{
 		for (int i = 0; i < 2; i++)
@@ -1123,8 +1123,8 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 		{
 			m_cResultManager.ResultIsDraw();
 		}
-	}
-	else
+	}*/
+	if (m_cResultManager.IsGameOver())
 	{
 		static float fDelayChangeTime = 3.0f;		// 3초후 대기방으로 간다.
 		fDelayChangeTime -= fTimeElapsed;

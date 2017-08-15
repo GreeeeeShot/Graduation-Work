@@ -37,10 +37,12 @@ private:
 
 	float m_fGravitationalAcceleration;
 
-	CResultManager<BELONG_TYPE> m_cResultManager;
+	
 	CTimeManager m_cTimeManager;
 
 public:
+	CResultManager<BELONG_TYPE> m_cResultManager;
+
 	CPlayer *m_pTreasureChest;
 
 	CVoxelTerrain *m_pVoxelTerrain;
