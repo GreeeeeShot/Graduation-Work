@@ -44,10 +44,12 @@ struct Client_Data
 #define CS_CHARAC_CHANGE 7
 #define CS_READY 8
 #define CS_EXIT 9
-#define CS_TEAM_CHANGE 10
+#define CS_TEAM_CHANGE  10
 #define CS_GAMEREADY	11
 #define CS_LIFTBOX		12
 #define CS_OUTBOX		13
+#define CS_THROWBOX		14
+#define CS_MAPCHANGE	15
 /*
 #define CS_JUMP  1
 #define CS_UP    2
@@ -86,6 +88,8 @@ struct Client_Data
 #define SC_DEFEAT		 25
 #define SC_DRAW			 26
 #define SC_GAMETIME		 27
+#define SC_THROWBOX		 28
+#define SC_MAPCHANGE	 29
 
 #pragma pack (push, 1)
 
@@ -127,6 +131,17 @@ struct cs_packet_ready {
 struct cs_packet_lift {
 	BYTE size;
 	BYTE type;
+};
+
+struct cs_packet_throwbox {
+	BYTE size;
+	BYTE type;
+};
+
+struct sc_packet_throwbox {
+	BYTE size;
+	BYTE type;
+	WORD id;
 };
 
 struct sc_packet_gametime {
@@ -230,6 +245,7 @@ struct sc_packet_initteam {
 	BYTE type;
 	WORD id;
 	WORD team;
+	WORD map;
 };
 
 struct sc_packet_pos {

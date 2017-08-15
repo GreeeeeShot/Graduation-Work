@@ -119,6 +119,7 @@ public:
 	bool m_Insvoxel;
 	bool m_serverActive;
 	bool m_IsLift;
+	bool m_IsThrow;
 	//ACTION m_action;
 
 public:

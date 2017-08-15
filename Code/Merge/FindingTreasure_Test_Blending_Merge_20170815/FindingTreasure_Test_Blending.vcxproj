@@ -255,9 +255,13 @@
     <Image Include="character3.bmp" />
     <Image Include="FindingTreasure_Test_Blending.ico" />
     <Image Include="grass.jpg" />
+    <Image Include="Invailduser.bmp" />
     <Image Include="in_the_room.bmp" />
+    <Image Include="junglemap.bmp" />
+    <Image Include="Mapbowl.bmp" />
     <Image Include="ready.bmp" />
     <Image Include="small.ico" />
+    <Image Include="snowmap.bmp" />
     <Image Include="title.bmp" />
     <Image Include="waiting_room_arrow.bmp" />
     <Image Include="waiting_room_base.bmp" />

@@ -20,6 +20,7 @@ bool Close_Server = false;
 //std::mutex g_Respawnlock;
 int red, blue;
 int g_GameTime = 183;
+int g_SelectMap = 0;
 
 enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC, BOX_MOVE, BOX_SYNC , WAS };
 
@@ -38,6 +39,7 @@ struct CLIENT {
 	int cameraYrotate;
 	bool VoxDelOrIns;
 	bool ready;
+	bool throwbox;
 
 	high_resolution_clock::time_point last_move_time;
 	bool is_active;
@@ -531,6 +533,7 @@ void SendTeamPacket(int client, int team)
 	packet.team = team;
 	packet.size = sizeof(packet);
 	packet.type = SC_INIT_TEAM;
+	packet.map = g_SelectMap;
 
 	SendPacket(client, &packet);
 }
@@ -651,6 +654,25 @@ void SendGameTimePacket(int client, int gametime)
 	SendPacket(client, &packet);
 }
 
+void SendThrowBox(int client, int object)
+{
+	sc_packet_throwbox packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_THROWBOX;
+	packet.id = object;
+
+	SendPacket(client, &packet);
+}
+
+void SendMapChangePacket(int client)
+{
+	sc_packet_waiting packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_MAPCHANGE;
+
+	SendPacket(client, &packet);
+}
+
 
 void DisconnectClient(int ci)
 {
@@ -742,6 +764,17 @@ void ProcessPacket(int ci, unsigned char packet[])
 				SendCharaChangePacket(i, ci);
 		}
 		break;
+	case CS_MAPCHANGE:
+		g_SelectMap = (g_SelectMap + 1) % 2;
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+				SendMapChangePacket(i);
+			printf("º¸³¿?");
+		}
+		break;
 	case CS_TEAM_CHANGE:
 		g_clients[ci].player.m_BelongType = (BELONG_TYPE)((g_clients[ci].player.m_BelongType + 1) % 2);
 		if (g_clients[ci].player.m_BelongType)
@@ -817,6 +850,21 @@ void ProcessPacket(int ci, unsigned char packet[])
 				continue;
 			if (i != ci)
 				SendLiftEnd(i, ci);
+		}
+		break;
+	case CS_THROWBOX:
+		g_clients[ci].vl_lock.lock();
+		g_clients[ci].throwbox = true;
+		g_clients[ci].vl_lock.unlock();
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (!g_clients[i].connect)
+				continue;
+			if (i != ci)
+			{
+				printf("%d\n", i);
+				SendThrowBox(i, ci);
+			}
 		}
 		break;
 	case CS_GAMEREADY:
@@ -1053,7 +1101,6 @@ void Worker_Thread()
 			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
 
 
-
 			if (currentclient.m_bIsActive)
 			{
 				CPlayer box;
@@ -1160,7 +1207,7 @@ void Worker_Thread()
 					g_clients[ci].vl_lock.unlock();
 					for (int i = 0; i < MAX_USER; ++i)
 					{
-						if (!g_clients[ci].connect)
+						if (!g_clients[i].connect)
 							continue;
 						SendBoxMissPacket(i, ci);
 					}
@@ -1171,6 +1218,30 @@ void Worker_Thread()
 					g_clients[ci].player.m_bIsPushed = false;
 					g_clients[ci].vl_lock.unlock();
 				}
+
+				g_TreasureBox.vl_lock.lock();
+				box = g_TreasureBox.player;
+				g_TreasureBox.vl_lock.unlock();
+
+
+				g_clients[ci].vl_lock.lock();
+				currentclient = g_clients[ci].player;
+				g_clients[ci].vl_lock.unlock();
+				
+				if (g_clients[ci].throwbox && g_clients[ci].player.m_IsLift)
+				{
+					g_TreasureBox.vl_lock.lock();
+					g_clients[ci].player.ThrowPlayer();
+					g_TreasureBox.vl_lock.unlock();
+					g_clients[ci].vl_lock.lock();
+					g_clients[ci].throwbox = false;
+					g_clients[ci].vl_lock.unlock();
+				}
+
+				g_clients[ci].vl_lock.lock();
+				g_clients[ci].player = currentclient;
+				g_clients[ci].vl_lock.unlock();
+
 				/*
 				if (g_TreasureBox.player.m_pLiftingPlayer)
 				{
@@ -1180,14 +1251,10 @@ void Worker_Thread()
 				printf("¹Ù´Ú¿¡ ÀÖ´Ù!");
 				}*/
 
-				g_clients[ci].vl_lock.lock();
-				currentclient = g_clients[ci].player;
-				g_clients[ci].vl_lock.unlock();
+				
 
 
-				g_TreasureBox.vl_lock.lock();
-				box = g_TreasureBox.player;
-				g_TreasureBox.vl_lock.unlock();
+				
 
 				if (g_clients[ci].player.GetPosition().y < -1.0f)
 				{

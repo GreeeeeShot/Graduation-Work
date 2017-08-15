@@ -26,8 +26,8 @@ public:
 	static HBITMAP m_hTitleBitmap;
 
 	static HBITMAP m_hTempWaitingRoomBitmap;
-	static HBITMAP m_hLeftAndRightArrowBitmap, m_hReadyBitmap, hBit1, m_hIPInputBitmap, m_hWaitingRoomBitmap;
-	static HBITMAP m_hSelectedTeamFrameBitmap[3], m_hCharacterBitmap[2];
+	static HBITMAP m_hLeftAndRightArrowBitmap, m_hReadyBitmap, hBit1, m_hIPInputBitmap, m_hWaitingRoomBitmap , m_hMapbowlBitmap;
+	static HBITMAP m_hSelectedTeamFrameBitmap[3], m_hCharacterBitmap[2], m_hMapBitmap[2];
 
 	//static HBITMAP piratebmp, cowgirlcharabmp, blueTeambmp, redTeambmp, nonteam;
 	static HINSTANCE m_hInstance;
@@ -130,6 +130,7 @@ class CWaitingRoomState : public CGameState
 	const CButton m_sButtonTeamFrame = CButton(50.0f, 40.0f, 330.0f, 458.0f);
 	const CButton m_sButtonReadyAndStart = CButton(357.0f, 514.0f, 904.0f, 661.0f);
 	const CButton m_sButtonFakie = CButton(10.0f, 11.0f, 60.0f, 65.0f);
+	const CButton m_sButtonMap = CButton(950.0f, 120.0f, 1200.0f, 410.0f);
 
 	const POINT m_sStartTeamPos[7] =
 	{
@@ -163,6 +164,13 @@ class CWaitingRoomState : public CGameState
 		645, 405,
 		785, 405
 	};
+
+	const POINT m_sMapPos[4] =
+	{
+		900, 90,
+		950, 120
+	};
+
 public:
 	CWaitingRoomState();
 	~CWaitingRoomState();
