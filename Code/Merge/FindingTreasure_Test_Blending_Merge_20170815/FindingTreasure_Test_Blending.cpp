@@ -46,20 +46,13 @@ void ServerMain()
 	if (accept_thread != NULL)
 	{
 		accept_thread->join();
-		accept_thread = NULL;
-	}
-	if (timer_thread != NULL)
-	{
 		timer_thread->join();
-		timer_thread = NULL;
-	}
-	if (worker_threads.size() != 0)
-	{
+		
 		for (auto pth : worker_threads) {
 			pth->join();
 			delete pth;
 		}
-		printf("¸ØÃß³Ä?");
+		
 	}
 
 	Initialize_Server();

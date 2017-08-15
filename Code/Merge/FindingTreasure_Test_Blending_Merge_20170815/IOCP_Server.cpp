@@ -21,7 +21,7 @@ bool Close_Server = false;
 int red, blue;
 int g_GameTime = 183;
 
-enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC, BOX_MOVE, BOX_SYNC , SERVER_CLOSE, WAS };
+enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC, BOX_MOVE, BOX_SYNC , WAS };
 
 struct OverlappedEX {
 	WSAOVERLAPPED over;
@@ -1350,9 +1350,8 @@ void Worker_Thread()
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
-		else if (SERVER_CLOSE == over->event_type)
+		else if (WAS == over->event_type)
 		{
-			printf("스레드뒤지냐?");
 			delete over;
 			return;
 		}
@@ -1416,20 +1415,20 @@ void Time_Thread()
 				Close_Server = true;
 				for (int i = 0; i < MAX_USER; ++i)
 				{
-					printf("다닫는다");
 					OverlappedEX *work_over = new OverlappedEX;
-					work_over->event_type = SERVER_CLOSE;
+					work_over->event_type = WAS;
 					PostQueuedCompletionStatus(g_hiocp, 1, -1, &work_over->over);
-
-					//closesocket(g_clients[i].client_socket);
+					if(g_clients[i].connect)
+						closesocket(g_clients[i].client_socket);
 				}
 				timer_queue.empty();
+				ShutDown_Server();
 				delete over;
-				//break;
-				
+				return;
 			}
 			if (!GameStart)
 			{
+				
 				for (int i = 0; i < MAX_USER; ++i)
 				{
 					if (i == 7 && ((g_clients[i].connect&&g_clients[i].ready) || !g_clients[i].connect))
@@ -1439,6 +1438,7 @@ void Time_Thread()
 							if (!g_clients[i].connect)
 								continue;
 							SendStartPacket(i);
+							printf("들어오냐");
 						}
 						GameStart = true;
 					}

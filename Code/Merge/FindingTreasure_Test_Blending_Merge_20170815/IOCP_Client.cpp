@@ -372,7 +372,7 @@ void ProcessPacket(char *ptr)
 	case SC_GAME_START:
 	{
 		sc_packet_waiting *my_packet = reinterpret_cast<sc_packet_waiting *>(ptr);
-		state = play;
+		g_GameStart = true;
 		break;
 	}
 	case SC_GAMETIME:
@@ -383,16 +383,19 @@ void ProcessPacket(char *ptr)
 	case SC_WIN:
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
+		g_GameStart = false;
 		break;
 	}
 	case SC_DRAW:
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
+		g_GameStart = false;
 		break;
 	}
 	case SC_DEFEAT:
 	{
 		sc_packet_result *my_packet = reinterpret_cast<sc_packet_result *>(ptr);
+		g_GameStart = false;
 		break;
 	}
 	/*
