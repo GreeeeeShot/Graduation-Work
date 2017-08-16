@@ -20,6 +20,8 @@ public:
 	int m_PastZMove;
 
 	int m_PastCameraYRotate;
+	int m_PastCameraXRotate;
+	bool m_Far;
 
 	bool m_Isthrow;
 	//float current_time;

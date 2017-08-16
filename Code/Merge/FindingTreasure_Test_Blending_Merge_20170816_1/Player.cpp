@@ -159,11 +159,13 @@ CPlayer::CPlayer()
 	m_MoveX = 0;
 	m_MoveZ = 0;
 	m_CameraY = 0;
+	m_CameraX = 0;
 	m_SyncPosition = D3DXVECTOR3(0.f, 0.f, 0.f);
 	m_Delvoxel = false;
 	m_Insvoxel = false;
 	m_serverActive = false;
 	m_IsLift = false;
+	m_CameraFar = false;
 }
 
 CPlayer::~CPlayer()

@@ -969,7 +969,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDeviceContext, float fTimeElapsed)
 {
 	m_fAccumulatedTime += fTimeElapsed;
-	m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
+	//m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
 	if(m_pWaveEffect) m_pWaveEffect->m_pMesh->Animate(pd3dDeviceContext, fTimeElapsed);						// 클라 영역
 	
 	CEffectManager::UpdateEffectManager(fTimeElapsed);

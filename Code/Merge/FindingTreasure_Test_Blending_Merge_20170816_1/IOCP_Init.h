@@ -50,6 +50,8 @@ struct Client_Data
 #define CS_OUTBOX		13
 #define CS_THROWBOX		14
 #define CS_MAPCHANGE	15
+#define CS_CAMERAXMOVE	16
+#define CS_CAMERAFAR	17
 /*
 #define CS_JUMP  1
 #define CS_UP    2
@@ -90,6 +92,7 @@ struct Client_Data
 #define SC_GAMETIME		 27
 #define SC_THROWBOX		 28
 #define SC_MAPCHANGE	 29
+#define SC_CAMERAFAR	 30
 
 #pragma pack (push, 1)
 
@@ -136,6 +139,13 @@ struct cs_packet_lift {
 struct cs_packet_throwbox {
 	BYTE size;
 	BYTE type;
+};
+
+struct sc_packet_camerafar {
+	BYTE size;
+	BYTE type;
+	WORD id;
+	CHAR cf;
 };
 
 struct sc_packet_throwbox {
@@ -255,6 +265,7 @@ struct sc_packet_pos {
 	CHAR MoveX;
 	CHAR MoveZ;
 	CHAR CameraY;
+	CHAR CameraX;
 };
 
 struct sc_packet_put_player {

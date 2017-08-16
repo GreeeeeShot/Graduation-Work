@@ -480,6 +480,14 @@ void CWaitingRoomState::Update(void)
 			m_pWaitingRoomInformDesc->m_PlayerInformDesc[waitingplayer[i].id].m_BelongType = (BELONG_TYPE)waitingplayer[i].team;
 		}
 
+		g_GameStart = false;
+		ready = false;
+
+		for (int i = 0; i < 7; ++i)
+		{
+			waitingplayer[i].ready = false;
+		}
+
 		CGameState* pTempGameState = new CPlayGameState();
 		pTempGameState->HandOverExternalInput(m_pWaitingRoomInformDesc);         // 외부 정보를 등록 시 다음과 같이 진행해야만 한다.
 		CGameManager::GetInstance()->ChangeGameState(pTempGameState);
@@ -725,8 +733,8 @@ void CIPInputState::Render(HDC hdc)
 	SelectObject(hIPInputDC, oldIPInputBitmap);
 	DeleteDC(hIPInputDC);
 
-	TextOutA(hdc, 190, 350, "server ip input: ", strlen("server ip input: "));
-	TextOutA(hdc, 300, 350, server_ip, strn);
+	TextOutA(hMemDC, 190, 350, "server ip input: ", strlen("server ip input: "));
+	TextOutA(hMemDC, 300, 350, server_ip, strn);
 	
 	BitBlt(hdc, 0, 0, 1280, 760, hMemDC, 0, 0, SRCCOPY);
 	SelectObject(hMemDC, oldMemBitmap);

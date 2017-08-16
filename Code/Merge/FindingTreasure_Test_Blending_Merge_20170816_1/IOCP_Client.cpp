@@ -35,7 +35,7 @@ void clienterror()
 void ProcessPacket(char *ptr)
 {
 	static bool first_time = true;
-	int x = 0, cameraY = 0, z = 0, id = -1;
+	int x = 0, cameraY = 0, cameraX = 0, z = 0, id = -1;
 	float px = 0.0, py = 0.0, pz = 0.0;
 	switch (ptr[1])
 	{
@@ -76,11 +76,20 @@ void ProcessPacket(char *ptr)
 		x = my_packet->MoveX;
 		z = my_packet->MoveZ;
 		cameraY = my_packet->CameraY;
+		cameraX = my_packet->CameraX;
 		id = my_packet->id;
 		//CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->SetMove(x, y, z);
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_MoveX = x;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_MoveZ = z;
 		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraY = cameraY;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraX = cameraX;
+		break;
+	}
+	case SC_CAMERAFAR:
+	{
+		sc_packet_camerafar *my_packet = reinterpret_cast<sc_packet_camerafar *>(ptr);
+		id = my_packet->id;
+		CGameManager::GetInstance()->m_pGameFramework->m_pPlayersMgrInform->m_ppPlayers[id]->m_CameraFar = my_packet->cf;
 		break;
 	}
 	case SC_JUMP:
@@ -384,6 +393,7 @@ void ProcessPacket(char *ptr)
 	case SC_GAMETIME:
 	{
 		sc_packet_gametime *my_packet = reinterpret_cast<sc_packet_gametime *>(ptr);
+		CGameManager::GetInstance()->m_pGameFramework->m_TimeManager.SetTimeNow((float)my_packet->time);
 		break;
 	}
 	case SC_WIN:
@@ -545,6 +555,31 @@ void SetPacket(PACKETTYPE type, int Posx, int Posz, int Look)
 
 		my_packet_camera->type = CS_CAMERAMOVE;
 		my_packet_camera->Look = Look;
+		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case CAMERAXMOVE:
+		my_packet_camera->size = sizeof(my_packet_camera);
+		send_wsabuf.len = sizeof(my_packet_camera);
+
+		my_packet_camera->type = CS_CAMERAXMOVE;
+		my_packet_camera->Look = Look;
+		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		if (ret) {
+			int error_code = WSAGetLastError();
+			printf("Error while sending packet [%d]", error_code);
+			break;
+		}
+		break;
+	case CAMERAFAR:
+		my_packet_camera->size = sizeof(my_packet_camera);
+		send_wsabuf.len = sizeof(my_packet_camera);
+		my_packet_camera->Look = Look;
+		my_packet_camera->type = CS_CAMERAFAR;
 		ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		if (ret) {
 			int error_code = WSAGetLastError();

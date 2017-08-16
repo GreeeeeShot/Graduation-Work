@@ -52,7 +52,6 @@ void ServerMain()
 			pth->join();
 			delete pth;
 		}
-		
 	}
 
 	Initialize_Server();

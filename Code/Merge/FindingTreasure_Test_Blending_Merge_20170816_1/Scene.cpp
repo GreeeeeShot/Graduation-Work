@@ -969,7 +969,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDeviceContext, float fTimeElapsed)
 {
 	m_fAccumulatedTime += fTimeElapsed;
-	m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
+	//m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
 	if(m_pWaveEffect) m_pWaveEffect->m_pMesh->Animate(pd3dDeviceContext, fTimeElapsed);						// 클라 영역
 	
 	CEffectManager::UpdateEffectManager(fTimeElapsed);
@@ -1012,6 +1012,9 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 					m_pPlayersMgrInform->m_ppPlayers[i]->m_d3dxvMoveDir.z = (float)m_pPlayersMgrInform->m_ppPlayers[i]->m_MoveZ;
 					//printf("카메라돌아가냐? %d \n", m_pPlayersMgrInform->m_ppPlayers[0]->m_CameraY);
 					m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC*m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraY, fTimeElapsed);
+					m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC*m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraX, fTimeElapsed);
+					if(m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraFar)
+						m_pPlayersMgrInform->m_ppPlayers[i]->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
 				}
 
 				m_pPlayersMgrInform->m_ppPlayers[i]->RotateMoveDir(fTimeElapsed);

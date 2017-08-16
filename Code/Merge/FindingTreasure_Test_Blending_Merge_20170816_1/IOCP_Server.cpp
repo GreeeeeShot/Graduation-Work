@@ -37,6 +37,9 @@ struct CLIENT {
 	int MoveZ;
 
 	int cameraYrotate;
+	int cameraXrotate;
+
+	bool cameraFar;
 	bool VoxDelOrIns;
 	bool ready;
 	bool throwbox;
@@ -137,7 +140,7 @@ void Initialize_Server()
 	red = 0;
 
 	g_RespawnManager.InitRespawnManager();
-	Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+	Timer_Event event = { -1, high_resolution_clock::now() + 100ms, RESPAWN_TIME };
 	tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 
 }
@@ -397,6 +400,8 @@ void SendPositionPacket(int client, int object)
 	packet.MoveX = g_clients[object].MoveX;
 	packet.MoveZ = g_clients[object].MoveZ;
 	packet.CameraY = g_clients[object].cameraYrotate;
+	packet.CameraX = g_clients[object].cameraXrotate;
+
 	//std::cout << "Position: " << g_clients[object].player.GetPosition().x << ", " << g_clients[object].player.GetPosition().z << std::endl;
 	SendPacket(client, &packet);
 }
@@ -648,7 +653,7 @@ void SendGameTimePacket(int client, int gametime)
 {
 	sc_packet_gametime packet;
 	packet.size = sizeof(packet);
-	packet.type = SC_DEFEAT;
+	packet.type = SC_GAMETIME;
 	packet.time = gametime;
 
 	SendPacket(client, &packet);
@@ -669,6 +674,17 @@ void SendMapChangePacket(int client)
 	sc_packet_waiting packet;
 	packet.size = sizeof(packet);
 	packet.type = SC_MAPCHANGE;
+
+	SendPacket(client, &packet);
+}
+
+void SendCameraFar(int client, int object)
+{
+	sc_packet_camerafar packet;
+	packet.size = sizeof(packet);
+	packet.type = SC_CAMERAFAR;
+	packet.id = object;
+	packet.cf = g_clients[object].cameraFar;
 
 	SendPacket(client, &packet);
 }
@@ -712,6 +728,31 @@ void ProcessPacket(int ci, unsigned char packet[])
 			{
 				if (i != ci)
 					SendPositionPacket(i, ci);
+			}
+		}
+		g_clients[ci].vl_lock.unlock();
+		break;
+	case CS_CAMERAXMOVE:
+		g_clients[ci].vl_lock.lock();
+		g_clients[ci].cameraXrotate = (int)(CHAR)packet[2];
+		for (int i = 0; i < MAX_USER; ++i) {
+			if (true == g_clients[i].connect)
+			{
+				if (i != ci)
+					SendPositionPacket(i, ci);
+			}
+		}
+		g_clients[ci].vl_lock.unlock();
+		break;
+	case CS_CAMERAFAR:
+		g_clients[ci].vl_lock.lock();
+		g_clients[ci].cameraFar = (int)(CHAR)packet[2];
+		printf("%d\n", (int)(CHAR)packet[2]);
+		for (int i = 0; i < MAX_USER; ++i) {
+			if (true == g_clients[i].connect)
+			{
+				if (i != ci)
+					SendCameraFar(i, ci);
 			}
 		}
 		g_clients[ci].vl_lock.unlock();
@@ -806,7 +847,6 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].ready = (g_clients[ci].ready + 1) % 2;
 		break;
 	case CS_EXIT:
-		g_clients[ci].connect = false;
 		if (ci == 0)
 		{
 			event = { -1, high_resolution_clock::now(), HOST_CLOSE };
@@ -814,7 +854,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 			break;
 			//ShutDown_Server();
 		}
-
+		g_clients[ci].connect = false;
 		if (g_clients[ci].player.m_BelongType) red--;
 		else blue--;
 
@@ -876,12 +916,13 @@ void ProcessPacket(int ci, unsigned char packet[])
 		g_clients[ci].player.m_fRecoveryStaminaPerSec = 40.0f;
 		g_clients[ci].player.m_fDecrementStaminaPerSec = 12.0f;
 		g_clients[ci].player.InitCameraOperator();
+		g_clients[ci].ready = false;
 		g_clients[ci].vl_lock.unlock();
 
 		g_RespawnManager.RegisterRespawnManager(&g_clients[ci].player, false);
 
 		MovePlayer(ci);
-		event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
+		event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 		tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 		SendInitPacket(ci);
 		for (int i = 0; i < MAX_USER; ++i)
@@ -903,9 +944,9 @@ void ProcessPacket(int ci, unsigned char packet[])
 
 			g_TreasureBox.player.SetPosition(D3DXVECTOR3(-33.f, 10.f, 0.f));
 			g_TreasureBox.vl_lock.unlock();
-			event = { -1, high_resolution_clock::now() + 23ms, BOX_EVENT };
+			event = { -1, high_resolution_clock::now() + 33ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-			event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
+			event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
@@ -1059,12 +1100,13 @@ void Worker_Thread()
 				continue;
 			CPlayer currentclient;
 			float x, z;
-			int cameraY;
+			int cameraY, cameraX;
 			g_clients[ci].vl_lock.lock();
 			currentclient = g_clients[ci].player;
 			x = g_clients[ci].MoveX;
 			z = g_clients[ci].MoveZ;
 			cameraY = g_clients[ci].cameraYrotate;
+			cameraX = g_clients[ci].cameraXrotate;
 			g_clients[ci].vl_lock.unlock();
 			if (!g_clients[ci].is_active && currentclient.m_bIsActive)
 			{
@@ -1095,11 +1137,17 @@ void Worker_Thread()
 			currentclient.m_d3dxvMoveDir.z += z;
 
 			currentclient.m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC * cameraY, t);
-
+			currentclient.m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC * cameraX, t);
+			currentclient.m_CameraOperator.OriginalZoomState();
+			if(g_clients[ci].cameraFar)
+				currentclient.m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			
+			//else
+				//currentclient.m_CameraOperator.ZoomOutAtOnce(-ZOOM_AT_ONCE_DISTANCE);
 			currentclient.RotateMoveDir(t);
 			//std::cout <<"m_d3dxvMoveDirX" << (float)g_clients[ci].player.GetPosition().x << std::endl;
 			//std::cout << "m_d3dxvMoveDirZ"<< (float)g_clients[ci].player.GetPosition().z << std::endl;
-
+			
 
 			if (currentclient.m_bIsActive)
 			{
@@ -1174,6 +1222,14 @@ void Worker_Thread()
 				g_clients[ci].vl_lock.unlock();
 				if (g_clients[ci].player.m_IsLift && !g_clients[ci].player.m_bIsPushed)
 				{
+					if (g_clients[ci].player.m_fMass > 40.0f)
+					{
+						g_clients[ci].vl_lock.lock();
+						g_clients[ci].player.m_fJumpdVelYM = 4.97f;
+						g_clients[ci].player.m_fMaxRunVelM = 5.0f;   
+						g_clients[ci].player.m_fMass = 40.0f;               
+						g_clients[ci].vl_lock.unlock();
+					}
 					g_TreasureBox.vl_lock.lock();
 					g_clients[ci].player.LiftPlayer(&g_TreasureBox.player, CGameManager::GetInstance()->m_pGameFramework->m_pScene->m_pVoxelTerrain);
 					g_TreasureBox.vl_lock.unlock();
@@ -1360,7 +1416,7 @@ void Worker_Thread()
 			}
 			if (GameStart)
 			{
-				Timer_Event event = { ci, high_resolution_clock::now() + 180ms, SYNC_TIME };
+				Timer_Event event = { ci, high_resolution_clock::now() + 200ms, SYNC_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			}
 			delete over;
@@ -1374,8 +1430,8 @@ void Worker_Thread()
 			float t = sec.count();
 
 			if(CGameManager::GetInstance()->m_pGameFramework->m_pScene) CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
-			g_TreasureBox.player.BeDraggedAwayByLiftingPlayer(t);
 			g_TreasureBox.vl_lock.lock();
+			g_TreasureBox.player.BeDraggedAwayByLiftingPlayer(t);
 			if (g_TreasureBox.player.m_d3dxvVelocity.y < -10.f)
 				g_TreasureBox.player.m_d3dxvVelocity.y = 1.f;
 			if (g_TreasureBox.player.GetPosition().y < -4.f)
@@ -1407,15 +1463,9 @@ void Worker_Thread()
 			}
 			if (GameStart)
 			{
-				Timer_Event event = { -1, high_resolution_clock::now() + 180ms, BOX_SYNC_TIME };
+				Timer_Event event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			}
-			delete over;
-		}
-		else if (GAME_TIME == over->event_type)
-		{
-			Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
-			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			delete over;
 		}
 		else if (WAS == over->event_type)
@@ -1453,9 +1503,9 @@ void Time_Thread()
 			}
 			else if (RESPAWN_TIME == t.event)
 			{
-				g_RespawnManager.UpdateRespawnManager(0.01f);
+				g_RespawnManager.UpdateRespawnManager(0.1f);
 
-				Timer_Event event = { -1, high_resolution_clock::now() + 10ms, RESPAWN_TIME };
+				Timer_Event event = { -1, high_resolution_clock::now() + 100ms, RESPAWN_TIME };
 				tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				delete over;
 			}
@@ -1480,19 +1530,51 @@ void Time_Thread()
 			}
 			else if (HOST_CLOSE == t.event)
 			{	
-				Close_Server = true;
 				for (int i = 0; i < MAX_USER; ++i)
 				{
 					OverlappedEX *work_over = new OverlappedEX;
 					work_over->event_type = WAS;
+					
 					PostQueuedCompletionStatus(g_hiocp, 1, -1, &work_over->over);
-					if(g_clients[i].connect)
-						closesocket(g_clients[i].client_socket);
+
+					if (g_clients[i].connect)
+					{
+						PostQueuedCompletionStatus(g_hiocp, 0, i, &work_over->over);
+					}
+					
 				}
+				Close_Server = true;
 				timer_queue.empty();
 				ShutDown_Server();
 				delete over;
 				return;
+			}
+			else if (GAME_TIME == over->event_type)
+			{
+				g_GameTime--;
+				if (g_GameTime == 0)
+				{
+					for (int i = 0; i < MAX_USER; ++i)
+					{
+						if (!g_clients[i].connect)
+							continue;
+
+						SendDrawPacket(i);
+					}
+					GameStart = false;
+				}
+				else {
+					for (int i = 0; i < MAX_USER; ++i)
+					{
+						if (!g_clients[i].connect)
+							continue;
+
+						SendGameTimePacket(i, g_GameTime);
+					}
+					Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
+					tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+				}
+				delete over;
 			}
 			if (!GameStart)
 			{
@@ -1535,9 +1617,9 @@ void Accept_Thread()
 
 		if (INVALID_SOCKET == new_client)
 		{
+			return;
 			int err_no = WSAGetLastError();
 			error_display("WSAAccept: ", err_no);
-			return;
 		}
 
 		int new_id = -1;

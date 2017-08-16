@@ -114,6 +114,9 @@ public:
 	int m_MoveX;
 	int m_MoveZ;
 	int m_CameraY;
+	int m_CameraX;
+	bool m_CameraFar;
+
 	D3DXVECTOR3 m_SyncPosition;
 	bool m_Delvoxel;
 	bool m_Insvoxel;

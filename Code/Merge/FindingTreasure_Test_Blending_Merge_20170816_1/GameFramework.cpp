@@ -43,6 +43,8 @@ CGameFramework::CGameFramework()
 	m_PastZMove = 0;
 	m_PastCameraYRotate = 0;
 	m_Isthrow = false;
+	m_PastCameraXRotate = 0;
+	m_Far = false;
 	//current_time = 0.0f;
 }
 
@@ -615,9 +617,15 @@ void CGameFramework::ProcessInput()
 			}
 
 			// 'S'나 'D'버튼을 떼는 순간에 아래 else문이 작동한다는 것을 감안할 것.
-
-			if (pKeyBuffer['F'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
-			if (pKeyBuffer['R'] & 0xF0)			pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+			int currentCameraXRotate = 0;
+			if (pKeyBuffer['F'] & 0xF0) { 
+				pMyPlayer->m_CameraOperator.RotateLocalX(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
+				currentCameraXRotate = 1;
+			}
+			if (pKeyBuffer['R'] & 0xF0) { 
+				pMyPlayer->m_CameraOperator.RotateLocalX(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed); 
+				currentCameraXRotate = -1;
+			}
 			int currentCameraYRotate = 0;
 			if (pKeyBuffer['Q'] & 0xF0) {
 				pMyPlayer->m_CameraOperator.RotateLocalY(-CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
@@ -627,13 +635,28 @@ void CGameFramework::ProcessInput()
 				pMyPlayer->m_CameraOperator.RotateLocalY(CAMERA_ROTATION_DEGREE_PER_SEC, fTimeElapsed);
 				currentCameraYRotate = 1;
 			}
-			if (pKeyBuffer['W'] & 0xF0)			pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+			bool farcamera = false;
+			if (pKeyBuffer['W'] & 0xF0) {
+				pMyPlayer->m_CameraOperator.ZoomOutAtOnce(ZOOM_AT_ONCE_DISTANCE);
+				farcamera = true;
+			}
+
 			pMyPlayer->ProofreadLocalAxis();
 
 			if (currentCameraYRotate != m_PastCameraYRotate)
 			{
 				SetPacket(CAMERAMOVE, 0, 0, currentCameraYRotate);
 				m_PastCameraYRotate = currentCameraYRotate;
+			}
+			if (currentCameraXRotate != m_PastCameraXRotate)
+			{
+				SetPacket(CAMERAXMOVE, 0, 0, currentCameraXRotate);
+				m_PastCameraXRotate = currentCameraXRotate;
+			}
+			if (farcamera != m_Far)
+			{
+				SetPacket(CAMERAFAR, 0, 0, farcamera);
+				m_Far = farcamera;
 			}
 		}
 		pMyPlayer->m_CameraOperator.GenerateViewMatrix(fTimeElapsed, true);

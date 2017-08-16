@@ -13,5 +13,6 @@ public:
 	int GetTimeSecRemaining(void);								// 남은 시간을 가져온다. (int형으로)
 	void DecreaseTimeSecRemaining(float fElapsedTime);			// 남은 시간을 감소시킨다.
 	bool IsTimeOver(void);										// 시간이 다 지났는지?
+	void SetTimeNow(float fGameTime) { m_fTimeLimitSec = fGameTime; }
 };
 

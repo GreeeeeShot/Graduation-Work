@@ -76,7 +76,7 @@ CMesh::~CMesh()
 	if (m_AABB.m_pRenderObject) delete m_AABB.m_pRenderObject;
 	if (m_pnVertexStrides) delete[] m_pnVertexStrides;
 	if (m_pnVertexOffsets) delete[] m_pnVertexOffsets;
-	if (m_pd3dRasterizerState) m_pd3dRasterizerState->Release();
+	//if (m_pd3dRasterizerState) m_pd3dRasterizerState->Release();
 }
 
 void CMesh::AddRef()
@@ -1355,7 +1355,7 @@ void SkydomMesh::Render(ID3D11DeviceContext *pd3dDeviceContext)
 
 ShipMesh::ShipMesh(ID3D11Device *pd3dDevice) : CLightingMesh(pd3dDevice)
 {
-	float fx = 2.5f, fy = 1.8f, fz = 5.0f;
+	float fx = 2.5f, fy = 2.0f, fz = 5.0f;
 	m_AABB.m_d3dxvMax = D3DXVECTOR3(fx, fy, fz);
 	m_AABB.m_d3dxvMin = D3DXVECTOR3(-fx, -fy, -fz);
 	/*m_AABB.m_pRenderObject = new CGameObject();
