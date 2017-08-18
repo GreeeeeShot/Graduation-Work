@@ -969,7 +969,7 @@ void CScene::MoveObjectUnderPhysicalEnvironment(CPlayer *pPlayer, float fTimeEla
 void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDeviceContext, float fTimeElapsed)
 {
 	m_fAccumulatedTime += fTimeElapsed;
-	//m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
+	m_cTimeManager.DecreaseTimeSecRemaining(fTimeElapsed);
 	if(m_pWaveEffect) m_pWaveEffect->m_pMesh->Animate(pd3dDeviceContext, fTimeElapsed);						// 클라 영역
 	
 	CEffectManager::UpdateEffectManager(fTimeElapsed);
@@ -1106,9 +1106,9 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 			}
 		}
 	}
-	/*
+	
 	if (!m_cResultManager.IsGameOver())
-	{
+	{/*
 		for (int i = 0; i < 2; i++)
 		{
 			if (CPhysicalCollision::IsCollided(
@@ -1121,12 +1121,12 @@ void CScene::AnimateObjects(ID3D11Device *pd3dDevice, ID3D11DeviceContext*pd3dDe
 					else m_cResultManager.RegisterWinnerType(BELONG_TYPE_RED);
 				}
 			}
-		}
+		}*/
 		if (m_cTimeManager.IsTimeOver())
 		{
 			m_cResultManager.ResultIsDraw();
 		}
-	}*/
+	}
 	if (m_cResultManager.IsGameOver())
 	{
 		static float fDelayChangeTime = 3.0f;		// 3초후 대기방으로 간다.

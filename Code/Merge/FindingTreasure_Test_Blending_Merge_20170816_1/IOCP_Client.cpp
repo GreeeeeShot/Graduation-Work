@@ -394,6 +394,7 @@ void ProcessPacket(char *ptr)
 	{
 		sc_packet_gametime *my_packet = reinterpret_cast<sc_packet_gametime *>(ptr);
 		CGameManager::GetInstance()->m_pGameFramework->m_TimeManager.SetTimeNow((float)my_packet->time);
+		printf("ss");
 		break;
 	}
 	case SC_WIN:

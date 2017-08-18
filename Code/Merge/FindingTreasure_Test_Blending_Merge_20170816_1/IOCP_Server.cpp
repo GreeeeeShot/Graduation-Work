@@ -19,7 +19,7 @@ bool GameStart = false;
 bool Close_Server = false;
 //std::mutex g_Respawnlock;
 int red, blue;
-int g_GameTime = 183;
+float g_GameTime = 183;
 int g_SelectMap = 0;
 
 enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC, BOX_MOVE, BOX_SYNC , WAS };
@@ -64,7 +64,7 @@ struct BOX {
 };
 
 
-enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME, BOX_EVENT, BOX_SYNC_TIME, CLOSE_SOCKET, GAME_TIME ,HOST_CLOSE };
+enum Event_Type { E_MOVE, RESPAWN_TIME, SYNC_TIME, BOX_EVENT, BOX_SYNC_TIME, CLOSE_SOCKET, GAME_TIME_M ,HOST_CLOSE , IN_GAME_TIME };
 
 struct Timer_Event {
 	int object_id;
@@ -934,6 +934,8 @@ void ProcessPacket(int ci, unsigned char packet[])
 
 		if (ci == 0)
 		{
+			g_GameTime = 180;
+
 			g_TreasureBox.vl_lock.lock();
 			//g_TreasureBox.player.m_pMesh = new TreasureChestMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
 			g_TreasureBox.player.m_pMesh = new CTexturedLightingCubeMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice, 1.5f, 0.5f, 1.5f);
@@ -944,12 +946,19 @@ void ProcessPacket(int ci, unsigned char packet[])
 
 			g_TreasureBox.player.SetPosition(D3DXVECTOR3(-33.f, 10.f, 0.f));
 			g_TreasureBox.vl_lock.unlock();
+
+
+
 			event = { -1, high_resolution_clock::now() + 33ms, BOX_EVENT };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 			event = { -1, high_resolution_clock::now() + 200ms, BOX_SYNC_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-			event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
+			event = { -1, high_resolution_clock::now() + 100ms, IN_GAME_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
+			event = { -1, high_resolution_clock::now() + 1s, GAME_TIME_M };
+			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+
 		}
 		break;
 	default:
@@ -1239,7 +1248,7 @@ void Worker_Thread()
 					g_clients[ci].vl_lock.unlock();
 
 				}
-				else if (!g_clients[ci].player.m_IsLift && g_TreasureBox.player.m_pLiftingPlayer)
+				else if (!g_clients[ci].player.m_IsLift && g_TreasureBox.player.m_pLiftingPlayer&&g_clients[ci].player.m_pLiftedPlayer)
 				{
 					g_clients[ci].vl_lock.lock();
 					g_clients[ci].player.m_bIsPushed = false;
@@ -1497,10 +1506,14 @@ void Time_Thread()
 			timer_queue.pop();
 			tq_lock.unlock();
 			OverlappedEX *over = new OverlappedEX;
+
 			if (E_MOVE == t.event) {
 				over->event_type = USER_MOVE;
 				PostQueuedCompletionStatus(g_hiocp, 1, t.object_id, &over->over);
 			}
+
+			
+
 			else if (RESPAWN_TIME == t.event)
 			{
 				g_RespawnManager.UpdateRespawnManager(0.1f);
@@ -1536,11 +1549,6 @@ void Time_Thread()
 					work_over->event_type = WAS;
 					
 					PostQueuedCompletionStatus(g_hiocp, 1, -1, &work_over->over);
-
-					if (g_clients[i].connect)
-					{
-						PostQueuedCompletionStatus(g_hiocp, 0, i, &work_over->over);
-					}
 					
 				}
 				Close_Server = true;
@@ -1549,10 +1557,11 @@ void Time_Thread()
 				delete over;
 				return;
 			}
-			else if (GAME_TIME == over->event_type)
+			else if (IN_GAME_TIME == over->event_type)
 			{
+
 				g_GameTime--;
-				if (g_GameTime == 0)
+				if (g_GameTime <= 0)
 				{
 					for (int i = 0; i < MAX_USER; ++i)
 					{
@@ -1568,11 +1577,39 @@ void Time_Thread()
 					{
 						if (!g_clients[i].connect)
 							continue;
-
 						SendGameTimePacket(i, g_GameTime);
 					}
-					Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME };
+					Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME_M };
 					tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+				}
+				delete over;
+			}
+			else if (GAME_TIME_M == over->event_type)
+			{
+				if (GameStart)
+				{
+					g_GameTime--;
+					if (g_GameTime <= 0)
+					{
+						for (int i = 0; i < MAX_USER; ++i)
+						{
+							if (!g_clients[i].connect)
+								continue;
+
+							SendDrawPacket(i);
+						}
+						GameStart = false;
+					}
+					else {
+						for (int i = 0; i < MAX_USER; ++i)
+						{
+							if (!g_clients[i].connect)
+								continue;
+							SendGameTimePacket(i, g_GameTime);
+						}
+						Timer_Event event = { -1, high_resolution_clock::now() + 100ms, IN_GAME_TIME };
+						tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
+					}
 				}
 				delete over;
 			}
