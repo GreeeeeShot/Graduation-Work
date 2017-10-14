@@ -747,7 +747,6 @@ void ProcessPacket(int ci, unsigned char packet[])
 	case CS_CAMERAFAR:
 		g_clients[ci].vl_lock.lock();
 		g_clients[ci].cameraFar = (int)(CHAR)packet[2];
-		printf("%d\n", (int)(CHAR)packet[2]);
 		for (int i = 0; i < MAX_USER; ++i) {
 			if (true == g_clients[i].connect)
 			{
@@ -813,7 +812,6 @@ void ProcessPacket(int ci, unsigned char packet[])
 				continue;
 			if (i != ci)
 				SendMapChangePacket(i);
-			printf("보냄?");
 		}
 		break;
 	case CS_TEAM_CHANGE:
@@ -902,7 +900,6 @@ void ProcessPacket(int ci, unsigned char packet[])
 				continue;
 			if (i != ci)
 			{
-				printf("%d\n", i);
 				SendThrowBox(i, ci);
 			}
 		}
@@ -956,9 +953,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 			event = { -1, high_resolution_clock::now() + 100ms, IN_GAME_TIME };
 			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 
-			event = { -1, high_resolution_clock::now() + 1s, GAME_TIME_M };
-			tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
-
+			//GameStart = true;
 		}
 		break;
 	default:
@@ -1333,7 +1328,7 @@ void Worker_Thread()
 						g_TreasureBox.player.BeRelievedFromLiftingPlayer();
 						g_TreasureBox.vl_lock.unlock();
 					}
-					printf("서버에서 플레이어가 물에 빠져버렸습니다!");
+					//printf("서버에서 플레이어가 물에 빠져버렸습니다!");
 					g_clients[ci].vl_lock.lock();
 					g_clients[ci].is_active = false;
 					g_clients[ci].player.m_fJumpdVelYM = 4.97f;   //Y축에 대한 순간 점프 속도 크기
@@ -1375,6 +1370,7 @@ void Worker_Thread()
 								{
 									SendDefeatPacket(j);
 								}
+								g_clients[j].ready = false;
 							}
 							GameStart = false;
 						}
@@ -1557,9 +1553,8 @@ void Time_Thread()
 				delete over;
 				return;
 			}
-			else if (IN_GAME_TIME == over->event_type)
+			else if (IN_GAME_TIME == t.event)
 			{
-
 				g_GameTime--;
 				if (g_GameTime <= 0)
 				{
@@ -1579,13 +1574,15 @@ void Time_Thread()
 							continue;
 						SendGameTimePacket(i, g_GameTime);
 					}
-					Timer_Event event = { -1, high_resolution_clock::now() + 1s, GAME_TIME_M };
+					Timer_Event event = { -1, high_resolution_clock::now() + 1s, IN_GAME_TIME };
 					tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 				}
 				delete over;
 			}
-			else if (GAME_TIME_M == over->event_type)
+			/*
+			else if (GAME_TIME_M == t.event)
 			{
+				
 				if (GameStart)
 				{
 					g_GameTime--;
@@ -1607,12 +1604,13 @@ void Time_Thread()
 								continue;
 							SendGameTimePacket(i, g_GameTime);
 						}
-						Timer_Event event = { -1, high_resolution_clock::now() + 100ms, IN_GAME_TIME };
+						Timer_Event event = { -1, high_resolution_clock::now() + 100ms, GAME_TIME_M };
 						tq_lock.lock();  timer_queue.push(event); tq_lock.unlock();
 					}
 				}
 				delete over;
 			}
+			*/
 			if (!GameStart)
 			{
 				
@@ -1625,7 +1623,6 @@ void Time_Thread()
 							if (!g_clients[i].connect)
 								continue;
 							SendStartPacket(i);
-							printf("들어오냐");
 						}
 						GameStart = true;
 					}
