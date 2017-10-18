@@ -678,7 +678,7 @@ void CGameFramework::FrameAdvance()
 	if (m_pPlayersMgrInform) pMyPlayer = m_pPlayersMgrInform->GetMyPlayer();
 	//타이머의 시간이 갱신되도록 하고 프레임 레이트를 계산한다. 
 	m_GameTimer.Tick(/*30.0f*/);
-	m_TimeManager.DecreaseTimeSecRemaining(m_GameTimer.GetTimeElapsed());
+	//m_TimeManager.DecreaseTimeSecRemaining(m_GameTimer.GetTimeElapsed());
 	ProcessInput();
 
 	for (int i = 0; i < m_pPlayersMgrInform->m_iPlayersNum; ++i)
@@ -821,7 +821,8 @@ void CGameFramework::FrameAdvance()
 		m_pd3dDeviceContext->OMSetRenderTargets(1, &m_pd3dRenderTargetView, m_pd3dDepthStencilView);
 	}
 	/**/
-	if(m_pDXGISwapChain) m_pDXGISwapChain->Present(0, 0);
+	if(m_pDXGISwapChain) 
+		m_pDXGISwapChain->Present(0, 0);
 
 	m_GameTimer.GetFrameRate(m_pszBuffer + 16, 37);
 	//current_time += m_GameTimer.GetTimeElapsed();

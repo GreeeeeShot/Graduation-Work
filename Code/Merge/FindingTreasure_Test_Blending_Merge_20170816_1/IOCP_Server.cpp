@@ -19,7 +19,7 @@ bool GameStart = false;
 bool Close_Server = false;
 //std::mutex g_Respawnlock;
 int red, blue;
-float g_GameTime = 183;
+float g_GameTime = 300;
 int g_SelectMap = 0;
 
 enum OPTYPE { OP_SEND, OP_RECV, USER_MOVE, SEND_SYNC, BOX_MOVE, BOX_SYNC , WAS };
@@ -931,7 +931,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 
 		if (ci == 0)
 		{
-			g_GameTime = 180;
+			g_GameTime = 300;
 
 			g_TreasureBox.vl_lock.lock();
 			//g_TreasureBox.player.m_pMesh = new TreasureChestMesh(CGameManager::GetInstance()->m_pGameFramework->m_pd3dDevice);
@@ -941,7 +941,7 @@ void ProcessPacket(int ci, unsigned char packet[])
 			g_TreasureBox.player.m_fMaxRunVelM = 15.0f;			// 밀리는 속도에 대한 최대 크기
 			g_TreasureBox.player.m_fMass = 40.0f;               // 질량
 
-			g_TreasureBox.player.SetPosition(D3DXVECTOR3(-33.f, 10.f, 0.f));
+			g_TreasureBox.player.SetPosition(D3DXVECTOR3(0.f, 10.f, 0.f));
 			g_TreasureBox.vl_lock.unlock();
 
 
@@ -997,7 +997,8 @@ void Worker_Thread()
 			int err_no = WSAGetLastError();
 			if (64 == err_no) DisconnectClient(ci);
 			else error_display("errGQCS :", err_no);
-			while (true);
+			continue;
+			//while (true);
 		}
 
 		if (0 == io_size)
@@ -1434,7 +1435,7 @@ void Worker_Thread()
 
 			float t = sec.count();
 
-			if(CGameManager::GetInstance()->m_pGameFramework->m_pScene) CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
+			if(CGameManager::GetInstance()->m_pGameFramework) CGameManager::GetInstance()->m_pGameFramework->m_pScene->MoveObjectUnderPhysicalEnvironment(&g_TreasureBox.player, t);
 			g_TreasureBox.vl_lock.lock();
 			g_TreasureBox.player.BeDraggedAwayByLiftingPlayer(t);
 			if (g_TreasureBox.player.m_d3dxvVelocity.y < -10.f)
